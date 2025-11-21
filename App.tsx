@@ -12,33 +12,46 @@ import { PrivacyView } from './components/views/PrivacyView';
 import { SettingsView } from './components/views/SettingsView';
 import { MenuOverlay } from './components/ui/MenuOverlay';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-// Initial mock state for user profile
-// Label is set to 'Loading...' to trigger the calibration animation on the Stance page
+// Initial mock state for user profile (used as fallback)
 const INITIAL_PROFILE: PoliticalCoordinates = {
-  economic: 30,  // Slightly Free Market
-  social: 60,    // Highly Liberal
-  diplomatic: -20, // Slightly Nationalist
-  label: 'Loading...',
+  economic: 0,
+  social: 0,
+  diplomatic: 0,
+  label: 'Uncalibrated',
 };
 
 const StanseApp: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [view, setView] = useState<ViewState>(ViewState.FEED);
-  const [userProfile] = useState<PoliticalCoordinates>(INITIAL_PROFILE);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { t } = useLanguage();
+  const { user, userProfile: authUserProfile, logout, loading } = useAuth();
+
+  // Use profile from Firebase or fallback to initial
+  const userProfile = authUserProfile?.coordinates || INITIAL_PROFILE;
 
   const handleLogin = () => {
-    setIsAuthenticated(true);
     setView(ViewState.FEED);
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    await logout();
     setIsMenuOpen(false);
-    setView(ViewState.FEED); // Reset view state internally
+    setView(ViewState.FEED);
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-pixel-white">
+        <div className="text-center">
+          <h1 className="font-pixel text-4xl mb-4">STANSE</h1>
+          <p className="font-mono text-sm text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const renderView = () => {
     switch (view) {
@@ -62,7 +75,7 @@ const StanseApp: React.FC = () => {
   };
 
   // If not authenticated, show Login Screen
-  if (!isAuthenticated) {
+  if (!user) {
     return <LoginView onLogin={handleLogin} />;
   }
 
@@ -149,9 +162,11 @@ const NavButton: React.FC<{ icon: React.ReactNode, label: string, isActive: bool
 
 // Export wrapper
 const App: React.FC = () => (
-  <LanguageProvider>
-    <StanseApp />
-  </LanguageProvider>
+  <AuthProvider>
+    <LanguageProvider>
+      <StanseApp />
+    </LanguageProvider>
+  </AuthProvider>
 );
 
 export default App;
