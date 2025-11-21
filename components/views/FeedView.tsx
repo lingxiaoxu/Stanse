@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Layers, TrendingUp, TrendingDown, ExternalLink, RefreshCw, ChevronDown } from 'lucide-react';
+import { Layers, TrendingUp, TrendingDown, RefreshCw, ChevronDown } from 'lucide-react';
 import { PixelCard } from '../ui/PixelCard';
 import { PixelButton } from '../ui/PixelButton';
 import { NewsEvent, StockTicker } from '../../types';
@@ -100,13 +100,6 @@ export const FeedView: React.FC = () => {
       const prism = await generatePrismSummary(newsItem.title + " " + newsItem.summary);
       setPrismData(prev => ({ ...prev, [newsItem.id]: prism }));
       setLoadingPrism(false);
-    }
-  };
-
-  // Open source URL
-  const openSource = (url?: string) => {
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -236,16 +229,7 @@ export const FeedView: React.FC = () => {
                   <h3 className="font-bold text-xl mb-2 leading-tight">{newsItem.title}</h3>
                   <p className="text-sm text-gray-600 mb-4 font-mono">{newsItem.summary}</p>
 
-                  <div className="flex justify-between items-center">
-                      {newsItem.sourceUrl && (
-                        <button
-                          onClick={() => openSource(newsItem.sourceUrl)}
-                          className="flex items-center gap-1 text-xs font-mono text-gray-500 hover:text-black transition-colors"
-                        >
-                          <ExternalLink size={12} />
-                          Source
-                        </button>
-                      )}
+                  <div className="flex justify-end items-center">
                       <PixelButton
                       variant="secondary"
                       className="text-xs px-3 py-1 flex items-center gap-2"
