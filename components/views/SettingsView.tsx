@@ -1,15 +1,18 @@
 
 import React, { useState } from 'react';
 import { PixelCard } from '../ui/PixelCard';
-import { Globe } from 'lucide-react';
+import { Globe, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { Language } from '../../types';
 
 export const SettingsView: React.FC = () => {
   const [notifications, setNotifications] = useState(true);
   const [location, setLocation] = useState(false);
   const [strictMode, setStrictMode] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const { t, language, setLanguage } = useLanguage();
+  const { resetOnboarding, hasCompletedOnboarding } = useAuth();
 
   return (
     <div className="max-w-lg mx-auto space-y-6 animate-fade-in pb-20">
@@ -51,12 +54,47 @@ export const SettingsView: React.FC = () => {
                 checked={location} 
                 onChange={() => setLocation(!location)} 
             />
-            <ToggleItem 
-                label={t('settings', 'strict')} 
+            <ToggleItem
+                label={t('settings', 'strict')}
                 sub={t('settings', 'sub_strict')}
-                checked={strictMode} 
-                onChange={() => setStrictMode(!strictMode)} 
+                checked={strictMode}
+                onChange={() => setStrictMode(!strictMode)}
             />
+
+            {/* Reset Stance Button */}
+            <div className="flex items-center justify-between p-6 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                    <RotateCcw size={20} />
+                    <div>
+                        <div className="font-bold font-mono text-lg">RESET STANCE</div>
+                        <div className="font-mono text-xs text-gray-500">Retake questionnaire to recalibrate</div>
+                    </div>
+                </div>
+                <button
+                    onClick={async () => {
+                        if (!hasCompletedOnboarding) return;
+                        if (confirm('Are you sure you want to reset your stance? You will need to retake the questionnaire.')) {
+                            setIsResetting(true);
+                            try {
+                                await resetOnboarding();
+                                alert('Stance reset! Go to Stance tab to recalibrate.');
+                            } catch (error) {
+                                alert('Failed to reset stance. Please try again.');
+                            } finally {
+                                setIsResetting(false);
+                            }
+                        }
+                    }}
+                    disabled={!hasCompletedOnboarding || isResetting}
+                    className={`px-4 py-2 font-mono text-xs border-2 border-black transition-all ${
+                        hasCompletedOnboarding && !isResetting
+                            ? 'bg-black text-white hover:bg-gray-800'
+                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                >
+                    {isResetting ? 'RESETTING...' : 'RESET'}
+                </button>
+            </div>
         </div>
       </PixelCard>
 
