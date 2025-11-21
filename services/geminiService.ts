@@ -285,8 +285,8 @@ export const calculateCoordinatesFromOnboarding = async (
 };
 
 /**
- * Fetches personalized news based on user's political stance using Google Search.
- * Returns news relevant to the user's political profile across categories.
+ * Fetches personalized news based on user's political stance.
+ * Returns news topics relevant to the user's political profile across categories.
  */
 export const fetchPersonalizedNews = async (
   userProfile: PoliticalCoordinates,
@@ -306,24 +306,24 @@ export const fetchPersonalizedNews = async (
     const prompt = `
       ${stanceContext}
 
-      Find ${5} recent news articles (from the last 7 days) that would be HIGHLY RELEVANT and INTERESTING to someone with this political profile.
+      Generate ${5} current news topics/headlines that would be HIGHLY RELEVANT and INTERESTING to someone with this political profile.
 
-      Search across these categories: ${categories.join(', ')}
+      Categories to cover: ${categories.join(', ')}
 
-      For each article, consider:
-      1. Topics that align with or challenge their worldview
-      2. Current events that directly impact their political interests
-      3. Mix of confirming and challenging perspectives for balanced awareness
+      Requirements:
+      1. Topics should reflect REAL current events and issues (November 2024 - present)
+      2. Include topics that align with AND challenge their worldview for balanced awareness
+      3. Cover diverse categories
+      4. Be specific and timely (not generic evergreen topics)
 
-      Skip result index: ${page * 5} (return results ${page * 5 + 1} to ${page * 5 + 5})
+      Set index: ${page} (generate different topics for each page)
 
       For each news item, provide:
-      - id: unique identifier (use format "news-{index}")
-      - title: The headline (max 80 chars)
-      - summary: Brief description of the news (max 150 chars)
-      - date: Relative date (TODAY, YESTERDAY, 2 DAYS AGO, etc.)
+      - id: unique identifier (use format "news-${page}-{index}")
+      - title: A realistic news headline (max 80 chars)
+      - summary: Brief description (max 150 chars)
+      - date: Relative date (TODAY, YESTERDAY, 2 DAYS AGO, 3 DAYS AGO, THIS WEEK)
       - category: One of (POLITICS, TECH, MILITARY, WORLD, BUSINESS)
-      - sourceUrl: The actual URL of the news article
     `;
 
     const responseSchema: Schema = {
@@ -338,10 +338,9 @@ export const fetchPersonalizedNews = async (
               title: { type: Type.STRING },
               summary: { type: Type.STRING },
               date: { type: Type.STRING },
-              category: { type: Type.STRING },
-              sourceUrl: { type: Type.STRING }
+              category: { type: Type.STRING }
             },
-            required: ['id', 'title', 'summary', 'date', 'category', 'sourceUrl']
+            required: ['id', 'title', 'summary', 'date', 'category']
           }
         }
       },
@@ -352,10 +351,9 @@ export const fetchPersonalizedNews = async (
       model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
-        tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
         responseSchema: responseSchema,
-        systemInstruction: "You are a news curator. Use Google Search to find real, recent news articles. Return actual news with real URLs. Be objective in selection but personalized to user interests."
+        systemInstruction: "You are a political news curator. Generate realistic, timely news headlines based on current events. Be objective but personalized to user interests. Focus on real-world issues from late 2024 to present."
       }
     });
 
@@ -376,7 +374,6 @@ export const fetchPersonalizedNews = async (
       summary: item.summary,
       date: item.date,
       imageUrl: categoryImages[item.category] || `https://picsum.photos/seed/${item.id}/400/200?grayscale`,
-      sourceUrl: item.sourceUrl,
       category: item.category
     }));
 
