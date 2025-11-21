@@ -276,14 +276,10 @@ export const calculateCoordinatesFromOnboarding = async (
       label: result.label || "Political Observer"
     };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini Onboarding Calculation Error:", error);
-    // Return neutral fallback
-    return {
-      economic: 0,
-      social: 0,
-      diplomatic: 0,
-      label: "Uncalibrated"
-    };
+    console.error("Error details:", error?.message, error?.stack);
+    // Throw error to show alert to user instead of silent fallback
+    throw new Error(`AI calibration failed: ${error?.message || 'Unknown error'}`);
   }
 };
