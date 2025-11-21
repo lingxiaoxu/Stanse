@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { BrandAlignment, PoliticalCoordinates, OnboardingAnswers } from "../types";
+import { BrandAlignment, PoliticalCoordinates, OnboardingAnswers, NewsEvent } from "../types";
 
 // Initialize Gemini Client
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
@@ -281,5 +281,107 @@ export const calculateCoordinatesFromOnboarding = async (
     console.error("Error details:", error?.message, error?.stack);
     // Throw error to show alert to user instead of silent fallback
     throw new Error(`AI calibration failed: ${error?.message || 'Unknown error'}`);
+  }
+};
+
+/**
+ * Fetches personalized news based on user's political stance using Google Search.
+ * Returns news relevant to the user's political profile across categories.
+ */
+export const fetchPersonalizedNews = async (
+  userProfile: PoliticalCoordinates,
+  page: number = 0, // 0 = first 5, 1 = next 5
+  categories: string[] = ['politics', 'technology', 'military', 'international', 'business']
+): Promise<NewsEvent[]> => {
+  try {
+    // Build search context based on user's political stance
+    const stanceContext = `
+      User Political Profile:
+      - Economic: ${userProfile.economic} (${userProfile.economic < 0 ? 'Left-leaning/Progressive economics' : 'Right-leaning/Free market'})
+      - Social: ${userProfile.social} (${userProfile.social < 0 ? 'Traditional/Conservative' : 'Progressive/Liberal'})
+      - Diplomatic: ${userProfile.diplomatic} (${userProfile.diplomatic < 0 ? 'Nationalist/Isolationist' : 'Globalist/Internationalist'})
+      - Persona: ${userProfile.label}
+    `;
+
+    const prompt = `
+      ${stanceContext}
+
+      Find ${5} recent news articles (from the last 7 days) that would be HIGHLY RELEVANT and INTERESTING to someone with this political profile.
+
+      Search across these categories: ${categories.join(', ')}
+
+      For each article, consider:
+      1. Topics that align with or challenge their worldview
+      2. Current events that directly impact their political interests
+      3. Mix of confirming and challenging perspectives for balanced awareness
+
+      Skip result index: ${page * 5} (return results ${page * 5 + 1} to ${page * 5 + 5})
+
+      For each news item, provide:
+      - id: unique identifier (use format "news-{index}")
+      - title: The headline (max 80 chars)
+      - summary: Brief description of the news (max 150 chars)
+      - date: Relative date (TODAY, YESTERDAY, 2 DAYS AGO, etc.)
+      - category: One of (POLITICS, TECH, MILITARY, WORLD, BUSINESS)
+      - sourceUrl: The actual URL of the news article
+    `;
+
+    const responseSchema: Schema = {
+      type: Type.OBJECT,
+      properties: {
+        news: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING },
+              title: { type: Type.STRING },
+              summary: { type: Type.STRING },
+              date: { type: Type.STRING },
+              category: { type: Type.STRING },
+              sourceUrl: { type: Type.STRING }
+            },
+            required: ['id', 'title', 'summary', 'date', 'category', 'sourceUrl']
+          }
+        }
+      },
+      required: ['news']
+    };
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+        responseMimeType: "application/json",
+        responseSchema: responseSchema,
+        systemInstruction: "You are a news curator. Use Google Search to find real, recent news articles. Return actual news with real URLs. Be objective in selection but personalized to user interests."
+      }
+    });
+
+    const result = JSON.parse(response.text || '{"news": []}');
+
+    // Transform to NewsEvent format with placeholder images based on category
+    const categoryImages: Record<string, string> = {
+      'POLITICS': 'https://picsum.photos/seed/politics/400/200?grayscale',
+      'TECH': 'https://picsum.photos/seed/tech/400/200?grayscale',
+      'MILITARY': 'https://picsum.photos/seed/military/400/200?grayscale',
+      'WORLD': 'https://picsum.photos/seed/world/400/200?grayscale',
+      'BUSINESS': 'https://picsum.photos/seed/business/400/200?grayscale'
+    };
+
+    return (result.news || []).map((item: any, index: number) => ({
+      id: item.id || `news-${page}-${index}`,
+      title: item.title,
+      summary: item.summary,
+      date: item.date,
+      imageUrl: categoryImages[item.category] || `https://picsum.photos/seed/${item.id}/400/200?grayscale`,
+      sourceUrl: item.sourceUrl,
+      category: item.category
+    }));
+
+  } catch (error: any) {
+    console.error("Gemini News Fetch Error:", error);
+    throw new Error(`Failed to fetch news: ${error?.message || 'Unknown error'}`);
   }
 };
