@@ -1,203 +1,285 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { PoliticalCoordinates } from '../../types';
+import { PoliticalCoordinates, OnboardingAnswers } from '../../types';
 import { PixelCard } from '../ui/PixelCard';
+import { OnboardingModal } from '../ui/OnboardingModal';
 import { calculatePersona } from '../../services/geminiService';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface FingerprintViewProps {
   coords: PoliticalCoordinates;
 }
 
 export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
+  const { hasCompletedOnboarding, completeOnboarding } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [localCoords, setLocalCoords] = useState(coords);
   const [persona, setPersona] = useState<string>(coords.label);
   const [displayCoords, setDisplayCoords] = useState({
-    economic: 0,
-    social: 0,
-    diplomatic: 0
+    economic: 50,
+    social: 50,
+    diplomatic: 50
   });
   // Ghost coords for the "echo" effect during calibration
   const [ghostCoords, setGhostCoords] = useState({
-    economic: 0,
-    social: 0,
-    diplomatic: 0
+    economic: -30,
+    social: -30,
+    diplomatic: -30
   });
-  
+
   const { t } = useLanguage();
-  const requestRef = useRef<number>(0);
   const startTimeRef = useRef<number>(Date.now());
-  const isCalibrating = persona === "Loading..." || persona === "CALIBRATING...";
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // Determine if we're in calibrating state (use isAnimating for better control)
+  const isCalibrating = isAnimating;
+
+  // Show onboarding modal if user hasn't completed it
+  useEffect(() => {
+    if (!hasCompletedOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, [hasCompletedOnboarding]);
+
+  // Handle onboarding completion
+  const handleOnboardingComplete = async (answers: OnboardingAnswers) => {
+    setShowOnboarding(false);
+    setPersona("CALIBRATING...");
+    setIsAnimating(true);
+    startTimeRef.current = Date.now();
+
+    try {
+      // Add timeout for the API call (30 seconds)
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Calibration timeout')), 30000)
+      );
+
+      const newCoords = await Promise.race([
+        completeOnboarding(answers),
+        timeoutPromise
+      ]);
+
+      setLocalCoords(newCoords);
+      setPersona(newCoords.label);
+      setIsAnimating(false);
+      // Set final coords
+      setDisplayCoords({
+        economic: newCoords.economic,
+        social: newCoords.social,
+        diplomatic: newCoords.diplomatic
+      });
+    } catch (error: any) {
+      console.error('Onboarding error:', error);
+      setIsAnimating(false);
+      // Set default coordinates on error
+      const fallbackCoords = {
+        economic: 0,
+        social: 0,
+        diplomatic: 0,
+        label: "Error"
+      };
+      setLocalCoords(fallbackCoords);
+      setPersona(fallbackCoords.label);
+      setDisplayCoords(fallbackCoords);
+      alert(`Calibration failed: ${error.message || 'Please check your internet connection and try again.'}`);
+    }
+  };
 
   // Mock loading sequence & Persona calculation
   useEffect(() => {
     if (coords.label === "Loading...") {
+      setIsAnimating(true);
+      startTimeRef.current = Date.now();
       // Ensure animation runs for at least a few seconds for effect
       const minTime = new Promise(resolve => setTimeout(resolve, 3500));
       const fetchPersona = calculatePersona(coords);
 
       Promise.all([minTime, fetchPersona]).then(([_, result]) => {
         setPersona(result);
+        setIsAnimating(false);
       });
     } else {
       setPersona(coords.label);
     }
   }, [coords]);
 
-  // Animation Loop
-  const animate = () => {
-    if (isCalibrating) {
-      const time = (Date.now() - startTimeRef.current) / 1000;
-      
-      // Artistic Math: 
-      // Main layer: Organic breathing
-      // Ghost layer: Rapid jitter / Inverted phase
-      
-      setDisplayCoords({
-        economic: Math.sin(time * 2.5) * 70 + Math.cos(time * 1.2) * 20, 
-        social: Math.cos(time * 2) * 60 + Math.sin(time * 3) * 30,
-        diplomatic: Math.sin(time * 3.5) * 50 + Math.cos(time * 5) * 10,
-      });
-
-      setGhostCoords({
-        economic: Math.sin(time * 4 + 1) * 80, 
-        social: Math.cos(time * 3 + 2) * 70,
-        diplomatic: Math.sin(time * 5 + 0.5) * 60,
-      });
-      
-      requestRef.current = requestAnimationFrame(animate);
-    } else {
-      // Snap to real values
-      setDisplayCoords({
-        economic: coords.economic,
-        social: coords.social,
-        diplomatic: coords.diplomatic
-      });
-      // Reset ghost to match main so it disappears (or overlaps perfectly)
-      setGhostCoords({
-        economic: coords.economic,
-        social: coords.social,
-        diplomatic: coords.diplomatic
-      });
-      cancelAnimationFrame(requestRef.current);
-    }
-  };
-
+  // Animation Loop - runs when isAnimating is true
   useEffect(() => {
-    requestRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(requestRef.current);
-  }, [isCalibrating, coords]);
+    let animationId: number;
+
+    const animate = () => {
+      const time = (Date.now() - startTimeRef.current) / 1000;
+
+      // Each axis has different phase offsets (0, 2π/3, 4π/3) to ensure triangle shape
+      // Base value of 30 ensures minimum size, amplitude of 50 for dynamic movement
+      // This creates a morphing triangle that never collapses to a line
+      const phase1 = 0;
+      const phase2 = (Math.PI * 2) / 3;  // 120 degrees offset
+      const phase3 = (Math.PI * 4) / 3;  // 240 degrees offset
+
+      setDisplayCoords({
+        economic: 30 + Math.sin(time * 1.5 + phase1) * 50 + Math.cos(time * 0.7) * 20,
+        social: 30 + Math.sin(time * 1.5 + phase2) * 50 + Math.cos(time * 0.9) * 20,
+        diplomatic: 30 + Math.sin(time * 1.5 + phase3) * 50 + Math.cos(time * 1.1) * 20,
+      });
+
+      // Ghost layer: Different frequency and phase for "scanning" effect
+      setGhostCoords({
+        economic: 20 + Math.sin(time * 2.5 + phase1 + 1) * 40,
+        social: 20 + Math.sin(time * 2.5 + phase2 + 1) * 40,
+        diplomatic: 20 + Math.sin(time * 2.5 + phase3 + 1) * 40,
+      });
+
+      animationId = requestAnimationFrame(animate);
+    };
+
+    if (isAnimating) {
+      animationId = requestAnimationFrame(animate);
+    }
+
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    };
+  }, [isAnimating]);
+
+  // Update display coords when not animating
+  useEffect(() => {
+    if (!isAnimating && !isCalibrating) {
+      setDisplayCoords({
+        economic: localCoords.economic,
+        social: localCoords.social,
+        diplomatic: localCoords.diplomatic
+      });
+    }
+  }, [isAnimating, isCalibrating, localCoords]);
 
   // Transform data for Recharts
+  // Use unique invisible characters during calibration to keep 3 distinct data points
+  // (Empty strings would cause Recharts to merge points with same key)
   const data = [
-    { 
-        subject: t('fingerprint', 'econ'), 
-        A: displayCoords.economic + 100, 
+    {
+        subject: isCalibrating ? ' ' : t('fingerprint', 'econ'),  // Single space
+        A: displayCoords.economic + 100,
         B: isCalibrating ? ghostCoords.economic + 100 : 0, // Ghost data
-        fullMark: 200 
+        fullMark: 200
     },
-    { 
-        subject: t('fingerprint', 'soc'), 
-        A: displayCoords.social + 100, 
+    {
+        subject: isCalibrating ? '  ' : t('fingerprint', 'soc'),  // Two spaces
+        A: displayCoords.social + 100,
         B: isCalibrating ? ghostCoords.social + 100 : 0,
-        fullMark: 200 
+        fullMark: 200
     },
-    { 
-        subject: t('fingerprint', 'diplo'), 
-        A: displayCoords.diplomatic + 100, 
+    {
+        subject: isCalibrating ? '   ' : t('fingerprint', 'diplo'),  // Three spaces
+        A: displayCoords.diplomatic + 100,
         B: isCalibrating ? ghostCoords.diplomatic + 100 : 0,
-        fullMark: 200 
+        fullMark: 200
     },
   ];
 
+  // Use localCoords (from onboarding) or props coords
+  const activeCoords = hasCompletedOnboarding ? localCoords : coords;
+
   return (
-    <div className="space-y-6 w-full max-w-md mx-auto pb-20">
-      <div className="text-center mb-10">
-        <h2 className="font-pixel text-5xl">{t('fingerprint', 'title')}</h2>
-        <p className="font-mono text-xs text-gray-400 uppercase">
-            {isCalibrating ? t('fingerprint', 'loading') : t('fingerprint', 'subtitle')}
-        </p>
-      </div>
+    <>
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onComplete={handleOnboardingComplete}
+      />
 
-      <PixelCard className="flex flex-col items-center p-4 bg-white relative overflow-hidden">
-        {/* Background Grid Effect for "Tech" feel */}
-        <div className="absolute inset-0 opacity-5 pointer-events-none" 
-             style={{backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '10px 10px'}}>
+      <div className="space-y-6 w-full max-w-md mx-auto pb-20">
+        <div className="text-center mb-10">
+          <h2 className="font-pixel text-5xl">{t('fingerprint', 'title')}</h2>
+          <p className="font-mono text-xs text-gray-400 uppercase">
+              {isCalibrating ? t('fingerprint', 'loading') : t('fingerprint', 'subtitle')}
+          </p>
         </div>
 
-        <div className="w-full h-[320px] font-mono text-xs relative z-10">
-          <ResponsiveContainer width="100%" height="100%">
-            {/* Reduced outerRadius to 60% to prevent label clipping */}
-            <RadarChart cx="50%" cy="50%" outerRadius="60%" data={data}>
-              <PolarGrid stroke="#e5e5e5" strokeDasharray="4 4" />
-              <PolarAngleAxis dataKey="subject" tick={{fill: '#111', fontSize: 11, fontFamily: '"Space Mono", "DotGothic16", monospace', fontWeight: 'bold'}} />
-              <PolarRadiusAxis angle={30} domain={[0, 200]} tick={false} axisLine={false} />
-              
-              {/* Ghost Radar - The "Glitch" / Scan effect */}
-              {isCalibrating && (
+        <PixelCard className="flex flex-col items-center p-4 bg-white relative overflow-hidden">
+          {/* Background Grid Effect for "Tech" feel */}
+          <div className="absolute inset-0 opacity-5 pointer-events-none"
+               style={{backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '10px 10px'}}>
+          </div>
+
+          <div className="w-full h-[350px] font-mono text-xs relative z-10">
+            <ResponsiveContainer width="100%" height="100%">
+              {/* Dynamic outerRadius: smaller when labels shown to prevent clipping */}
+              <RadarChart cx="50%" cy="50%" outerRadius={isCalibrating ? "75%" : "55%"} data={data}>
+                <PolarGrid stroke="#e5e5e5" strokeDasharray="4 4" />
+                <PolarAngleAxis dataKey="subject" tick={{fill: '#111', fontSize: 10, fontFamily: '"Space Mono", "DotGothic16", monospace', fontWeight: 'bold'}} />
+                <PolarRadiusAxis angle={30} domain={[0, 200]} tick={false} axisLine={false} />
+
+                {/* Ghost Radar - The "Glitch" / Scan effect */}
+                {isCalibrating && (
+                  <Radar
+                      name="Ghost"
+                      dataKey="B"
+                      stroke="#888"
+                      strokeWidth={1}
+                      fill="transparent"
+                      strokeDasharray="4 4"
+                      isAnimationActive={false}
+                  />
+                )}
+
+                {/* Main Radar */}
                 <Radar
-                    name="Ghost"
-                    dataKey="B"
-                    stroke="#888"
-                    strokeWidth={1}
-                    fill="transparent"
-                    strokeDasharray="4 4"
-                    isAnimationActive={false}
+                  name="User"
+                  dataKey="A"
+                  stroke={isCalibrating ? "#111" : "#000"}
+                  strokeWidth={isCalibrating ? 2 : 3}
+                  fill={isCalibrating ? "#111" : "#000"}
+                  fillOpacity={isCalibrating ? 0.1 : 0.25}
+                  isAnimationActive={false}
                 />
-              )}
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
 
-              {/* Main Radar */}
-              <Radar
-                name="User"
-                dataKey="A"
-                stroke={isCalibrating ? "#111" : "#000"}
-                strokeWidth={isCalibrating ? 2 : 3}
-                fill={isCalibrating ? "#111" : "#000"}
-                fillOpacity={isCalibrating ? 0.1 : 0.25}
-                isAnimationActive={false} 
-              />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
+          <div className="w-full text-center border-t-2 border-black pt-6 mt-2 relative">
+            <span className="block text-[10px] font-mono tracking-widest text-gray-400 mb-2 uppercase">
+              {isCalibrating ? t('fingerprint', 'analyzing') : t('fingerprint', 'identified')}
+            </span>
 
-        <div className="w-full text-center border-t-2 border-black pt-6 mt-2 relative">
-          <span className="block text-[10px] font-mono tracking-widest text-gray-400 mb-2 uppercase">
-            {isCalibrating ? t('fingerprint', 'analyzing') : t('fingerprint', 'identified')}
-          </span>
-          
-          {/* Typography unified: Clean, professional, no extra symbols */}
-          <h3 className={`font-pixel text-3xl promax:text-4xl uppercase tracking-wide leading-none transition-all duration-500 ${isCalibrating ? 'opacity-50 animate-pulse' : 'opacity-100'}`}>
-            {isCalibrating ? (
-                t('fingerprint', 'computing')
-            ) : persona}
-          </h3>
-        </div>
-      </PixelCard>
+            {/* Typography unified: Clean, professional, no extra symbols */}
+            <h3 className={`font-pixel text-3xl promax:text-4xl uppercase tracking-wide leading-none transition-all duration-500 ${isCalibrating ? 'opacity-50 animate-pulse' : 'opacity-100'}`}>
+              {isCalibrating ? (
+                  t('fingerprint', 'computing')
+              ) : persona}
+            </h3>
+          </div>
+        </PixelCard>
 
-      <div className="grid grid-cols-3 gap-3 text-center font-mono text-xs">
-        <div className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform">
-          <div className="font-bold mb-1 text-gray-400">{t('fingerprint', 'econ')}</div>
-          <div className="text-base font-bold uppercase">
-             {isCalibrating ? <span className="animate-pulse">--</span> : (coords.economic > 0 ? t('fingerprint', 'right') : t('fingerprint', 'left'))}
+        <div className="grid grid-cols-3 gap-3 text-center font-mono text-xs">
+          <div className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform">
+            <div className="font-bold mb-1 text-gray-400">{t('fingerprint', 'econ')}</div>
+            <div className="text-base font-bold uppercase">
+               {isCalibrating ? <span className="animate-pulse">--</span> : (activeCoords.economic > 0 ? t('fingerprint', 'right') : t('fingerprint', 'left'))}
+            </div>
+          </div>
+          <div className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform">
+            <div className="font-bold mb-1 text-gray-400">{t('fingerprint', 'soc')}</div>
+            <div className="text-base font-bold uppercase">
+              {isCalibrating ? <span className="animate-pulse">--</span> : (activeCoords.social > 0 ? t('fingerprint', 'lib') : t('fingerprint', 'auth'))}
+            </div>
+          </div>
+          <div className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform">
+            <div className="font-bold mb-1 text-gray-400">{t('fingerprint', 'diplo')}</div>
+            <div className="text-base font-bold uppercase">
+              {isCalibrating ? <span className="animate-pulse">--</span> : (activeCoords.diplomatic > 0 ? t('fingerprint', 'global') : t('fingerprint', 'nat'))}
+            </div>
           </div>
         </div>
-        <div className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform">
-          <div className="font-bold mb-1 text-gray-400">{t('fingerprint', 'soc')}</div>
-          <div className="text-base font-bold uppercase">
-            {isCalibrating ? <span className="animate-pulse">--</span> : (coords.social > 0 ? t('fingerprint', 'lib') : t('fingerprint', 'auth'))}
-          </div>
-        </div>
-        <div className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform">
-          <div className="font-bold mb-1 text-gray-400">{t('fingerprint', 'diplo')}</div>
-          <div className="text-base font-bold uppercase">
-            {isCalibrating ? <span className="animate-pulse">--</span> : (coords.diplomatic > 0 ? t('fingerprint', 'global') : t('fingerprint', 'nat'))}
-          </div>
+
+        <div className="text-center py-6 opacity-60">
+          <p className="font-pixel text-xl">"{t('slogan')}"</p>
         </div>
       </div>
-
-      <div className="text-center py-6 opacity-60">
-        <p className="font-pixel text-xl">"{t('slogan')}"</p>
-      </div>
-    </div>
+    </>
   );
 };
