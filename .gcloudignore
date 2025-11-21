@@ -20,6 +20,6 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Environment files with secrets
+# Environment files with secrets (keep .env for build)
 .env.local
 .env.*.local
