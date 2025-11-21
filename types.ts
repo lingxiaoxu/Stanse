@@ -44,6 +44,8 @@ export interface NewsEvent {
   summary: string;
   date: string;
   imageUrl: string;
+  sourceUrl?: string;
+  category?: string;
   prism?: {
     support: string;
     oppose: string;
