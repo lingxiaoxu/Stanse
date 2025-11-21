@@ -3,6 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build argument for API key
+ARG GEMINI_API_KEY
+
 # Copy package files
 COPY package*.json ./
 
@@ -11,6 +14,9 @@ RUN npm ci
 
 # Copy source code
 COPY . .
+
+# Create .env file with API key for build
+RUN echo "GEMINI_API_KEY=${GEMINI_API_KEY}" > .env
 
 # Build the app
 RUN npm run build
