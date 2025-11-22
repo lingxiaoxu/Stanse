@@ -1,0 +1,186 @@
+// SP500 Top Companies by sector (representative sample for ranking)
+// Full list would be maintained in Firestore, this is for initial seeding
+
+export interface SP500Company {
+  symbol: string;
+  name: string;
+  sector: string;
+}
+
+// Top 100 SP500 companies by market cap (representative sample)
+export const SP500_COMPANIES: SP500Company[] = [
+  // Technology
+  { symbol: 'AAPL', name: 'Apple Inc', sector: 'Technology' },
+  { symbol: 'MSFT', name: 'Microsoft Corp', sector: 'Technology' },
+  { symbol: 'GOOGL', name: 'Alphabet Inc', sector: 'Technology' },
+  { symbol: 'AMZN', name: 'Amazon.com Inc', sector: 'Technology' },
+  { symbol: 'NVDA', name: 'NVIDIA Corp', sector: 'Technology' },
+  { symbol: 'META', name: 'Meta Platforms Inc', sector: 'Technology' },
+  { symbol: 'TSLA', name: 'Tesla Inc', sector: 'Technology' },
+  { symbol: 'AVGO', name: 'Broadcom Inc', sector: 'Technology' },
+  { symbol: 'ORCL', name: 'Oracle Corp', sector: 'Technology' },
+  { symbol: 'CRM', name: 'Salesforce Inc', sector: 'Technology' },
+  { symbol: 'AMD', name: 'Advanced Micro Devices', sector: 'Technology' },
+  { symbol: 'INTC', name: 'Intel Corp', sector: 'Technology' },
+  { symbol: 'IBM', name: 'IBM Corp', sector: 'Technology' },
+  { symbol: 'CSCO', name: 'Cisco Systems', sector: 'Technology' },
+  { symbol: 'ADBE', name: 'Adobe Inc', sector: 'Technology' },
+
+  // Financial Services
+  { symbol: 'BRK.B', name: 'Berkshire Hathaway', sector: 'Financial' },
+  { symbol: 'JPM', name: 'JPMorgan Chase', sector: 'Financial' },
+  { symbol: 'V', name: 'Visa Inc', sector: 'Financial' },
+  { symbol: 'MA', name: 'Mastercard Inc', sector: 'Financial' },
+  { symbol: 'BAC', name: 'Bank of America', sector: 'Financial' },
+  { symbol: 'WFC', name: 'Wells Fargo', sector: 'Financial' },
+  { symbol: 'GS', name: 'Goldman Sachs', sector: 'Financial' },
+  { symbol: 'MS', name: 'Morgan Stanley', sector: 'Financial' },
+  { symbol: 'BLK', name: 'BlackRock Inc', sector: 'Financial' },
+  { symbol: 'C', name: 'Citigroup Inc', sector: 'Financial' },
+
+  // Healthcare
+  { symbol: 'UNH', name: 'UnitedHealth Group', sector: 'Healthcare' },
+  { symbol: 'JNJ', name: 'Johnson & Johnson', sector: 'Healthcare' },
+  { symbol: 'LLY', name: 'Eli Lilly', sector: 'Healthcare' },
+  { symbol: 'PFE', name: 'Pfizer Inc', sector: 'Healthcare' },
+  { symbol: 'MRK', name: 'Merck & Co', sector: 'Healthcare' },
+  { symbol: 'ABBV', name: 'AbbVie Inc', sector: 'Healthcare' },
+  { symbol: 'TMO', name: 'Thermo Fisher Scientific', sector: 'Healthcare' },
+  { symbol: 'ABT', name: 'Abbott Laboratories', sector: 'Healthcare' },
+  { symbol: 'CVS', name: 'CVS Health', sector: 'Healthcare' },
+  { symbol: 'BMY', name: 'Bristol-Myers Squibb', sector: 'Healthcare' },
+
+  // Consumer
+  { symbol: 'WMT', name: 'Walmart Inc', sector: 'Consumer' },
+  { symbol: 'PG', name: 'Procter & Gamble', sector: 'Consumer' },
+  { symbol: 'KO', name: 'Coca-Cola Co', sector: 'Consumer' },
+  { symbol: 'PEP', name: 'PepsiCo Inc', sector: 'Consumer' },
+  { symbol: 'COST', name: 'Costco Wholesale', sector: 'Consumer' },
+  { symbol: 'HD', name: 'Home Depot', sector: 'Consumer' },
+  { symbol: 'MCD', name: 'McDonald\'s Corp', sector: 'Consumer' },
+  { symbol: 'NKE', name: 'Nike Inc', sector: 'Consumer' },
+  { symbol: 'SBUX', name: 'Starbucks Corp', sector: 'Consumer' },
+  { symbol: 'TGT', name: 'Target Corp', sector: 'Consumer' },
+  { symbol: 'LOW', name: 'Lowe\'s Companies', sector: 'Consumer' },
+  { symbol: 'DIS', name: 'Walt Disney Co', sector: 'Consumer' },
+
+  // Energy
+  { symbol: 'XOM', name: 'Exxon Mobil', sector: 'Energy' },
+  { symbol: 'CVX', name: 'Chevron Corp', sector: 'Energy' },
+  { symbol: 'COP', name: 'ConocoPhillips', sector: 'Energy' },
+  { symbol: 'SLB', name: 'Schlumberger', sector: 'Energy' },
+  { symbol: 'EOG', name: 'EOG Resources', sector: 'Energy' },
+  { symbol: 'OXY', name: 'Occidental Petroleum', sector: 'Energy' },
+  { symbol: 'PSX', name: 'Phillips 66', sector: 'Energy' },
+  { symbol: 'VLO', name: 'Valero Energy', sector: 'Energy' },
+
+  // Industrial
+  { symbol: 'GE', name: 'General Electric', sector: 'Industrial' },
+  { symbol: 'CAT', name: 'Caterpillar Inc', sector: 'Industrial' },
+  { symbol: 'RTX', name: 'RTX Corp (Raytheon)', sector: 'Industrial' },
+  { symbol: 'HON', name: 'Honeywell International', sector: 'Industrial' },
+  { symbol: 'UPS', name: 'United Parcel Service', sector: 'Industrial' },
+  { symbol: 'BA', name: 'Boeing Co', sector: 'Industrial' },
+  { symbol: 'LMT', name: 'Lockheed Martin', sector: 'Industrial' },
+  { symbol: 'DE', name: 'Deere & Company', sector: 'Industrial' },
+  { symbol: 'NOC', name: 'Northrop Grumman', sector: 'Industrial' },
+  { symbol: 'GD', name: 'General Dynamics', sector: 'Industrial' },
+
+  // Communications
+  { symbol: 'NFLX', name: 'Netflix Inc', sector: 'Communications' },
+  { symbol: 'CMCSA', name: 'Comcast Corp', sector: 'Communications' },
+  { symbol: 'T', name: 'AT&T Inc', sector: 'Communications' },
+  { symbol: 'VZ', name: 'Verizon Communications', sector: 'Communications' },
+  { symbol: 'TMUS', name: 'T-Mobile US', sector: 'Communications' },
+
+  // Utilities & Clean Energy
+  { symbol: 'NEE', name: 'NextEra Energy', sector: 'Utilities' },
+  { symbol: 'DUK', name: 'Duke Energy', sector: 'Utilities' },
+  { symbol: 'SO', name: 'Southern Company', sector: 'Utilities' },
+  { symbol: 'D', name: 'Dominion Energy', sector: 'Utilities' },
+
+  // Materials
+  { symbol: 'LIN', name: 'Linde PLC', sector: 'Materials' },
+  { symbol: 'APD', name: 'Air Products', sector: 'Materials' },
+  { symbol: 'SHW', name: 'Sherwin-Williams', sector: 'Materials' },
+  { symbol: 'FCX', name: 'Freeport-McMoRan', sector: 'Materials' },
+  { symbol: 'NEM', name: 'Newmont Corp', sector: 'Materials' },
+
+  // Real Estate
+  { symbol: 'PLD', name: 'Prologis Inc', sector: 'Real Estate' },
+  { symbol: 'AMT', name: 'American Tower', sector: 'Real Estate' },
+  { symbol: 'CCI', name: 'Crown Castle', sector: 'Real Estate' },
+  { symbol: 'EQIX', name: 'Equinix Inc', sector: 'Real Estate' },
+  { symbol: 'SPG', name: 'Simon Property Group', sector: 'Real Estate' },
+];
+
+// Define stance types based on political coordinates
+// Each stance type is a combination of the three dimensions
+export type StanceType =
+  | 'progressive-globalist'      // Economic Left, Social Lib, Diplomatic Global
+  | 'progressive-nationalist'    // Economic Left, Social Lib, Diplomatic National
+  | 'socialist-libertarian'      // Economic Left, Social Auth, Diplomatic Global
+  | 'socialist-nationalist'      // Economic Left, Social Auth, Diplomatic National
+  | 'capitalist-globalist'       // Economic Right, Social Lib, Diplomatic Global
+  | 'capitalist-nationalist'     // Economic Right, Social Lib, Diplomatic National (MAGA)
+  | 'conservative-globalist'     // Economic Right, Social Auth, Diplomatic Global
+  | 'conservative-nationalist';  // Economic Right, Social Auth, Diplomatic National
+
+export const STANCE_TYPES: { type: StanceType; label: string; description: string }[] = [
+  {
+    type: 'progressive-globalist',
+    label: 'Progressive Globalist',
+    description: 'Left economics, progressive social values, international cooperation'
+  },
+  {
+    type: 'progressive-nationalist',
+    label: 'Progressive Patriot',
+    description: 'Left economics, progressive social values, national focus'
+  },
+  {
+    type: 'socialist-libertarian',
+    label: 'Social Democrat',
+    description: 'Left economics, traditional values, international cooperation'
+  },
+  {
+    type: 'socialist-nationalist',
+    label: 'National Socialist',
+    description: 'Left economics, traditional values, national focus'
+  },
+  {
+    type: 'capitalist-globalist',
+    label: 'Liberal Capitalist',
+    description: 'Free market, progressive social values, international cooperation'
+  },
+  {
+    type: 'capitalist-nationalist',
+    label: 'America First',
+    description: 'Free market, progressive social values, national focus'
+  },
+  {
+    type: 'conservative-globalist',
+    label: 'Neoconservative',
+    description: 'Free market, traditional values, international cooperation'
+  },
+  {
+    type: 'conservative-nationalist',
+    label: 'Paleoconservative',
+    description: 'Free market, traditional values, national focus'
+  }
+];
+
+// Helper function to determine stance type from coordinates
+export const getStanceType = (economic: number, social: number, diplomatic: number): StanceType => {
+  const isLeftEcon = economic < 0;
+  const isLibSocial = social > 0;
+  const isGlobalDiplo = diplomatic > 0;
+
+  if (isLeftEcon && isLibSocial && isGlobalDiplo) return 'progressive-globalist';
+  if (isLeftEcon && isLibSocial && !isGlobalDiplo) return 'progressive-nationalist';
+  if (isLeftEcon && !isLibSocial && isGlobalDiplo) return 'socialist-libertarian';
+  if (isLeftEcon && !isLibSocial && !isGlobalDiplo) return 'socialist-nationalist';
+  if (!isLeftEcon && isLibSocial && isGlobalDiplo) return 'capitalist-globalist';
+  if (!isLeftEcon && isLibSocial && !isGlobalDiplo) return 'capitalist-nationalist';
+  if (!isLeftEcon && !isLibSocial && isGlobalDiplo) return 'conservative-globalist';
+  return 'conservative-nationalist';
+};

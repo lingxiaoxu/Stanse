@@ -1,0 +1,33 @@
+steps:
+  # Build the container image with the API key passed as substitution
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'GEMINI_API_KEY=${_GEMINI_API_KEY}'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/stanse:latest'
+      - '.'
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/stanse:latest']
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'stanse'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/stanse:latest'
+      - '--region'
+      - 'us-central1'
+      - '--allow-unauthenticated'
+
+substitutions:
+  _GEMINI_API_KEY: ''
+
+images:
+  - 'gcr.io/$PROJECT_ID/stanse:latest'

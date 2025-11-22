@@ -24,7 +24,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   updateCoordinates: (coords: PoliticalCoordinates) => Promise<void>;
-  completeOnboarding: (answers: OnboardingAnswers) => Promise<PoliticalCoordinates>;
+  completeOnboarding: (answers: OnboardingAnswers, language?: string) => Promise<PoliticalCoordinates>;
   resetOnboarding: () => Promise<void>;
   clearError: () => void;
   refreshProfile: () => Promise<void>;
@@ -147,13 +147,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const completeOnboarding = async (answers: OnboardingAnswers): Promise<PoliticalCoordinates> => {
+  const completeOnboarding = async (answers: OnboardingAnswers, language: string = 'en'): Promise<PoliticalCoordinates> => {
     if (!user) throw new Error('User not authenticated');
     setError(null);
 
     try {
-      // Calculate coordinates using AI
-      const coordinates = await calculateCoordinatesFromOnboarding(answers);
+      // Calculate coordinates using AI with language support for persona label
+      const coordinates = await calculateCoordinatesFromOnboarding(answers, language);
 
       // Save to Firestore
       await saveOnboardingAnswers(user.uid, answers, coordinates);
