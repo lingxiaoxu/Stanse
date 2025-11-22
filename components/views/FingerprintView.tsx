@@ -4,7 +4,7 @@ import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadius
 import { PoliticalCoordinates, OnboardingAnswers } from '../../types';
 import { PixelCard } from '../ui/PixelCard';
 import { OnboardingModal } from '../ui/OnboardingModal';
-import { calculatePersona } from '../../services/geminiService';
+import { calculatePersona, translatePersonaLabel } from '../../services/geminiService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -29,7 +29,7 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
     diplomatic: -30
   });
 
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const startTimeRef = useRef<number>(Date.now());
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -57,7 +57,7 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
       );
 
       const newCoords = await Promise.race([
-        completeOnboarding(answers),
+        completeOnboarding(answers, language),
         timeoutPromise
       ]);
 
@@ -87,6 +87,10 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
     }
   };
 
+  // Track if persona has been translated for current language
+  const [lastTranslatedLang, setLastTranslatedLang] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+
   // Mock loading sequence & Persona calculation
   useEffect(() => {
     if (coords.label === "Loading...") {
@@ -104,6 +108,45 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
       setPersona(coords.label);
     }
   }, [coords]);
+
+  // Translate persona label when language changes or on initial load (for existing users)
+  useEffect(() => {
+    // Use coords prop (from userProfile) for translation
+    const coordsToTranslate = hasCompletedOnboarding ? coords : localCoords;
+
+    // Only translate if:
+    // 1. User has completed onboarding
+    // 2. Not currently calibrating or translating
+    // 3. Language is different from last translated language
+    // 4. We have valid coordinates with a label
+    if (
+      hasCompletedOnboarding &&
+      !isAnimating &&
+      !isTranslating &&
+      language !== lastTranslatedLang &&
+      coordsToTranslate.label &&
+      coordsToTranslate.label !== "Loading..." &&
+      coordsToTranslate.label !== "CALIBRATING..." &&
+      coordsToTranslate.label !== "Error" &&
+      coordsToTranslate.label !== "Uncalibrated"
+    ) {
+      setIsTranslating(true);
+      console.log(`Translating persona to ${language}:`, coordsToTranslate);
+      translatePersonaLabel(coordsToTranslate, language)
+        .then((translatedLabel) => {
+          console.log(`Translation result:`, translatedLabel);
+          setPersona(translatedLabel);
+          setLastTranslatedLang(language);
+        })
+        .catch((error) => {
+          console.error('Translation error:', error);
+          // Keep original label on error
+        })
+        .finally(() => {
+          setIsTranslating(false);
+        });
+    }
+  }, [language, hasCompletedOnboarding, isAnimating, isTranslating, lastTranslatedLang, coords, localCoords]);
 
   // Animation Loop - runs when isAnimating is true
   useEffect(() => {
@@ -247,7 +290,7 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
             </span>
 
             {/* Typography unified: Clean, professional, no extra symbols */}
-            <h3 className={`font-pixel text-3xl promax:text-4xl uppercase tracking-wide leading-none transition-all duration-500 ${isCalibrating ? 'opacity-50 animate-pulse' : 'opacity-100'}`}>
+            <h3 className={`font-pixel text-3xl promax:text-4xl uppercase tracking-wide leading-none transition-all duration-500 ${isCalibrating || isTranslating ? 'opacity-50 animate-pulse' : 'opacity-100'}`}>
               {isCalibrating ? (
                   t('fingerprint', 'computing')
               ) : persona}

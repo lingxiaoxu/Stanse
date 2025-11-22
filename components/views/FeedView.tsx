@@ -3,8 +3,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Layers, TrendingUp, TrendingDown, RefreshCw, ChevronDown } from 'lucide-react';
 import { PixelCard } from '../ui/PixelCard';
 import { PixelButton } from '../ui/PixelButton';
+import { ValuesCompanyRanking } from '../ui/ValuesCompanyRanking';
 import { NewsEvent, StockTicker } from '../../types';
-import { generatePrismSummary, fetchPersonalizedNews } from '../../services/geminiService';
+import { generatePrismSummary, fetchPersonalizedNews, translatePersonaLabel } from '../../services/geminiService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -21,16 +22,42 @@ export const FeedView: React.FC = () => {
   const [activePrism, setActivePrism] = useState<string | null>(null);
   const [prismData, setPrismData] = useState<Record<string, any>>({});
   const [loadingPrism, setLoadingPrism] = useState(false);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { userProfile, hasCompletedOnboarding } = useAuth();
 
-  // News state
-  const [news, setNews] = useState<NewsEvent[]>([]);
+  // Translated persona label state
+  const [translatedPersona, setTranslatedPersona] = useState<string | null>(null);
+  const [lastPersonaLang, setLastPersonaLang] = useState<string | null>(null);
+
+  // Cache version - increment this to invalidate stale cached data
+  const CACHE_VERSION = 'v5'; // Now using Gemini Imagen + curated Unsplash images
+
+  // News state - initialize from localStorage cache (with version check)
+  const [news, setNews] = useState<NewsEvent[]>(() => {
+    try {
+      const cacheVersion = localStorage.getItem('stanse_cache_version');
+      // If cache version doesn't match, clear stale data
+      if (cacheVersion !== CACHE_VERSION) {
+        localStorage.removeItem('stanse_news_cache');
+        localStorage.removeItem('stanse_last_stance_hash');
+        localStorage.setItem('stanse_cache_version', CACHE_VERSION);
+        return [];
+      }
+      const cached = localStorage.getItem('stanse_news_cache');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
   const [loadingNews, setLoadingNews] = useState(false);
   const [newsError, setNewsError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMoreNews, setHasMoreNews] = useState(true);
-  const [lastStanceHash, setLastStanceHash] = useState<string>('');
+  const [lastStanceHash, setLastStanceHash] = useState<string>(() => {
+    const cacheVersion = localStorage.getItem('stanse_cache_version');
+    if (cacheVersion !== CACHE_VERSION) {
+      return ''; // Force refresh
+    }
+    return localStorage.getItem('stanse_last_stance_hash') || '';
+  });
 
   // Create a hash of the user's stance to detect changes
   const getStanceHash = useCallback(() => {
@@ -49,15 +76,23 @@ export const FeedView: React.FC = () => {
     try {
       const fetchedNews = await fetchPersonalizedNews(userProfile.coordinates, page);
 
+      const newStanceHash = getStanceHash();
+
       if (append) {
-        setNews(prev => [...prev, ...fetchedNews]);
+        setNews(prev => {
+          const updated = [...prev, ...fetchedNews];
+          localStorage.setItem('stanse_news_cache', JSON.stringify(updated));
+          return updated;
+        });
       } else {
         setNews(fetchedNews);
+        localStorage.setItem('stanse_news_cache', JSON.stringify(fetchedNews));
       }
 
       setHasMoreNews(fetchedNews.length === 5);
       setCurrentPage(page);
-      setLastStanceHash(getStanceHash());
+      setLastStanceHash(newStanceHash);
+      localStorage.setItem('stanse_last_stance_hash', newStanceHash);
     } catch (error: any) {
       console.error('Error fetching news:', error);
       setNewsError(error.message || 'Failed to load news');
@@ -73,6 +108,24 @@ export const FeedView: React.FC = () => {
       fetchNews(0, false);
     }
   }, [getStanceHash, lastStanceHash, fetchNews]);
+
+  // Translate persona label when language changes
+  useEffect(() => {
+    if (
+      hasCompletedOnboarding &&
+      userProfile?.coordinates &&
+      language !== lastPersonaLang
+    ) {
+      translatePersonaLabel(userProfile.coordinates, language)
+        .then((translated) => {
+          setTranslatedPersona(translated);
+          setLastPersonaLang(language);
+        })
+        .catch((err) => {
+          console.error('Persona translation error:', err);
+        });
+    }
+  }, [language, hasCompletedOnboarding, userProfile?.coordinates, lastPersonaLang]);
 
   // Load more news (pagination)
   const loadMoreNews = () => {
@@ -152,6 +205,9 @@ export const FeedView: React.FC = () => {
          </PixelCard>
       </div>
 
+      {/* SECTION 1.5: VALUES COMPANY RANKING */}
+      <ValuesCompanyRanking />
+
       {/* SECTION 2: THE FEED */}
       <div className="text-center mb-10">
         <div className="flex items-center justify-center gap-4">
@@ -170,7 +226,7 @@ export const FeedView: React.FC = () => {
         <p className="font-mono text-xs text-gray-400">{t('feed', 'subtitle')}</p>
         {userProfile?.coordinates?.label && (
           <p className="font-mono text-[10px] text-gray-500 mt-1">
-            Curated for: {userProfile.coordinates.label}
+            Curated for: {translatedPersona || userProfile.coordinates.label}
           </p>
         )}
       </div>
