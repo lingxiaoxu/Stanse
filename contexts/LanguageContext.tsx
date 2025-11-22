@@ -70,6 +70,10 @@ const TRANSLATIONS = {
     },
     feed: {
         market: "Values Market Alignment",
+        company_ranking: "Values Company Ranking",
+        support_companies: "SUPPORT",
+        oppose_companies: "OPPOSE",
+        loading_rankings: "ANALYZING COMPANIES...",
         title: "THE FEED",
         subtitle: "GLOBAL INTELLIGENCE STREAM",
         lens: "PRISM LENS",
@@ -195,6 +199,10 @@ const TRANSLATIONS = {
     },
     feed: {
         market: "价值观市场对齐度",
+        company_ranking: "价值观公司排名",
+        support_companies: "支持",
+        oppose_companies: "抵制",
+        loading_rankings: "正在分析公司...",
         title: "情报流",
         subtitle: "全球情报流",
         lens: "三棱镜透视",
@@ -645,11 +653,12 @@ export const LanguageContext = createContext<LanguageContextType>({
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>(Language.EN);
 
-  const t = (section: string, key?: string) => {
-    const sectionData = TRANSLATIONS[language][section as keyof typeof TRANSLATIONS[typeof language]];
+  const t = (section: string, key?: string): string => {
+    const translations = TRANSLATIONS[language] as Record<string, Record<string, string>>;
+    const sectionData = translations[section];
     if (!sectionData) return "MISSING_SECTION";
-    if (!key) return sectionData;
-    return sectionData[key as keyof typeof sectionData] || "MISSING_KEY";
+    if (!key) return typeof sectionData === 'string' ? sectionData : "MISSING_KEY";
+    return sectionData[key] || "MISSING_KEY";
   };
 
   return (

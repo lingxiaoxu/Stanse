@@ -4,13 +4,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB88IrP4_wO-9lJ8Nya0QIoZMRTY71tnSc",
-  authDomain: "stanse-e3624.firebaseapp.com",
-  projectId: "stanse-e3624",
-  storageBucket: "stanse-e3624.firebasestorage.app",
-  messagingSenderId: "770213512314",
-  appId: "1:770213512314:web:50c63c77500bfcd813e7c3",
-  measurementId: "G-HFK71SBER7"
+  apiKey: "AIzaSyD1Hdjo17l2YrgakNzZW-lpx78vVE77keE",
+  authDomain: "stanseproject.firebaseapp.com",
+  projectId: "stanseproject",
+  storageBucket: "stanseproject.firebasestorage.app",
+  messagingSenderId: "626045766180",
+  appId: "1:626045766180:web:3a8d3967343cc3264ca6b1",
+  measurementId: "G-QZJYQ89Y49"
 };
 
 // Initialize Firebase
