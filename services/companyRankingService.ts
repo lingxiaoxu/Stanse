@@ -1,11 +1,12 @@
-import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { SP500_COMPANIES, StanceType, STANCE_TYPES, getStanceType } from '../data/sp500Companies';
+import { GoogleGenAI } from "@google/genai";
+import { SP500_COMPANIES, StanceType, getStanceType } from '../data/sp500Companies';
 import {
   getCompanyRankingsFromCache,
   saveCompanyRankingsToCache,
   RankedCompany,
   CompanyRanking
 } from './companyRankingCache';
+import { getRecentMixedNews } from './newsCache';
 
 // Get base URL for API proxy in production
 const getBaseUrl = () => {
@@ -40,6 +41,7 @@ const getStanceDescription = (stanceType: StanceType): string => {
 
 /**
  * Rank companies using AI with search grounding for recent news
+ * Uses real news from the last 12 hours to make rankings dynamic
  */
 export const rankCompaniesForStance = async (
   stanceType: StanceType,
@@ -58,60 +60,62 @@ export const rankCompaniesForStance = async (
   const stanceDescription = getStanceDescription(stanceType);
   const companyList = SP500_COMPANIES.map(c => `${c.symbol}: ${c.name} (${c.sector})`).join('\n');
 
+  // Get recent news from database to provide context
+  let recentNewsContext = '';
+  try {
+    const recentNews = await getRecentMixedNews(20);
+    if (recentNews.length > 0) {
+      recentNewsContext = `
+      RECENT NEWS CONTEXT (from last 12 hours):
+      ${recentNews.map(n => `- [${n.category}] ${n.title}`).join('\n')}
+      `;
+    }
+  } catch (e) {
+    console.warn('Could not fetch recent news for ranking context');
+  }
+
+  // IMPORTANT: Google Search Grounding does NOT support JSON response format
+  // We must use plain text and parse manually
   const prompt = `
     === COMPANY VALUES ALIGNMENT ANALYSIS ===
 
     Analyze S&P 500 companies for alignment with this political/values profile:
     ${stanceDescription}
 
-    COMPANIES:
+    ${recentNewsContext}
+
+    COMPANIES TO ANALYZE:
     ${companyList}
 
-    ANALYSIS CRITERIA (use recent news from last 30 days):
+    ANALYSIS CRITERIA (use Google Search for real-time news from last 12 hours):
     - Corporate political donations and lobbying
-    - CEO public statements and social media
+    - CEO public statements and social media (especially Twitter/X)
     - ESG practices, labor practices
     - International vs domestic focus
-    - Political controversies
+    - Recent political controversies or news
 
     Score each 0-100 (100 = perfectly aligned, 0 = completely opposed).
-    Return TOP 5 to SUPPORT (highest) and TOP 5 to OPPOSE (lowest).
-  `;
 
-  const responseSchema: Schema = {
-    type: Type.OBJECT,
-    properties: {
-      supportCompanies: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            symbol: { type: Type.STRING },
-            name: { type: Type.STRING },
-            sector: { type: Type.STRING },
-            score: { type: Type.NUMBER },
-            reasoning: { type: Type.STRING }
-          },
-          required: ['symbol', 'name', 'sector', 'score', 'reasoning']
-        }
-      },
-      opposeCompanies: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            symbol: { type: Type.STRING },
-            name: { type: Type.STRING },
-            sector: { type: Type.STRING },
-            score: { type: Type.NUMBER },
-            reasoning: { type: Type.STRING }
-          },
-          required: ['symbol', 'name', 'sector', 'score', 'reasoning']
-        }
-      }
-    },
-    required: ['supportCompanies', 'opposeCompanies']
-  };
+    Format your response EXACTLY like this:
+
+    ---SUPPORT_COMPANIES---
+    1. SYMBOL: [ticker] | NAME: [company name] | SECTOR: [sector] | SCORE: [0-100] | REASON: [brief reason, max 50 chars]
+    2. SYMBOL: [ticker] | NAME: [company name] | SECTOR: [sector] | SCORE: [0-100] | REASON: [brief reason]
+    3. SYMBOL: [ticker] | NAME: [company name] | SECTOR: [sector] | SCORE: [0-100] | REASON: [brief reason]
+    4. SYMBOL: [ticker] | NAME: [company name] | SECTOR: [sector] | SCORE: [0-100] | REASON: [brief reason]
+    5. SYMBOL: [ticker] | NAME: [company name] | SECTOR: [sector] | SCORE: [0-100] | REASON: [brief reason]
+    ---END_SUPPORT---
+
+    ---OPPOSE_COMPANIES---
+    1. SYMBOL: [ticker] | NAME: [company name] | SECTOR: [sector] | SCORE: [0-100] | REASON: [brief reason]
+    2. SYMBOL: [ticker] | NAME: [company name] | SECTOR: [sector] | SCORE: [0-100] | REASON: [brief reason]
+    3. SYMBOL: [ticker] | NAME: [company name] | SECTOR: [sector] | SCORE: [0-100] | REASON: [brief reason]
+    4. SYMBOL: [ticker] | NAME: [company name] | SECTOR: [sector] | SCORE: [0-100] | REASON: [brief reason]
+    5. SYMBOL: [ticker] | NAME: [company name] | SECTOR: [sector] | SCORE: [0-100] | REASON: [brief reason]
+    ---END_OPPOSE---
+
+    Return TOP 5 to SUPPORT (highest scores) and TOP 5 to OPPOSE (lowest scores).
+  `;
 
   try {
     const response = await ai.models.generateContent({
@@ -119,32 +123,65 @@ export const rankCompaniesForStance = async (
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        responseMimeType: "application/json",
-        responseSchema: responseSchema,
       }
     });
 
-    const result = JSON.parse(response.text || '{}');
+    const rawText = response.text || '';
+    console.log('Company ranking response length:', rawText.length);
 
-    const supportCompanies: RankedCompany[] = (result.supportCompanies || [])
-      .slice(0, 5)
-      .map((c: any) => ({
-        symbol: c.symbol,
-        name: c.name,
-        sector: c.sector,
-        score: Math.min(100, Math.max(0, c.score)),
-        reasoning: c.reasoning
-      }));
+    // Parse support companies
+    const supportCompanies: RankedCompany[] = [];
+    const supportMatch = rawText.match(/---SUPPORT_COMPANIES---([\s\S]*?)---END_SUPPORT---/);
+    if (supportMatch) {
+      const lines = supportMatch[1].trim().split('\n').filter(l => l.includes('SYMBOL:'));
+      for (const line of lines.slice(0, 5)) {
+        const symbolMatch = line.match(/SYMBOL:\s*([A-Z]+)/);
+        const nameMatch = line.match(/NAME:\s*([^|]+)/);
+        const sectorMatch = line.match(/SECTOR:\s*([^|]+)/);
+        const scoreMatch = line.match(/SCORE:\s*(\d+)/);
+        const reasonMatch = line.match(/REASON:\s*(.+?)(?:\||$)/);
 
-    const opposeCompanies: RankedCompany[] = (result.opposeCompanies || [])
-      .slice(0, 5)
-      .map((c: any) => ({
-        symbol: c.symbol,
-        name: c.name,
-        sector: c.sector,
-        score: Math.min(100, Math.max(0, c.score)),
-        reasoning: c.reasoning
-      }));
+        if (symbolMatch && nameMatch && scoreMatch) {
+          supportCompanies.push({
+            symbol: symbolMatch[1].trim(),
+            name: nameMatch[1].trim(),
+            sector: sectorMatch ? sectorMatch[1].trim() : 'Unknown',
+            score: Math.min(100, Math.max(0, parseInt(scoreMatch[1]))),
+            reasoning: reasonMatch ? reasonMatch[1].trim() : 'Aligned with values'
+          });
+        }
+      }
+    }
+
+    // Parse oppose companies
+    const opposeCompanies: RankedCompany[] = [];
+    const opposeMatch = rawText.match(/---OPPOSE_COMPANIES---([\s\S]*?)---END_OPPOSE---/);
+    if (opposeMatch) {
+      const lines = opposeMatch[1].trim().split('\n').filter(l => l.includes('SYMBOL:'));
+      for (const line of lines.slice(0, 5)) {
+        const symbolMatch = line.match(/SYMBOL:\s*([A-Z]+)/);
+        const nameMatch = line.match(/NAME:\s*([^|]+)/);
+        const sectorMatch = line.match(/SECTOR:\s*([^|]+)/);
+        const scoreMatch = line.match(/SCORE:\s*(\d+)/);
+        const reasonMatch = line.match(/REASON:\s*(.+?)(?:\||$)/);
+
+        if (symbolMatch && nameMatch && scoreMatch) {
+          opposeCompanies.push({
+            symbol: symbolMatch[1].trim(),
+            name: nameMatch[1].trim(),
+            sector: sectorMatch ? sectorMatch[1].trim() : 'Unknown',
+            score: Math.min(100, Math.max(0, parseInt(scoreMatch[1]))),
+            reasoning: reasonMatch ? reasonMatch[1].trim() : 'Conflicts with values'
+          });
+        }
+      }
+    }
+
+    // If parsing failed, use fallback
+    if (supportCompanies.length < 3 || opposeCompanies.length < 3) {
+      console.warn('Parsing failed, using fallback rankings');
+      return getFallbackRankings(stanceType);
+    }
 
     const ranking = { stanceType, supportCompanies, opposeCompanies };
     await saveCompanyRankingsToCache(ranking);

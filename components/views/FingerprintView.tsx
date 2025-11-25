@@ -110,6 +110,7 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
   }, [coords]);
 
   // Translate persona label when language changes or on initial load (for existing users)
+  // Uses localStorage caching to avoid repeated API calls
   useEffect(() => {
     // Use coords prop (from userProfile) for translation
     const coordsToTranslate = hasCompletedOnboarding ? coords : localCoords;
@@ -130,13 +131,37 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
       coordsToTranslate.label !== "Error" &&
       coordsToTranslate.label !== "Uncalibrated"
     ) {
+      const label = coordsToTranslate.label;
+      const cacheKey = `stanse_persona_${label}_${language.toLowerCase()}`;
+
+      // Check localStorage cache first
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          console.log(`[FingerprintCache] Cache hit for ${language}:`, cached);
+          setPersona(cached);
+          setLastTranslatedLang(language);
+          return;
+        }
+      } catch (e) {
+        console.warn('[FingerprintCache] Failed to read cache');
+      }
+
+      // Cache miss - need to translate
       setIsTranslating(true);
-      console.log(`Translating persona to ${language}:`, coordsToTranslate);
+      console.log(`[FingerprintCache] Cache miss, translating to ${language}:`, coordsToTranslate);
       translatePersonaLabel(coordsToTranslate, language)
         .then((translatedLabel) => {
-          console.log(`Translation result:`, translatedLabel);
+          console.log(`[FingerprintCache] Translation result:`, translatedLabel);
           setPersona(translatedLabel);
           setLastTranslatedLang(language);
+          // Save to localStorage
+          try {
+            localStorage.setItem(cacheKey, translatedLabel);
+            console.log(`[FingerprintCache] Translation cached for ${language}`);
+          } catch (e) {
+            console.warn('[FingerprintCache] Failed to cache translation');
+          }
         })
         .catch((error) => {
           console.error('Translation error:', error);
@@ -250,7 +275,7 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
           </div>
 
           <div className="w-full h-[350px] font-mono text-xs relative z-10">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
               {/* Dynamic outerRadius: smaller when labels shown to prevent clipping */}
               <RadarChart cx="50%" cy="50%" outerRadius={isCalibrating ? "75%" : "55%"} data={data}>
                 <PolarGrid stroke="#e5e5e5" strokeDasharray="4 4" />
