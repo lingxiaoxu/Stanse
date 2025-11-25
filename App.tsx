@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ViewState, PoliticalCoordinates } from './types';
+import { ViewState, PoliticalCoordinates, BrandAlignment } from './types';
 import { Compass, Search, Newspaper, Users, Menu } from 'lucide-react';
 import { SenseView } from './components/views/SenseView';
 import { FingerprintView } from './components/views/FingerprintView';
@@ -13,6 +13,8 @@ import { SettingsView } from './components/views/SettingsView';
 import { MenuOverlay } from './components/ui/MenuOverlay';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AppStateProvider } from './contexts/AppStateContext';
+import { recalibrateWithEntityFeedback } from './services/agents/stanceAgent';
 
 // Initial mock state for user profile (used as fallback)
 const INITIAL_PROFILE: PoliticalCoordinates = {
@@ -26,10 +28,18 @@ const StanseApp: React.FC = () => {
   const [view, setView] = useState<ViewState>(ViewState.FEED);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { t } = useLanguage();
-  const { user, userProfile: authUserProfile, logout, loading } = useAuth();
+  const { user, userProfile: authUserProfile, logout, loading, updateCoordinates } = useAuth();
 
   // Use profile from Firebase or fallback to initial
   const userProfile = authUserProfile?.coordinates || INITIAL_PROFILE;
+
+  // Persist SENSE report across tab switches
+  const [senseResult, setSenseResult] = useState<BrandAlignment | null>(null);
+  const [senseQuery, setSenseQuery] = useState('');
+
+  // Note: We intentionally do NOT clear the sense report when coordinates change.
+  // The report should persist until the user manually searches again.
+  // This allows the user to compare how their stance affects the score.
 
   const handleLogin = () => {
     setView(ViewState.FEED);
@@ -39,6 +49,19 @@ const StanseApp: React.FC = () => {
     await logout();
     setIsMenuOpen(false);
     setView(ViewState.FEED);
+  };
+
+  // Handle entity recalibration from SenseView
+  const handleRecalibrate = async (entityName: string, stance: 'SUPPORT' | 'OPPOSE', reason?: string) => {
+    if (!userProfile) return;
+
+    try {
+      const newCoords = await recalibrateWithEntityFeedback(userProfile, entityName, stance, reason);
+      await updateCoordinates(newCoords);
+    } catch (error) {
+      console.error('Recalibration failed:', error);
+      throw error;
+    }
   };
 
   // Show loading state
@@ -58,7 +81,23 @@ const StanseApp: React.FC = () => {
       case ViewState.FEED:
         return <FeedView />;
       case ViewState.SENSE:
-        return <SenseView userProfile={userProfile} onNavigate={setView} />;
+        // Extract demographics for country-aware analysis
+        const demographics = authUserProfile?.onboarding?.demographics;
+        return (
+          <SenseView
+            userProfile={userProfile}
+            userDemographics={demographics ? {
+              birthCountry: demographics.birthCountry,
+              currentCountry: demographics.currentCountry
+            } : undefined}
+            onNavigate={setView}
+            onRecalibrate={handleRecalibrate}
+            persistedResult={senseResult}
+            onResultChange={setSenseResult}
+            persistedQuery={senseQuery}
+            onQueryChange={setSenseQuery}
+          />
+        );
       case ViewState.FINGERPRINT:
         return <FingerprintView coords={userProfile} />;
       case ViewState.UNION:
@@ -164,7 +203,9 @@ const NavButton: React.FC<{ icon: React.ReactNode, label: string, isActive: bool
 const App: React.FC = () => (
   <AuthProvider>
     <LanguageProvider>
-      <StanseApp />
+      <AppStateProvider>
+        <StanseApp />
+      </AppStateProvider>
     </LanguageProvider>
   </AuthProvider>
 );
