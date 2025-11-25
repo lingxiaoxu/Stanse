@@ -7,6 +7,7 @@ import { OnboardingModal } from '../ui/OnboardingModal';
 import { calculatePersona, translatePersonaLabel } from '../../services/geminiService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAppState } from '../../contexts/AppStateContext';
 
 interface FingerprintViewProps {
   coords: PoliticalCoordinates;
@@ -33,6 +34,15 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
   const startTimeRef = useRef<number>(Date.now());
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // Use global state for persona loading (persists across tab switches)
+  const {
+    personaLoading,
+    personaProgress,
+    setPersonaLoading,
+    setPersonaProgress,
+    personaLoadingAbortController
+  } = useAppState();
+
   // Determine if we're in calibrating state (use isAnimating for better control)
   const isCalibrating = isAnimating;
 
@@ -48,9 +58,20 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
     setShowOnboarding(false);
     setPersona("CALIBRATING...");
     setIsAnimating(true);
+    setPersonaLoading(true);
+    setPersonaProgress(0);
     startTimeRef.current = Date.now();
 
+    // Create new AbortController for this operation
+    const abortController = new AbortController();
+    personaLoadingAbortController.current = abortController;
+
     try {
+      // Simulate progress updates during calibration
+      const progressInterval = setInterval(() => {
+        setPersonaProgress(prev => Math.min(prev + 5, 90));
+      }, 500);
+
       // Add timeout for the API call (30 seconds)
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Calibration timeout')), 30000)
@@ -61,9 +82,20 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
         timeoutPromise
       ]);
 
+      clearInterval(progressInterval);
+
+      // Check if aborted
+      if (abortController.signal.aborted) {
+        console.log('Persona calculation was aborted');
+        return;
+      }
+
+      setPersonaProgress(100);
+
       setLocalCoords(newCoords);
       setPersona(newCoords.label);
       setIsAnimating(false);
+      setPersonaLoading(false);
       // Set final coords
       setDisplayCoords({
         economic: newCoords.economic,
@@ -71,8 +103,14 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
         diplomatic: newCoords.diplomatic
       });
     } catch (error: any) {
+      if (abortController.signal.aborted) {
+        console.log('Persona calculation was aborted during error');
+        return;
+      }
       console.error('Onboarding error:', error);
       setIsAnimating(false);
+      setPersonaLoading(false);
+      setPersonaProgress(0);
       // Set default coordinates on error
       const fallbackCoords = {
         economic: 0,
@@ -320,6 +358,13 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
                   t('fingerprint', 'computing')
               ) : persona}
             </h3>
+
+            {/* Progress percentage */}
+            {personaLoading && personaProgress > 0 && personaProgress < 100 && (
+              <p className="font-mono text-xs text-gray-500 mt-2">
+                {personaProgress}%
+              </p>
+            )}
           </div>
         </PixelCard>
 
