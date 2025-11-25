@@ -27,6 +27,7 @@ export interface PoliticalCoordinates {
 
 export interface BrandAlignment {
   brandName: string;
+  entityType?: string; // COMPANY, PERSON, COUNTRY, ORGANIZATION, POLITICAL_PARTY
   score: number; // 0-100
   status: 'MATCH' | 'CONFLICT' | 'NEUTRAL';
   reportSummary: string; // concise summary
@@ -36,6 +37,7 @@ export interface BrandAlignment {
   reasoning: string; // deprecated but kept for compatibility if needed
   alternatives?: string[];
   sources: string[];
+  sourceMaterial?: string; // Political context and risk factors summary
 }
 
 export interface NewsEvent {
@@ -88,10 +90,19 @@ export interface WarStance {
   sideBName: string;
 }
 
+// Non-war geopolitical conflicts (trade wars, sovereignty, decoupling)
+export interface ConflictStance {
+  conflictId: string;
+  conflictName: string;
+  stance: 'SUPPORT' | 'OPPOSE' | 'NEUTRAL';
+  description?: string; // Additional context
+}
+
 export interface PoliticalPreferences {
   mostHatedInitiative: string;
   mostSupportedInitiative: string;
   warStances: WarStance[];
+  conflictStances: ConflictStance[]; // New: non-war conflicts
   questionAnswers: QuestionAnswer[];
 }
 
@@ -120,6 +131,39 @@ export const CURRENT_WARS: Omit<WarStance, 'stance'>[] = [
     warName: 'Sudan Civil War',
     sideAName: 'Sudanese Army (SAF)',
     sideBName: 'Rapid Support Forces (RSF)'
+  }
+];
+
+// Non-war geopolitical conflicts for questionnaire
+export interface ConflictQuestion {
+  conflictId: string;
+  conflictName: string;
+  supportLabel: string;
+  opposeLabel: string;
+  description?: string;
+}
+
+export const CURRENT_CONFLICTS: ConflictQuestion[] = [
+  {
+    conflictId: 'trade-war',
+    conflictName: 'Trade Tariff War: China/EU vs USA',
+    supportLabel: 'Support China/EU position',
+    opposeLabel: 'Support USA position',
+    description: 'Ongoing trade disputes and tariffs between major economic powers'
+  },
+  {
+    conflictId: 'taiwan-sovereignty',
+    conflictName: 'China Reclaiming Taiwan Sovereignty',
+    supportLabel: 'Support reunification',
+    opposeLabel: 'Oppose reunification',
+    description: 'Cross-strait tensions and sovereignty claims'
+  },
+  {
+    conflictId: 'west-decoupling',
+    conflictName: 'Western Economic Decoupling from China & Russia',
+    supportLabel: 'Support decoupling',
+    opposeLabel: 'Oppose decoupling',
+    description: 'Proposals to reduce economic interdependence with China and Russia'
   }
 ];
 

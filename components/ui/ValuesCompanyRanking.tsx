@@ -8,9 +8,10 @@ import { RankedCompany, CompanyRanking } from '../../services/companyRankingCach
 
 interface ValuesCompanyRankingProps {
   className?: string;
+  onRankingsChange?: (rankings: CompanyRanking) => void;
 }
 
-export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ className = '' }) => {
+export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ className = '', onRankingsChange }) => {
   const { t } = useLanguage();
   const { userProfile, hasCompletedOnboarding } = useAuth();
   const [rankings, setRankings] = useState<CompanyRanking | null>(null);
@@ -28,6 +29,8 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
         const { economic, social, diplomatic } = userProfile.coordinates;
         const result = await getCompanyRankingsForUser(economic, social, diplomatic);
         setRankings(result);
+        // Notify parent component of rankings change
+        onRankingsChange?.(result);
       } catch (err: any) {
         console.error('Error fetching company rankings:', err);
         setError(err.message || 'Failed to load rankings');
@@ -37,7 +40,7 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
     };
 
     fetchRankings();
-  }, [userProfile, hasCompletedOnboarding]);
+  }, [userProfile, hasCompletedOnboarding, onRankingsChange]);
 
   const handleRefresh = async () => {
     if (!userProfile?.coordinates) return;
@@ -53,6 +56,8 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
       const stanceType = getStanceType(economic, social, diplomatic);
       const result = await rankCompaniesForStance(stanceType, true);
       setRankings(result);
+      // Notify parent component of rankings change
+      onRankingsChange?.(result);
     } catch (err: any) {
       console.error('Error refreshing rankings:', err);
       setError(err.message || 'Failed to refresh');

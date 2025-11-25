@@ -1,10 +1,12 @@
 steps:
-  # Build the container image with the API key passed as substitution
+  # Build the container image with API keys passed as substitutions
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '--build-arg'
       - 'GEMINI_API_KEY=${_GEMINI_API_KEY}'
+      - '--build-arg'
+      - 'POLYGON_API_KEY=${_POLYGON_API_KEY}'
       - '-t'
       - 'gcr.io/$PROJECT_ID/stanse:latest'
       - '.'
@@ -28,6 +30,7 @@ steps:
 
 substitutions:
   _GEMINI_API_KEY: ''
+  _POLYGON_API_KEY: ''
 
 images:
   - 'gcr.io/$PROJECT_ID/stanse:latest'
