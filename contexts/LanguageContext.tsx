@@ -18,6 +18,7 @@ const TRANSLATIONS = {
         manifesto: "MANIFESTO",
         privacy: "PRIVACY",
         settings: "SETTINGS",
+        account: "ACCOUNT",
         source: "SOURCE",
         social: "SOCIAL MEDIA",
         logout: "LOGOUT",
@@ -25,9 +26,14 @@ const TRANSLATIONS = {
             manifesto: "Our Philosophy",
             privacy: "Zero-Knowledge Proof",
             settings: "Preferences",
+            account: "Account Details",
             source: "View on GitHub",
             social: "Connect X/Twitter"
-        }
+        },
+        account_email: "Email Address",
+        account_reset: "Reset Password",
+        account_reset_sent: "Password reset email sent!",
+        account_reset_error: "Failed to send reset email"
     },
     sense: {
         title: "SENSE",
@@ -149,6 +155,7 @@ const TRANSLATIONS = {
         manifesto: "宣言",
         privacy: "隐私",
         settings: "设置",
+        account: "账户",
         source: "源代码",
         social: "社交媒体",
         logout: "登出",
@@ -156,9 +163,14 @@ const TRANSLATIONS = {
             manifesto: "我们的哲学",
             privacy: "零知识证明",
             settings: "偏好设置",
+            account: "账户详情",
             source: "GitHub 仓库",
             social: "连接 X/Twitter"
-        }
+        },
+        account_email: "电子邮箱",
+        account_reset: "重置密码",
+        account_reset_sent: "密码重置邮件已发送！",
+        account_reset_error: "发送重置邮件失败"
     },
     sense: {
         title: "感知引擎",
@@ -280,6 +292,7 @@ const TRANSLATIONS = {
         manifesto: "マニフェスト",
         privacy: "プライバシー",
         settings: "設定",
+        account: "アカウント",
         source: "ソース",
         social: "ソーシャル",
         logout: "ログアウト",
@@ -287,9 +300,14 @@ const TRANSLATIONS = {
             manifesto: "私たちの哲学",
             privacy: "ゼロ知識証明",
             settings: "環境設定",
+            account: "アカウント詳細",
             source: "GitHubで表示",
             social: "X/Twitterを接続"
-        }
+        },
+        account_email: "メールアドレス",
+        account_reset: "パスワードをリセット",
+        account_reset_sent: "パスワードリセットメールを送信しました！",
+        account_reset_error: "リセットメールの送信に失敗しました"
     },
     sense: {
         title: "センス",
@@ -411,6 +429,7 @@ const TRANSLATIONS = {
         manifesto: "MANIFESTE",
         privacy: "CONFIDENTIALITÉ",
         settings: "RÉGLAGES",
+        account: "COMPTE",
         source: "SOURCE",
         social: "MÉDIAS SOCIAUX",
         logout: "DÉCONNEXION",
@@ -418,9 +437,14 @@ const TRANSLATIONS = {
             manifesto: "Notre Philosophie",
             privacy: "Preuve Zéro Connaissance",
             settings: "Préférences",
+            account: "Détails du Compte",
             source: "Voir sur GitHub",
             social: "Connecter X/Twitter"
-        }
+        },
+        account_email: "Adresse E-mail",
+        account_reset: "Réinitialiser le Mot de Passe",
+        account_reset_sent: "E-mail de réinitialisation envoyé !",
+        account_reset_error: "Échec de l'envoi de l'e-mail"
     },
     sense: {
         title: "SENS",
@@ -542,6 +566,7 @@ const TRANSLATIONS = {
         manifesto: "MANIFIESTO",
         privacy: "PRIVACIDAD",
         settings: "AJUSTES",
+        account: "CUENTA",
         source: "CÓDIGO",
         social: "REDES SOCIALES",
         logout: "CERRAR SESIÓN",
@@ -549,9 +574,14 @@ const TRANSLATIONS = {
             manifesto: "Nuestra Filosofía",
             privacy: "Prueba de Conocimiento Cero",
             settings: "Preferencias",
+            account: "Detalles de la Cuenta",
             source: "Ver en GitHub",
             social: "Conectar X/Twitter"
-        }
+        },
+        account_email: "Correo Electrónico",
+        account_reset: "Restablecer Contraseña",
+        account_reset_sent: "¡Correo de restablecimiento enviado!",
+        account_reset_error: "Error al enviar el correo"
     },
     sense: {
         title: "SENTIDO",
