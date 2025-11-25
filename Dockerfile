@@ -9,8 +9,14 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy source code (includes .env with GEMINI_API_KEY)
+# Copy source code
 COPY . .
+
+# Accept API keys as build arguments and write to .env
+ARG GEMINI_API_KEY
+ARG POLYGON_API_KEY
+RUN echo "GEMINI_API_KEY=${GEMINI_API_KEY}" > .env && \
+    echo "POLYGON_API_KEY=${POLYGON_API_KEY}" >> .env
 
 # Build the app
 RUN npm run build

@@ -9,7 +9,8 @@ import {
   getDocs,
   orderBy,
   limit,
-  Timestamp
+  Timestamp,
+  deleteDoc
 } from 'firebase/firestore';
 import { NewsEvent } from '../types';
 
@@ -150,6 +151,65 @@ export const getRecentMixedNews = async (maxResults: number = 5): Promise<NewsEv
 export const createTitleHash = hashTitle;
 
 /**
+ * Delete all news from the last N hours
+ * Used to clean up fake/generated news before populating with real news
+ */
+export const deleteRecentNews = async (hoursAgo: number = 12): Promise<{ deleted: number }> => {
+  try {
+    const cutoffTime = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
+    const cutoffTimestamp = Timestamp.fromDate(cutoffTime);
+
+    const q = query(
+      collection(db, NEWS_COLLECTION),
+      where('createdAt', '>=', cutoffTimestamp),
+      orderBy('createdAt', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    let deleted = 0;
+
+    for (const docSnapshot of querySnapshot.docs) {
+      await deleteDoc(doc(db, NEWS_COLLECTION, docSnapshot.id));
+      deleted++;
+      const newsData = docSnapshot.data();
+      console.log(`Deleted: ${newsData.title?.slice(0, 50)}...`);
+    }
+
+    console.log(`Deleted ${deleted} news items from the last ${hoursAgo} hours`);
+    return { deleted };
+  } catch (error) {
+    console.error('Error deleting recent news:', error);
+    return { deleted: 0 };
+  }
+};
+
+/**
+ * Delete ALL news from database (use with caution)
+ */
+export const deleteAllNews = async (): Promise<{ deleted: number }> => {
+  try {
+    const q = query(
+      collection(db, NEWS_COLLECTION),
+      limit(500) // Process in batches
+    );
+
+    const querySnapshot = await getDocs(q);
+    let deleted = 0;
+
+    for (const docSnapshot of querySnapshot.docs) {
+      await deleteDoc(doc(db, NEWS_COLLECTION, docSnapshot.id));
+      deleted++;
+    }
+
+    console.log(`Deleted ${deleted} news items total`);
+    return { deleted };
+  } catch (error) {
+    console.error('Error deleting all news:', error);
+    return { deleted: 0 };
+  }
+};
+
+/**
  * Check if an image URL is stale (broken services)
  */
 export const isStaleImageUrl = (imageUrl: string | undefined | null): boolean => {
@@ -212,5 +272,103 @@ export const cleanStaleNewsImages = async (
   } catch (error) {
     console.error('Error cleaning stale images:', error);
     return { cleaned: 0, total: 0 };
+  }
+};
+
+/**
+ * DEBUG: Find news by title keyword and log full details
+ * Call from browser console: import('/services/newsCache').then(m => m.debugFindNews('Sindoor'))
+ */
+export const debugFindNews = async (keyword: string): Promise<void> => {
+  try {
+    console.log(`\n🔍 Searching for news containing: "${keyword}"...\n`);
+
+    const q = query(
+      collection(db, NEWS_COLLECTION),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+
+    const querySnapshot = await getDocs(q);
+    let found = 0;
+
+    querySnapshot.forEach((docSnapshot) => {
+      const data = docSnapshot.data();
+      const title = data.title || '';
+
+      if (title.toLowerCase().includes(keyword.toLowerCase())) {
+        found++;
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`📰 FOUND: ${title}`);
+        console.log(`📋 Doc ID: ${docSnapshot.id}`);
+        console.log(`🖼️  Image URL: ${data.imageUrl || 'NO IMAGE'}`);
+        console.log(`📂 Category: ${data.category || 'N/A'}`);
+        console.log(`📅 Date: ${data.date || 'N/A'}`);
+        console.log(`🔗 Source URL: ${data.sourceUrl || 'N/A'}`);
+
+        // Check image URL issues
+        if (!data.imageUrl) {
+          console.log('⚠️  ISSUE: No image URL at all');
+        } else if (isStaleImageUrl(data.imageUrl)) {
+          console.log('⚠️  ISSUE: Image URL is STALE (known broken service)');
+        } else if (data.imageUrl.startsWith('data:')) {
+          console.log('⚠️  ISSUE: Image is base64 encoded (might be too large)');
+        } else if (!data.imageUrl.startsWith('http')) {
+          console.log('⚠️  ISSUE: Image URL does not start with http');
+        }
+
+        console.log('\n📦 Full data:', JSON.stringify(data, null, 2));
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      }
+    });
+
+    if (found === 0) {
+      console.log(`❌ No news found containing "${keyword}"`);
+      console.log(`   Total news items checked: ${querySnapshot.size}`);
+    } else {
+      console.log(`✅ Found ${found} news item(s) containing "${keyword}"`);
+    }
+  } catch (error) {
+    console.error('Error searching news:', error);
+  }
+};
+
+/**
+ * DEBUG: List all news with their image status
+ */
+export const debugListAllNewsImages = async (): Promise<void> => {
+  try {
+    console.log('\n📰 Listing all news and their image status...\n');
+
+    const q = query(
+      collection(db, NEWS_COLLECTION),
+      orderBy('createdAt', 'desc'),
+      limit(30)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const docs = querySnapshot.docs;
+
+    docs.forEach((docSnapshot, index) => {
+      const data = docSnapshot.data();
+      const title = (data.title || 'No title').slice(0, 60);
+      const imageUrl = data.imageUrl || '';
+
+      let status = '✅';
+      if (!imageUrl) {
+        status = '❌ NO IMAGE';
+      } else if (isStaleImageUrl(imageUrl)) {
+        status = '⚠️  STALE';
+      } else if (imageUrl.startsWith('data:')) {
+        status = '📦 BASE64';
+      }
+
+      console.log(`${index + 1}. ${status} | ${title}...`);
+      if (status !== '✅') {
+        console.log(`   └─ URL: ${imageUrl.slice(0, 80)}...`);
+      }
+    });
+  } catch (error) {
+    console.error('Error listing news:', error);
   }
 };

@@ -4,19 +4,20 @@ import { Layers, TrendingUp, TrendingDown, RefreshCw, ChevronDown } from 'lucide
 import { PixelCard } from '../ui/PixelCard';
 import { PixelButton } from '../ui/PixelButton';
 import { ValuesCompanyRanking } from '../ui/ValuesCompanyRanking';
-import { NewsEvent, StockTicker } from '../../types';
-import { generatePrismSummary, fetchPersonalizedNews, translatePersonaLabel } from '../../services/geminiService';
+import { NewsEvent } from '../../types';
+import { generatePrismSummary, fetchPersonalizedNews, translatePersonaLabel, cleanAndRepopulateNews } from '../../services/geminiService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { CompanyRanking } from '../../services/companyRankingCache';
 
-// Mock Stocks aligned with "Liberal/Green" values for demo
-const MOCK_STOCKS: StockTicker[] = [
-    { symbol: 'ICLN', name: 'Global Clean Energy', price: 14.52, change: 2.4, alignment: 'HIGH' },
-    { symbol: 'TSLA', name: 'Tesla Inc', price: 182.40, change: -1.2, alignment: 'HIGH' },
-    { symbol: 'ESG', name: 'Social Governance ETF', price: 64.20, change: 0.8, alignment: 'HIGH' },
-    { symbol: 'XOM', name: 'Exxon Mobil', price: 102.30, change: 1.5, alignment: 'LOW' },
-    { symbol: 'RIVN', name: 'Rivian Automotive', price: 12.30, change: 0.5, alignment: 'HIGH' },
-];
+// Stock price interface for market alignment display
+interface MarketStock {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  alignment: 'HIGH' | 'LOW';
+}
 
 export const FeedView: React.FC = () => {
   const [activePrism, setActivePrism] = useState<string | null>(null);
@@ -27,7 +28,92 @@ export const FeedView: React.FC = () => {
 
   // Translated persona label state
   const [translatedPersona, setTranslatedPersona] = useState<string | null>(null);
-  const [lastPersonaLang, setLastPersonaLang] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  // Market alignment stocks (from company rankings)
+  const [marketStocks, setMarketStocks] = useState<MarketStock[]>([]);
+  const [loadingStocks, setLoadingStocks] = useState(false);
+
+  // Handle rankings change from ValuesCompanyRanking component
+  const handleRankingsChange = useCallback(async (rankings: CompanyRanking) => {
+    console.log('Rankings changed, updating market stocks...');
+    setLoadingStocks(true);
+
+    try {
+      // Combine support and oppose companies
+      const allCompanies = [
+        ...rankings.supportCompanies.map(c => ({ ...c, alignment: 'HIGH' as const })),
+        ...rankings.opposeCompanies.map(c => ({ ...c, alignment: 'LOW' as const }))
+      ];
+
+      console.log('Companies for market alignment:', allCompanies.map(c => c.symbol));
+
+      // Fetch real stock prices using Polygon.io API
+      const polygonApiKey = process.env.POLYGON_API_KEY;
+
+      const stocksWithPrices: MarketStock[] = await Promise.all(
+        allCompanies.slice(0, 10).map(async (company) => {
+          // Fallback function for mock prices
+          const getMockPrice = () => {
+            const hashCode = company.symbol.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0);
+            const basePrice = 50 + Math.abs(hashCode % 300);
+            const change = ((hashCode % 100) - 50) / 10;
+            return {
+              symbol: company.symbol,
+              name: company.name,
+              price: Math.round(basePrice * 100) / 100,
+              change: Math.round(change * 100) / 100,
+              alignment: company.alignment
+            };
+          };
+
+          // If no API key, use mock data
+          if (!polygonApiKey) {
+            console.warn('No Polygon API key configured, using mock prices');
+            return getMockPrice();
+          }
+
+          try {
+            // Polygon.io Previous Close API - get previous day's close and current day's open
+            const response = await fetch(
+              `https://api.polygon.io/v2/aggs/ticker/${company.symbol}/prev?adjusted=true&apiKey=${polygonApiKey}`
+            );
+
+            if (response.ok) {
+              const data = await response.json();
+              const result = data.results?.[0];
+
+              if (result) {
+                const closePrice = result.c || 100; // close price
+                const openPrice = result.o || closePrice; // open price
+                const change = openPrice > 0 ? ((closePrice - openPrice) / openPrice) * 100 : 0;
+
+                return {
+                  symbol: company.symbol,
+                  name: company.name,
+                  price: Math.round(closePrice * 100) / 100,
+                  change: Math.round(change * 100) / 100,
+                  alignment: company.alignment
+                };
+              }
+            }
+          } catch (e) {
+            console.warn(`Failed to fetch price for ${company.symbol}:`, e);
+          }
+
+          // Fallback to mock price
+          return getMockPrice();
+        })
+      );
+
+      console.log('Market stocks updated:', stocksWithPrices.map(s => s.symbol));
+      setMarketStocks(stocksWithPrices);
+    } catch (error) {
+      console.error('Error fetching market stocks:', error);
+    } finally {
+      setLoadingStocks(false);
+    }
+  }, []);
 
   // Cache version - increment this to invalidate stale cached data
   const CACHE_VERSION = 'v5'; // Now using Gemini Imagen + curated Unsplash images
@@ -109,23 +195,48 @@ export const FeedView: React.FC = () => {
     }
   }, [getStanceHash, lastStanceHash, fetchNews]);
 
-  // Translate persona label when language changes
+  // Translate persona label when language changes - with localStorage caching
   useEffect(() => {
-    if (
-      hasCompletedOnboarding &&
-      userProfile?.coordinates &&
-      language !== lastPersonaLang
-    ) {
-      translatePersonaLabel(userProfile.coordinates, language)
-        .then((translated) => {
-          setTranslatedPersona(translated);
-          setLastPersonaLang(language);
-        })
-        .catch((err) => {
-          console.error('Persona translation error:', err);
-        });
+    if (!hasCompletedOnboarding || !userProfile?.coordinates) {
+      return;
     }
-  }, [language, hasCompletedOnboarding, userProfile?.coordinates, lastPersonaLang]);
+
+    const label = userProfile.coordinates.label;
+    const cacheKey = `stanse_persona_${label}_${language.toLowerCase()}`;
+
+    // Check localStorage cache first - ALWAYS check on mount
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        console.log('[PersonaCache] Cache hit from localStorage:', cached);
+        setTranslatedPersona(cached);
+        setIsTranslating(false);
+        return;
+      }
+    } catch (e) {
+      console.warn('[PersonaCache] Failed to read cache');
+    }
+
+    // Cache miss - need to translate
+    console.log('[PersonaCache] Cache miss, translating...');
+    setIsTranslating(true);
+    translatePersonaLabel(userProfile.coordinates, language)
+      .then((translated) => {
+        setTranslatedPersona(translated);
+        setIsTranslating(false);
+        // Save to localStorage with specific key
+        try {
+          localStorage.setItem(cacheKey, translated);
+          console.log('[PersonaCache] Translation cached:', translated);
+        } catch (e) {
+          console.warn('[PersonaCache] Failed to cache translation');
+        }
+      })
+      .catch((err) => {
+        console.error('Persona translation error:', err);
+        setIsTranslating(false);
+      });
+  }, [language, hasCompletedOnboarding, userProfile?.coordinates?.label]);
 
   // Load more news (pagination)
   const loadMoreNews = () => {
@@ -134,10 +245,32 @@ export const FeedView: React.FC = () => {
     }
   };
 
-  // Refresh news
-  const refreshNews = () => {
-    setCurrentPage(0);
-    fetchNews(0, false);
+  // Refresh news - cleans old news and fetches fresh real news
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshNews = async () => {
+    if (!userProfile?.coordinates) return;
+
+    setIsRefreshing(true);
+    setNewsError(null);
+
+    try {
+      console.log('Refreshing news: cleaning and fetching real news...');
+      const result = await cleanAndRepopulateNews(userProfile.coordinates);
+      console.log(`Refresh complete: deleted ${result.deleted}, fetched ${result.fetched}`);
+
+      // Clear local cache
+      localStorage.removeItem('stanse_news_cache');
+      localStorage.removeItem('stanse_last_stance_hash');
+
+      // Refresh the feed
+      setCurrentPage(0);
+      await fetchNews(0, false);
+    } catch (error: any) {
+      console.error('Error refreshing news:', error);
+      setNewsError(error.message || 'Failed to refresh news');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handlePrismClick = async (newsItem: NewsEvent) => {
@@ -184,29 +317,39 @@ export const FeedView: React.FC = () => {
          </style>
 
          <PixelCard className="p-0 bg-white/50 backdrop-blur-sm">
-             <div className="flex overflow-x-auto no-scrollbar snap-x horizontal-snap">
-                {MOCK_STOCKS.map((stock, i) => (
-                    <div key={i} className={`
-                        flex-shrink-0 flex flex-col p-4 border-r-2 border-black w-32
-                        ${stock.alignment === 'HIGH' ? 'bg-white' : 'bg-gray-100'}
-                        first:pl-4 last:border-r-0 snap-start
-                    `}>
-                        <div className="flex justify-between items-start gap-2 mb-2">
-                            <span className="font-bold font-mono text-sm">{stock.symbol}</span>
-                            {stock.change >= 0 ? <TrendingUp size={14} className="text-black"/> : <TrendingDown size={14} className="text-gray-500"/>}
-                        </div>
-                        <div className="font-pixel text-2xl leading-none mb-1">${stock.price}</div>
-                        <div className={`text-[10px] font-mono font-bold ${stock.change >= 0 ? 'text-black' : 'text-gray-400'}`}>
-                            {stock.change >= 0 ? '+' : ''}{stock.change}%
-                        </div>
-                    </div>
-                ))}
-             </div>
+             {loadingStocks && marketStocks.length === 0 ? (
+               <div className="p-4 text-center">
+                 <div className="font-mono text-xs text-gray-500 animate-pulse">Loading market data...</div>
+               </div>
+             ) : marketStocks.length === 0 ? (
+               <div className="p-4 text-center">
+                 <div className="font-mono text-xs text-gray-400">Complete onboarding to see aligned stocks</div>
+               </div>
+             ) : (
+               <div className="flex overflow-x-auto no-scrollbar snap-x horizontal-snap">
+                  {marketStocks.map((stock, i) => (
+                      <div key={`${stock.symbol}-${i}`} className={`
+                          flex-shrink-0 flex flex-col p-4 border-r-2 border-black w-32
+                          ${stock.alignment === 'HIGH' ? 'bg-white' : 'bg-gray-100'}
+                          first:pl-4 last:border-r-0 snap-start
+                      `}>
+                          <div className="flex justify-between items-start gap-2 mb-2">
+                              <span className="font-bold font-mono text-sm">{stock.symbol}</span>
+                              {stock.change >= 0 ? <TrendingUp size={14} className="text-black"/> : <TrendingDown size={14} className="text-gray-500"/>}
+                          </div>
+                          <div className="font-pixel text-2xl leading-none mb-1">${stock.price}</div>
+                          <div className={`text-[10px] font-mono font-bold ${stock.change >= 0 ? 'text-black' : 'text-gray-400'}`}>
+                              {stock.change >= 0 ? '+' : ''}{stock.change}%
+                          </div>
+                      </div>
+                  ))}
+               </div>
+             )}
          </PixelCard>
       </div>
 
       {/* SECTION 1.5: VALUES COMPANY RANKING */}
-      <ValuesCompanyRanking />
+      <ValuesCompanyRanking onRankingsChange={handleRankingsChange} />
 
       {/* SECTION 2: THE FEED */}
       <div className="text-center mb-10">
@@ -215,11 +358,11 @@ export const FeedView: React.FC = () => {
           {hasCompletedOnboarding && (
             <button
               onClick={refreshNews}
-              disabled={loadingNews}
+              disabled={loadingNews || isRefreshing}
               className="p-2 border-2 border-black bg-white hover:bg-gray-100 transition-colors disabled:opacity-50"
               title="Refresh news"
             >
-              <RefreshCw size={16} className={loadingNews ? 'animate-spin' : ''} />
+              <RefreshCw size={16} className={(loadingNews || isRefreshing) ? 'animate-spin' : ''} />
             </button>
           )}
         </div>

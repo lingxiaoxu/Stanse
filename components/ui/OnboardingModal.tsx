@@ -7,8 +7,10 @@ import {
   UserDemographics,
   PoliticalPreferences,
   WarStance,
+  ConflictStance,
   QuestionAnswer,
   CURRENT_WARS,
+  CURRENT_CONFLICTS,
   POLITICAL_QUESTIONS
 } from '../../types';
 
@@ -61,13 +63,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const [mostHatedInitiative, setMostHatedInitiative] = useState('');
   const [mostSupportedInitiative, setMostSupportedInitiative] = useState('');
   const [warStances, setWarStances] = useState<Record<string, 'SIDE_A' | 'SIDE_B' | 'NEUTRAL'>>({});
+  const [conflictStances, setConflictStances] = useState<Record<string, 'SUPPORT' | 'OPPOSE' | 'NEUTRAL'>>({});
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, 'A' | 'B' | 'NEUTRAL'>>({});
 
-  // 5 steps: Demographics, Questions, Initiatives, War stances, Confirm
-  const totalSteps = 5;
+  // 6 steps: Demographics, Questions, Initiatives, War stances, Conflict stances, Confirm
+  const totalSteps = 6;
 
   const handleWarStanceChange = (warId: string, stance: 'SIDE_A' | 'SIDE_B' | 'NEUTRAL') => {
     setWarStances(prev => ({ ...prev, [warId]: stance }));
+  };
+
+  const handleConflictStanceChange = (conflictId: string, stance: 'SUPPORT' | 'OPPOSE' | 'NEUTRAL') => {
+    setConflictStances(prev => ({ ...prev, [conflictId]: stance }));
   };
 
   const handleQuestionAnswer = (questionId: string, answer: 'A' | 'B' | 'NEUTRAL') => {
@@ -84,7 +91,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         return mostHatedInitiative.trim() && mostSupportedInitiative.trim();
       case 3: // War stances
         return CURRENT_WARS.every(war => warStances[war.warId]);
-      case 4: // Confirm
+      case 4: // Conflict stances (new step)
+        return CURRENT_CONFLICTS.every(conflict => conflictStances[conflict.conflictId]);
+      case 5: // Confirm
         return true;
       default:
         return false;
@@ -106,6 +115,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       stance: warStances[war.warId]
     }));
 
+    const conflictStancesList: ConflictStance[] = CURRENT_CONFLICTS.map(conflict => ({
+      conflictId: conflict.conflictId,
+      conflictName: conflict.conflictName,
+      stance: conflictStances[conflict.conflictId]
+    }));
+
     const questionAnswersList: QuestionAnswer[] = POLITICAL_QUESTIONS.map(q => ({
       questionId: q.id,
       answer: questionAnswers[q.id]
@@ -115,6 +130,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       mostHatedInitiative,
       mostSupportedInitiative,
       warStances: warStancesList,
+      conflictStances: conflictStancesList,
       questionAnswers: questionAnswersList
     };
 
@@ -332,9 +348,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         {/* Step 3: War Stances */}
         {step === 3 && (
           <div className="space-y-4">
-            <h3 className="font-mono text-sm font-bold uppercase mb-2">Conflict Positions</h3>
+            <h3 className="font-mono text-sm font-bold uppercase mb-2">Active War Positions</h3>
             <p className="font-mono text-xs text-gray-500 mb-4">
-              Select your stance on current global conflicts
+              Select your stance on current armed conflicts
             </p>
 
             {CURRENT_WARS.map((war) => (
@@ -380,8 +396,62 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           </div>
         )}
 
-        {/* Step 4: Confirmation */}
+        {/* Step 4: Non-War Conflict Stances (NEW) */}
         {step === 4 && (
+          <div className="space-y-4">
+            <h3 className="font-mono text-sm font-bold uppercase mb-2">Geopolitical Disputes</h3>
+            <p className="font-mono text-xs text-gray-500 mb-4">
+              Select your stance on non-war geopolitical conflicts
+            </p>
+
+            {CURRENT_CONFLICTS.map((conflict) => (
+              <div key={conflict.conflictId} className="border-2 border-black p-4 bg-white">
+                <p className="font-mono text-sm font-bold mb-2">{conflict.conflictName}</p>
+                {conflict.description && (
+                  <p className="font-mono text-xs text-gray-500 mb-3">{conflict.description}</p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleConflictStanceChange(conflict.conflictId, 'SUPPORT')}
+                    className={`flex-1 min-w-[100px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
+                      conflictStances[conflict.conflictId] === 'SUPPORT'
+                        ? 'bg-black text-white'
+                        : 'bg-white hover:bg-gray-100'
+                    }`}
+                  >
+                    {conflict.supportLabel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleConflictStanceChange(conflict.conflictId, 'NEUTRAL')}
+                    className={`flex-1 min-w-[80px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
+                      conflictStances[conflict.conflictId] === 'NEUTRAL'
+                        ? 'bg-black text-white'
+                        : 'bg-white hover:bg-gray-100'
+                    }`}
+                  >
+                    Neutral
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleConflictStanceChange(conflict.conflictId, 'OPPOSE')}
+                    className={`flex-1 min-w-[100px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
+                      conflictStances[conflict.conflictId] === 'OPPOSE'
+                        ? 'bg-black text-white'
+                        : 'bg-white hover:bg-gray-100'
+                    }`}
+                  >
+                    {conflict.opposeLabel}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Step 5: Confirmation */}
+        {step === 5 && (
           <div className="space-y-4">
             <h3 className="font-mono text-sm font-bold uppercase mb-4">Confirm Your Profile</h3>
 
