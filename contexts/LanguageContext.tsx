@@ -32,7 +32,8 @@ const TRANSLATIONS = {
         },
         account_email: "Email Address",
         account_reset: "Reset Password",
-        account_reset_sent: "Password reset email sent!",
+        account_reset_desc: "Click below to receive a password reset link via email",
+        account_reset_sent: "Password reset email sent! Check your inbox.",
         account_reset_error: "Failed to send reset email"
     },
     sense: {
@@ -169,7 +170,8 @@ const TRANSLATIONS = {
         },
         account_email: "电子邮箱",
         account_reset: "重置密码",
-        account_reset_sent: "密码重置邮件已发送！",
+        account_reset_desc: "点击下方按钮，通过电子邮件接收密码重置链接",
+        account_reset_sent: "密码重置邮件已发送！请查收邮箱。",
         account_reset_error: "发送重置邮件失败"
     },
     sense: {
@@ -306,7 +308,8 @@ const TRANSLATIONS = {
         },
         account_email: "メールアドレス",
         account_reset: "パスワードをリセット",
-        account_reset_sent: "パスワードリセットメールを送信しました！",
+        account_reset_desc: "以下をクリックしてパスワードリセットリンクをメールで受け取る",
+        account_reset_sent: "パスワードリセットメールを送信しました！受信トレイをご確認ください。",
         account_reset_error: "リセットメールの送信に失敗しました"
     },
     sense: {
@@ -443,7 +446,8 @@ const TRANSLATIONS = {
         },
         account_email: "Adresse E-mail",
         account_reset: "Réinitialiser le Mot de Passe",
-        account_reset_sent: "E-mail de réinitialisation envoyé !",
+        account_reset_desc: "Cliquez ci-dessous pour recevoir un lien de réinitialisation par e-mail",
+        account_reset_sent: "E-mail de réinitialisation envoyé ! Consultez votre boîte de réception.",
         account_reset_error: "Échec de l'envoi de l'e-mail"
     },
     sense: {
@@ -580,7 +584,8 @@ const TRANSLATIONS = {
         },
         account_email: "Correo Electrónico",
         account_reset: "Restablecer Contraseña",
-        account_reset_sent: "¡Correo de restablecimiento enviado!",
+        account_reset_desc: "Haga clic abajo para recibir un enlace de restablecimiento por correo",
+        account_reset_sent: "¡Correo de restablecimiento enviado! Revise su bandeja de entrada.",
         account_reset_error: "Error al enviar el correo"
     },
     sense: {

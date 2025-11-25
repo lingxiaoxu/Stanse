@@ -7,7 +7,8 @@ export enum ViewState {
   UNION = 'UNION',
   MANIFESTO = 'MANIFESTO',
   PRIVACY = 'PRIVACY',
-  SETTINGS = 'SETTINGS'
+  SETTINGS = 'SETTINGS',
+  ACCOUNT = 'ACCOUNT'
 }
 
 export enum Language {

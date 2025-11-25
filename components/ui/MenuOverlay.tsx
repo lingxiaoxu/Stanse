@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { X, BookOpen, Shield, Settings, LogOut, ChevronRight, Github, Twitter, Check, User } from 'lucide-react';
 import { ViewState } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContext';
 
 interface MenuOverlayProps {
   isOpen: boolean;
@@ -14,12 +13,9 @@ interface MenuOverlayProps {
 
 export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose, onNavigate, onLogout }) => {
   const { t } = useLanguage();
-  const { user, sendPasswordReset } = useAuth();
   const [twitterHandle, setTwitterHandle] = useState('');
   const [isConnectingTwitter, setIsConnectingTwitter] = useState(false);
   const [isTwitterConnected, setIsTwitterConnected] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const [passwordResetStatus, setPasswordResetStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   if (!isOpen) return null;
 
@@ -36,22 +32,6 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose, onNav
         setIsConnectingTwitter(false);
         setIsTwitterConnected(true);
     }, 1500);
-  };
-
-  const handlePasswordReset = async () => {
-    if (!user?.email) return;
-    setIsResettingPassword(true);
-    setPasswordResetStatus('idle');
-    try {
-      await sendPasswordReset(user.email);
-      setPasswordResetStatus('success');
-      setTimeout(() => setPasswordResetStatus('idle'), 3000);
-    } catch (error) {
-      setPasswordResetStatus('error');
-      setTimeout(() => setPasswordResetStatus('idle'), 3000);
-    } finally {
-      setIsResettingPassword(false);
-    }
   };
 
   return (
@@ -87,46 +67,12 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose, onNav
           sub={t('menu', 'subs').settings}
           onClick={() => handleNav(ViewState.SETTINGS)}
         />
-
-        {/* Account Section */}
-        <div className="w-full p-4 border-2 border-pixel-black bg-white shadow-pixel transition-all">
-          <div className="flex items-center gap-4 mb-3">
-            <User />
-            <div className="text-left">
-              <div className="font-pixel text-2xl leading-none">{t('menu', 'account')}</div>
-              <div className="font-mono text-xs opacity-60">{t('menu', 'subs').account}</div>
-            </div>
-          </div>
-
-          {/* Email Display */}
-          <div className="mb-3 pb-3 border-b border-gray-200">
-            <div className="font-mono text-xs text-gray-500 mb-1">{t('menu', 'account_email')}</div>
-            <div className="font-mono text-sm text-gray-900 break-all">{user?.email}</div>
-          </div>
-
-          {/* Reset Password Button */}
-          <button
-            onClick={handlePasswordReset}
-            disabled={isResettingPassword || passwordResetStatus === 'success'}
-            className="w-full bg-black text-white px-4 py-2 font-mono font-bold text-xs hover:bg-gray-800 disabled:opacity-50 transition-colors"
-          >
-            {isResettingPassword ? '...' : t('menu', 'account_reset')}
-          </button>
-
-          {/* Status Messages */}
-          {passwordResetStatus === 'success' && (
-            <div className="flex items-center gap-2 text-green-600 font-mono text-xs font-bold mt-2 border-t border-gray-100 pt-2 animate-fade-in">
-              <Check size={14} />
-              <span>{t('menu', 'account_reset_sent')}</span>
-            </div>
-          )}
-          {passwordResetStatus === 'error' && (
-            <div className="text-alert-red font-mono text-xs font-bold mt-2 border-t border-gray-100 pt-2 animate-fade-in">
-              {t('menu', 'account_reset_error')}
-            </div>
-          )}
-        </div>
-
+        <MenuItem
+          icon={<User />}
+          label={t('menu', 'account')}
+          sub={t('menu', 'subs').account}
+          onClick={() => handleNav(ViewState.ACCOUNT)}
+        />
         <MenuItem
           icon={<Github />}
           label={t('menu', 'source')}
