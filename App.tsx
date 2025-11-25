@@ -10,6 +10,7 @@ import { LoginView } from './components/views/LoginView';
 import { ManifestoView } from './components/views/ManifestoView';
 import { PrivacyView } from './components/views/PrivacyView';
 import { SettingsView } from './components/views/SettingsView';
+import { AccountView } from './components/views/AccountView';
 import { MenuOverlay } from './components/ui/MenuOverlay';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -108,6 +109,8 @@ const StanseApp: React.FC = () => {
         return <PrivacyView />;
       case ViewState.SETTINGS:
         return <SettingsView />;
+      case ViewState.ACCOUNT:
+        return <AccountView />;
       default:
         return <FeedView />;
     }
