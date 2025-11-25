@@ -369,7 +369,7 @@ export const FeedView: React.FC = () => {
                </div>
              ) : marketStocks.length === 0 ? (
                <div className="p-4 text-center">
-                 <div className="font-mono text-xs text-gray-400">Complete onboarding to see aligned stocks</div>
+                 <div className="font-mono text-xs text-gray-400 uppercase tracking-wider">{t('feed', 'onboarding_required_market')}</div>
                </div>
              ) : (
                <div className="flex overflow-x-auto no-scrollbar snap-x horizontal-snap">
@@ -429,8 +429,7 @@ export const FeedView: React.FC = () => {
       {/* Not onboarded message */}
       {!hasCompletedOnboarding && (
         <PixelCard className="text-center py-8">
-          <p className="font-mono text-sm text-gray-500 mb-2">Complete your stance calibration</p>
-          <p className="font-mono text-xs text-gray-400">to get personalized news</p>
+          <p className="font-mono text-xs text-gray-400 uppercase tracking-wider">{t('feed', 'onboarding_required_news')}</p>
         </PixelCard>
       )}
 
