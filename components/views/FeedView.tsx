@@ -9,6 +9,7 @@ import { generatePrismSummary, fetchPersonalizedNews, translatePersonaLabel, cle
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { CompanyRanking } from '../../services/companyRankingCache';
+import { useAppState } from '../../contexts/AppStateContext';
 
 // Stock price interface for market alignment display
 interface MarketStock {
@@ -25,6 +26,19 @@ export const FeedView: React.FC = () => {
   const [loadingPrism, setLoadingPrism] = useState(false);
   const { t, language } = useLanguage();
   const { userProfile, hasCompletedOnboarding } = useAuth();
+
+  // Use global state for news loading (persists across tab switches)
+  const {
+    feedNews,
+    feedLoading,
+    feedProgress,
+    feedError,
+    setFeedNews,
+    setFeedLoading,
+    setFeedProgress,
+    setFeedError,
+    feedLoadingAbortController
+  } = useAppState();
 
   // Translated persona label state
   const [translatedPersona, setTranslatedPersona] = useState<string | null>(null);
@@ -118,23 +132,7 @@ export const FeedView: React.FC = () => {
   // Cache version - increment this to invalidate stale cached data
   const CACHE_VERSION = 'v5'; // Now using Gemini Imagen + curated Unsplash images
 
-  // News state - initialize from localStorage cache (with version check)
-  const [news, setNews] = useState<NewsEvent[]>(() => {
-    try {
-      const cacheVersion = localStorage.getItem('stanse_cache_version');
-      // If cache version doesn't match, clear stale data
-      if (cacheVersion !== CACHE_VERSION) {
-        localStorage.removeItem('stanse_news_cache');
-        localStorage.removeItem('stanse_last_stance_hash');
-        localStorage.setItem('stanse_cache_version', CACHE_VERSION);
-        return [];
-      }
-      const cached = localStorage.getItem('stanse_news_cache');
-      return cached ? JSON.parse(cached) : [];
-    } catch { return []; }
-  });
-  const [loadingNews, setLoadingNews] = useState(false);
-  const [newsError, setNewsError] = useState<string | null>(null);
+  // Local pagination state (not affected by tab switches)
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMoreNews, setHasMoreNews] = useState(true);
   const [lastStanceHash, setLastStanceHash] = useState<string>(() => {
@@ -145,6 +143,27 @@ export const FeedView: React.FC = () => {
     return localStorage.getItem('stanse_last_stance_hash') || '';
   });
 
+  // Initialize news from localStorage on mount
+  useEffect(() => {
+    if (feedNews.length === 0) {
+      try {
+        const cacheVersion = localStorage.getItem('stanse_cache_version');
+        if (cacheVersion !== CACHE_VERSION) {
+          localStorage.removeItem('stanse_news_cache');
+          localStorage.removeItem('stanse_last_stance_hash');
+          localStorage.setItem('stanse_cache_version', CACHE_VERSION);
+        } else {
+          const cached = localStorage.getItem('stanse_news_cache');
+          if (cached) {
+            setFeedNews(JSON.parse(cached));
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load cached news:', e);
+      }
+    }
+  }, []);
+
   // Create a hash of the user's stance to detect changes
   const getStanceHash = useCallback(() => {
     if (!userProfile?.coordinates) return '';
@@ -152,26 +171,46 @@ export const FeedView: React.FC = () => {
     return `${economic}-${social}-${diplomatic}-${label}`;
   }, [userProfile]);
 
-  // Fetch news when stance changes or on initial load
+  // Fetch news when stance changes or on initial load (with progress tracking)
   const fetchNews = useCallback(async (page: number = 0, append: boolean = false) => {
     if (!userProfile?.coordinates || !hasCompletedOnboarding) return;
 
-    setLoadingNews(true);
-    setNewsError(null);
+    // Create new AbortController for this fetch
+    const abortController = new AbortController();
+    feedLoadingAbortController.current = abortController;
+
+    setFeedLoading(true);
+    setFeedError(null);
+    setFeedProgress(0);
 
     try {
+      // Simulate progress updates during fetch
+      const progressInterval = setInterval(() => {
+        setFeedProgress(prev => Math.min(prev + 10, 90));
+      }, 200);
+
       const fetchedNews = await fetchPersonalizedNews(userProfile.coordinates, page);
+
+      clearInterval(progressInterval);
+
+      // Check if this fetch was aborted
+      if (abortController.signal.aborted) {
+        console.log('News fetch was aborted');
+        return;
+      }
+
+      setFeedProgress(100);
 
       const newStanceHash = getStanceHash();
 
       if (append) {
-        setNews(prev => {
+        setFeedNews(prev => {
           const updated = [...prev, ...fetchedNews];
           localStorage.setItem('stanse_news_cache', JSON.stringify(updated));
           return updated;
         });
       } else {
-        setNews(fetchedNews);
+        setFeedNews(fetchedNews);
         localStorage.setItem('stanse_news_cache', JSON.stringify(fetchedNews));
       }
 
@@ -180,12 +219,19 @@ export const FeedView: React.FC = () => {
       setLastStanceHash(newStanceHash);
       localStorage.setItem('stanse_last_stance_hash', newStanceHash);
     } catch (error: any) {
+      if (abortController.signal.aborted) {
+        console.log('News fetch was aborted during error');
+        return;
+      }
       console.error('Error fetching news:', error);
-      setNewsError(error.message || 'Failed to load news');
+      setFeedError(error.message || 'Failed to load news');
+      setFeedProgress(0);
     } finally {
-      setLoadingNews(false);
+      if (!abortController.signal.aborted) {
+        setFeedLoading(false);
+      }
     }
-  }, [userProfile, hasCompletedOnboarding, getStanceHash]);
+  }, [userProfile, hasCompletedOnboarding, getStanceHash, feedLoadingAbortController, setFeedLoading, setFeedError, setFeedProgress, setFeedNews]);
 
   // Initial load and stance change detection
   useEffect(() => {
@@ -240,7 +286,7 @@ export const FeedView: React.FC = () => {
 
   // Load more news (pagination)
   const loadMoreNews = () => {
-    if (!loadingNews && hasMoreNews) {
+    if (!feedLoading && hasMoreNews) {
       fetchNews(currentPage + 1, true);
     }
   };
@@ -251,7 +297,7 @@ export const FeedView: React.FC = () => {
     if (!userProfile?.coordinates) return;
 
     setIsRefreshing(true);
-    setNewsError(null);
+    setFeedError(null);
 
     try {
       console.log('Refreshing news: cleaning and fetching real news...');
@@ -267,7 +313,7 @@ export const FeedView: React.FC = () => {
       await fetchNews(0, false);
     } catch (error: any) {
       console.error('Error refreshing news:', error);
-      setNewsError(error.message || 'Failed to refresh news');
+      setFeedError(error.message || 'Failed to refresh news');
     } finally {
       setIsRefreshing(false);
     }
@@ -358,11 +404,11 @@ export const FeedView: React.FC = () => {
           {hasCompletedOnboarding && (
             <button
               onClick={refreshNews}
-              disabled={loadingNews || isRefreshing}
+              disabled={feedLoading || isRefreshing}
               className="p-2 border-2 border-black bg-white hover:bg-gray-100 transition-colors disabled:opacity-50"
               title="Refresh news"
             >
-              <RefreshCw size={16} className={(loadingNews || isRefreshing) ? 'animate-spin' : ''} />
+              <RefreshCw size={16} className={(feedLoading || isRefreshing) ? 'animate-spin' : ''} />
             </button>
           )}
         </div>
@@ -370,6 +416,12 @@ export const FeedView: React.FC = () => {
         {userProfile?.coordinates?.label && (
           <p className="font-mono text-[10px] text-gray-500 mt-1">
             Curated for: {translatedPersona || userProfile.coordinates.label}
+          </p>
+        )}
+        {/* Progress percentage */}
+        {feedLoading && feedProgress > 0 && feedProgress < 100 && (
+          <p className="font-mono text-xs text-gray-500 mt-2">
+            {feedProgress}%
           </p>
         )}
       </div>
@@ -383,7 +435,7 @@ export const FeedView: React.FC = () => {
       )}
 
       {/* Loading state */}
-      {loadingNews && news.length === 0 && (
+      {feedLoading && feedNews.length === 0 && (
         <div className="text-center py-12">
           <div className="font-pixel text-2xl animate-pulse mb-2">LOADING...</div>
           <p className="font-mono text-xs text-gray-500">Searching for news aligned with your stance</p>
@@ -391,9 +443,9 @@ export const FeedView: React.FC = () => {
       )}
 
       {/* Error state */}
-      {newsError && (
+      {feedError && (
         <PixelCard className="text-center py-8 bg-red-50">
-          <p className="font-mono text-sm text-red-600 mb-2">{newsError}</p>
+          <p className="font-mono text-sm text-red-600 mb-2">{feedError}</p>
           <PixelButton variant="secondary" onClick={refreshNews} className="text-xs">
             Try Again
           </PixelButton>
@@ -401,13 +453,13 @@ export const FeedView: React.FC = () => {
       )}
 
       {/* Feed List Container with Local Relative Positioning for Timeline */}
-      {news.length > 0 && (
+      {feedNews.length > 0 && (
         <div className="relative pl-6">
           {/* Timeline Line */}
           <div className="absolute left-[3px] top-2 bottom-6 w-0.5 bg-pixel-black opacity-20 z-0"></div>
 
           <div className="space-y-12 relative z-10">
-              {news.map((newsItem) => (
+              {feedNews.map((newsItem) => (
               <div key={newsItem.id} className="relative">
                   {/* Timeline Dot */}
                   <div className="absolute -left-[24px] top-6 w-3 h-3 bg-black border-2 border-white box-content"></div>
@@ -468,16 +520,16 @@ export const FeedView: React.FC = () => {
           </div>
 
           {/* Load More Button */}
-          {hasMoreNews && news.length >= 5 && (
+          {hasMoreNews && feedNews.length >= 5 && (
             <div className="mt-8 text-center">
               <PixelButton
                 variant="secondary"
                 onClick={loadMoreNews}
-                disabled={loadingNews}
+                disabled={feedLoading}
                 className="flex items-center gap-2 mx-auto"
               >
                 <ChevronDown size={16} />
-                {loadingNews ? 'Loading...' : 'Load More'}
+                {feedLoading ? 'Loading...' : 'Load More'}
               </PixelButton>
             </div>
           )}
