@@ -1,12 +1,13 @@
 steps:
-  # Build the container image with API keys passed as substitutions
+  # Build the container image with API keys from Secret Manager
   - name: 'gcr.io/cloud-builders/docker'
+    secretEnv: ['GEMINI_API_KEY', 'POLYGON_API_KEY']
     args:
       - 'build'
       - '--build-arg'
-      - 'GEMINI_API_KEY=${_GEMINI_API_KEY}'
+      - 'GEMINI_API_KEY=$$GEMINI_API_KEY'
       - '--build-arg'
-      - 'POLYGON_API_KEY=${_POLYGON_API_KEY}'
+      - 'POLYGON_API_KEY=$$POLYGON_API_KEY'
       - '-t'
       - 'gcr.io/$PROJECT_ID/stanse:latest'
       - '.'
@@ -15,7 +16,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/stanse:latest']
 
-  # Deploy container image to Cloud Run
+  # Deploy container image to Cloud Run with env vars from Secret Manager
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -27,10 +28,16 @@ steps:
       - '--region'
       - 'us-central1'
       - '--allow-unauthenticated'
+      - '--update-secrets'
+      - 'GEMINI_API_KEY=gemini-api-key:latest,POLYGON_API_KEY=polygon-api-key:latest'
 
-substitutions:
-  _GEMINI_API_KEY: ''
-  _POLYGON_API_KEY: ''
+# Define secrets from Secret Manager
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/gemini-api-key/versions/latest
+      env: 'GEMINI_API_KEY'
+    - versionName: projects/$PROJECT_ID/secrets/polygon-api-key/versions/latest
+      env: 'POLYGON_API_KEY'
 
 images:
   - 'gcr.io/$PROJECT_ID/stanse:latest'
