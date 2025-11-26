@@ -369,7 +369,7 @@ export const FeedView: React.FC = () => {
                </div>
              ) : marketStocks.length === 0 ? (
                <div className="p-4 text-center">
-                 <div className="font-mono text-xs text-gray-400 uppercase tracking-wider">{t('feed', 'onboarding_required_market')}</div>
+                 <div className="font-pixel text-sm">{t('feed', 'onboarding_required_market')}</div>
                </div>
              ) : (
                <div className="flex overflow-x-auto no-scrollbar snap-x horizontal-snap">
