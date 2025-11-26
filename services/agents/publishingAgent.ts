@@ -316,39 +316,41 @@ export const processNewsWithEmbeddings = async (
   news: ProcessedNewsItem[]
 ): Promise<ProcessedNewsItem[]> => {
   const opId = publishingLogger.operationStart('processNewsWithEmbeddings', { newsCount: news.length });
-  const processedNews: ProcessedNewsItem[] = [];
   let cacheHits = 0;
   let newEmbeddings = 0;
   let failed = 0;
 
-  for (const item of news) {
-    // Check if embedding already exists
-    const existingEmbedding = await getEmbedding(item.titleHash);
+  // OPTIMIZATION: Process all embeddings in parallel using Promise.all
+  const processedNews = await Promise.all(
+    news.map(async (item) => {
+      // Check if embedding already exists
+      const existingEmbedding = await getEmbedding(item.titleHash);
 
-    if (existingEmbedding) {
-      cacheHits++;
-      processedNews.push({
-        ...item,
-        embedding: existingEmbedding.embedding
-      });
-    } else {
-      // Generate new embedding
-      const text = `${item.title}. ${item.summary}`;
-      const embedding = await generateEmbedding(text);
-
-      if (embedding) {
-        newEmbeddings++;
-        await saveEmbedding(item.titleHash, embedding, item.title, item.category);
-        processedNews.push({
+      if (existingEmbedding) {
+        cacheHits++;
+        return {
           ...item,
-          embedding
-        });
+          embedding: existingEmbedding.embedding
+        };
       } else {
-        failed++;
-        processedNews.push(item);
+        // Generate new embedding
+        const text = `${item.title}. ${item.summary}`;
+        const embedding = await generateEmbedding(text);
+
+        if (embedding) {
+          newEmbeddings++;
+          await saveEmbedding(item.titleHash, embedding, item.title, item.category);
+          return {
+            ...item,
+            embedding
+          };
+        } else {
+          failed++;
+          return item;
+        }
       }
-    }
-  }
+    })
+  );
 
   publishingLogger.operationSuccess(opId, 'processNewsWithEmbeddings', {
     total: news.length,
