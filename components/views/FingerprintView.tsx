@@ -296,6 +296,7 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
       <OnboardingModal
         isOpen={showOnboarding}
         onComplete={handleOnboardingComplete}
+        onClose={() => setShowOnboarding(false)}
       />
 
       <div className="space-y-6 w-full max-w-md mx-auto pb-20">
