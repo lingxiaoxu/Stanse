@@ -23,7 +23,25 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables (contains API keys)
+# Environment variables (contains API keys - NEVER commit these!)
 .env
 .env.local
 .env.*.local
+.env.development
+.env.development.local
+.env.production
+.env.production.local
+.env.test
+.env.test.local
+
+# Google Cloud credentials and secrets
+credentials.json
+service-account-key.json
+*-key.json
+*.pem
+*.key
+
+# Cloud Build secrets (if accidentally downloaded)
+*_key.txt
+gemini_key.txt
+polygon_key.txt

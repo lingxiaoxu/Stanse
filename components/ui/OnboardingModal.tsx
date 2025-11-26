@@ -13,6 +13,8 @@ import {
   CURRENT_CONFLICTS,
   POLITICAL_QUESTIONS
 } from '../../types';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { ONBOARDING_TRANSLATIONS } from '../../translations/onboarding';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -50,6 +52,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   onComplete,
   onClose
 }) => {
+  const { language } = useLanguage();
+  const t = ONBOARDING_TRANSLATIONS[language];
+
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -151,9 +156,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         {/* Header */}
         <div className="flex justify-between items-center mb-6 border-b-2 border-black pb-4">
           <div>
-            <h2 className="font-pixel text-2xl">CALIBRATION</h2>
+            <h2 className="font-pixel text-2xl">{t.calibration}</h2>
             <p className="font-mono text-xs text-gray-500 uppercase">
-              Step {step + 1} of {totalSteps}
+              {t.stepOf.replace('{step}', String(step + 1)).replace('{total}', String(totalSteps))}
             </p>
           </div>
           {onClose && (
@@ -177,16 +182,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         {/* Step 0: Demographics */}
         {step === 0 && (
           <div className="space-y-4">
-            <h3 className="font-mono text-sm font-bold uppercase mb-4">Your Background</h3>
+            <h3 className="font-mono text-sm font-bold uppercase mb-4">{t.steps.demographics}</h3>
 
             <div className="space-y-2">
-              <label className="font-mono text-xs font-bold block uppercase">Birth Country</label>
+              <label className="font-mono text-xs font-bold block uppercase">{t.demographics.birthCountry}</label>
               <select
                 value={birthCountry}
                 onChange={(e) => setBirthCountry(e.target.value)}
                 className="w-full border-2 border-black p-3 font-mono bg-white"
               >
-                <option value="">Select country...</option>
+                <option value="">{t.demographics.selectCountry}</option>
                 {COUNTRIES.map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
@@ -194,7 +199,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             </div>
 
             <div className="space-y-2">
-              <label className="font-mono text-xs font-bold block uppercase">Current Country</label>
+              <label className="font-mono text-xs font-bold block uppercase">{t.demographics.currentCountry}</label>
               <select
                 value={currentCountry}
                 onChange={(e) => {
@@ -203,7 +208,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 }}
                 className="w-full border-2 border-black p-3 font-mono bg-white"
               >
-                <option value="">Select country...</option>
+                <option value="">{t.demographics.selectCountry}</option>
                 {COUNTRIES.map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
@@ -212,7 +217,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
             <div className="space-y-2">
               <label className="font-mono text-xs font-bold block uppercase">
-                {currentCountry === 'United States' ? 'State' : 'State / Province'}
+                {currentCountry === 'United States' ? t.demographics.state : t.demographics.stateProvince}
               </label>
               {currentCountry === 'United States' ? (
                 <select
@@ -220,7 +225,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   onChange={(e) => setCurrentState(e.target.value)}
                   className="w-full border-2 border-black p-3 font-mono bg-white"
                 >
-                  <option value="">Select state...</option>
+                  <option value="">{t.demographics.selectState}</option>
                   {US_STATES.map(s => (
                     <option key={s} value={s}>{s}</option>
                   ))}
@@ -230,97 +235,100 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   type="text"
                   value={currentState}
                   onChange={(e) => setCurrentState(e.target.value)}
-                  placeholder="Enter state/province..."
+                  placeholder={t.demographics.enterState}
                   className="w-full border-2 border-black p-3 font-mono bg-white"
                 />
               )}
             </div>
 
             <div className="space-y-2">
-              <label className="font-mono text-xs font-bold block uppercase">Age</label>
+              <label className="font-mono text-xs font-bold block uppercase">{t.demographics.age}</label>
               <input
                 type="number"
                 min="13"
                 max="120"
                 value={age}
                 onChange={(e) => setAge(e.target.value ? parseInt(e.target.value) : '')}
-                placeholder="Enter your age..."
+                placeholder={t.demographics.enterAge}
                 className="w-full border-2 border-black p-3 font-mono bg-white"
               />
             </div>
           </div>
         )}
 
-        {/* Step 1: Political Questions (5 questions) */}
+        {/* Step 1: Political Questions (6 questions) */}
         {step === 1 && (
           <div className="space-y-4">
-            <h3 className="font-mono text-sm font-bold uppercase mb-2">Political Compass</h3>
+            <h3 className="font-mono text-sm font-bold uppercase mb-2">{t.steps.questions}</h3>
             <p className="font-mono text-xs text-gray-500 mb-4">
-              Answer these questions to calibrate your political position
+              {t.questionsDesc}
             </p>
 
-            {POLITICAL_QUESTIONS.map((q, index) => (
-              <div key={q.id} className="border-2 border-black p-4 bg-white">
-                <p className="font-mono text-sm font-bold mb-3">
-                  {index + 1}. {q.question}
-                </p>
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuestionAnswer(q.id, 'A')}
-                    className={`w-full px-3 py-2 font-mono text-xs border-2 border-black transition-all text-left ${
-                      questionAnswers[q.id] === 'A'
-                        ? 'bg-black text-white'
-                        : 'bg-white hover:bg-gray-100'
-                    }`}
-                  >
-                    {q.optionA}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuestionAnswer(q.id, 'NEUTRAL')}
-                    className={`w-full px-3 py-2 font-mono text-xs border-2 border-black transition-all text-left ${
-                      questionAnswers[q.id] === 'NEUTRAL'
-                        ? 'bg-black text-white'
-                        : 'bg-white hover:bg-gray-100'
-                    }`}
-                  >
-                    Neutral / It depends
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuestionAnswer(q.id, 'B')}
-                    className={`w-full px-3 py-2 font-mono text-xs border-2 border-black transition-all text-left ${
-                      questionAnswers[q.id] === 'B'
-                        ? 'bg-black text-white'
-                        : 'bg-white hover:bg-gray-100'
-                    }`}
-                  >
-                    {q.optionB}
-                  </button>
+            {POLITICAL_QUESTIONS.map((q, index) => {
+              const questionTranslation = t.questions[q.id];
+              return (
+                <div key={q.id} className="border-2 border-black p-4 bg-white">
+                  <p className="font-mono text-sm font-bold mb-3">
+                    {index + 1}. {questionTranslation.question}
+                  </p>
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => handleQuestionAnswer(q.id, 'A')}
+                      className={`w-full px-3 py-2 font-mono text-xs border-2 border-black transition-all text-left ${
+                        questionAnswers[q.id] === 'A'
+                          ? 'bg-black text-white'
+                          : 'bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      {questionTranslation.optionA}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuestionAnswer(q.id, 'NEUTRAL')}
+                      className={`w-full px-3 py-2 font-mono text-xs border-2 border-black transition-all text-left ${
+                        questionAnswers[q.id] === 'NEUTRAL'
+                          ? 'bg-black text-white'
+                          : 'bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      {t.neutral}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuestionAnswer(q.id, 'B')}
+                      className={`w-full px-3 py-2 font-mono text-xs border-2 border-black transition-all text-left ${
+                        questionAnswers[q.id] === 'B'
+                          ? 'bg-black text-white'
+                          : 'bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      {questionTranslation.optionB}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {/* Step 2: Political Initiatives */}
         {step === 2 && (
           <div className="space-y-4">
-            <h3 className="font-mono text-sm font-bold uppercase mb-4">Your Political Views</h3>
+            <h3 className="font-mono text-sm font-bold uppercase mb-4">{t.steps.initiatives}</h3>
 
             <div className="space-y-2">
               <label className="font-mono text-xs font-bold block uppercase">
-                Political Initiative You MOST OPPOSE
+                {t.initiatives.oppose}
               </label>
               <p className="font-mono text-xs text-gray-500 mb-2">
-                e.g., "Universal Basic Income", "Border Wall", "Carbon Tax"
+                {t.initiatives.opposeEx}
               </p>
               <input
                 type="text"
                 value={mostHatedInitiative}
                 onChange={(e) => setMostHatedInitiative(e.target.value)}
-                placeholder="Enter initiative you oppose..."
+                placeholder={t.initiatives.opposePlaceholder}
                 className="w-full border-2 border-black p-3 font-mono bg-white"
                 maxLength={100}
               />
@@ -328,16 +336,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
             <div className="space-y-2">
               <label className="font-mono text-xs font-bold block uppercase">
-                Political Initiative You MOST SUPPORT
+                {t.initiatives.support}
               </label>
               <p className="font-mono text-xs text-gray-500 mb-2">
-                e.g., "Medicare for All", "School Choice", "Green New Deal"
+                {t.initiatives.supportEx}
               </p>
               <input
                 type="text"
                 value={mostSupportedInitiative}
                 onChange={(e) => setMostSupportedInitiative(e.target.value)}
-                placeholder="Enter initiative you support..."
+                placeholder={t.initiatives.supportPlaceholder}
                 className="w-full border-2 border-black p-3 font-mono bg-white"
                 maxLength={100}
               />
@@ -348,134 +356,139 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         {/* Step 3: War Stances */}
         {step === 3 && (
           <div className="space-y-4">
-            <h3 className="font-mono text-sm font-bold uppercase mb-2">Active War Positions</h3>
+            <h3 className="font-mono text-sm font-bold uppercase mb-2">{t.steps.wars}</h3>
             <p className="font-mono text-xs text-gray-500 mb-4">
-              Select your stance on current armed conflicts
+              {t.warsDesc}
             </p>
 
-            {CURRENT_WARS.map((war) => (
-              <div key={war.warId} className="border-2 border-black p-4 bg-white">
-                <p className="font-mono text-sm font-bold mb-3">{war.warName}</p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleWarStanceChange(war.warId, 'SIDE_A')}
-                    className={`flex-1 min-w-[80px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
-                      warStances[war.warId] === 'SIDE_A'
-                        ? 'bg-black text-white'
-                        : 'bg-white hover:bg-gray-100'
-                    }`}
-                  >
-                    {war.sideAName}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleWarStanceChange(war.warId, 'NEUTRAL')}
-                    className={`flex-1 min-w-[80px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
-                      warStances[war.warId] === 'NEUTRAL'
-                        ? 'bg-black text-white'
-                        : 'bg-white hover:bg-gray-100'
-                    }`}
-                  >
-                    Neutral
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleWarStanceChange(war.warId, 'SIDE_B')}
-                    className={`flex-1 min-w-[80px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
-                      warStances[war.warId] === 'SIDE_B'
-                        ? 'bg-black text-white'
-                        : 'bg-white hover:bg-gray-100'
-                    }`}
-                  >
-                    {war.sideBName}
-                  </button>
+            {CURRENT_WARS.map((war) => {
+              const warTranslation = t.wars[war.warId];
+              return (
+                <div key={war.warId} className="border-2 border-black p-4 bg-white">
+                  <p className="font-mono text-sm font-bold mb-3">{warTranslation.name}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleWarStanceChange(war.warId, 'SIDE_A')}
+                      className={`flex-1 min-w-[80px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
+                        warStances[war.warId] === 'SIDE_A'
+                          ? 'bg-black text-white'
+                          : 'bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      {warTranslation.sideA}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleWarStanceChange(war.warId, 'NEUTRAL')}
+                      className={`flex-1 min-w-[80px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
+                        warStances[war.warId] === 'NEUTRAL'
+                          ? 'bg-black text-white'
+                          : 'bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      {t.neutral}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleWarStanceChange(war.warId, 'SIDE_B')}
+                      className={`flex-1 min-w-[80px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
+                        warStances[war.warId] === 'SIDE_B'
+                          ? 'bg-black text-white'
+                          : 'bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      {warTranslation.sideB}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {/* Step 4: Non-War Conflict Stances (NEW) */}
         {step === 4 && (
           <div className="space-y-4">
-            <h3 className="font-mono text-sm font-bold uppercase mb-2">Geopolitical Disputes</h3>
+            <h3 className="font-mono text-sm font-bold uppercase mb-2">{t.steps.conflicts}</h3>
             <p className="font-mono text-xs text-gray-500 mb-4">
-              Select your stance on non-war geopolitical conflicts
+              {t.conflictsDesc}
             </p>
 
-            {CURRENT_CONFLICTS.map((conflict) => (
-              <div key={conflict.conflictId} className="border-2 border-black p-4 bg-white">
-                <p className="font-mono text-sm font-bold mb-2">{conflict.conflictName}</p>
-                {conflict.description && (
-                  <p className="font-mono text-xs text-gray-500 mb-3">{conflict.description}</p>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleConflictStanceChange(conflict.conflictId, 'SUPPORT')}
-                    className={`flex-1 min-w-[100px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
-                      conflictStances[conflict.conflictId] === 'SUPPORT'
-                        ? 'bg-black text-white'
-                        : 'bg-white hover:bg-gray-100'
-                    }`}
-                  >
-                    {conflict.supportLabel}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleConflictStanceChange(conflict.conflictId, 'NEUTRAL')}
-                    className={`flex-1 min-w-[80px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
-                      conflictStances[conflict.conflictId] === 'NEUTRAL'
-                        ? 'bg-black text-white'
-                        : 'bg-white hover:bg-gray-100'
-                    }`}
-                  >
-                    Neutral
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleConflictStanceChange(conflict.conflictId, 'OPPOSE')}
-                    className={`flex-1 min-w-[100px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
-                      conflictStances[conflict.conflictId] === 'OPPOSE'
-                        ? 'bg-black text-white'
-                        : 'bg-white hover:bg-gray-100'
-                    }`}
-                  >
-                    {conflict.opposeLabel}
-                  </button>
+            {CURRENT_CONFLICTS.map((conflict) => {
+              const conflictTranslation = t.conflicts[conflict.conflictId];
+              return (
+                <div key={conflict.conflictId} className="border-2 border-black p-4 bg-white">
+                  <p className="font-mono text-sm font-bold mb-2">{conflictTranslation.name}</p>
+                  {conflictTranslation.desc && (
+                    <p className="font-mono text-xs text-gray-500 mb-3">{conflictTranslation.desc}</p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleConflictStanceChange(conflict.conflictId, 'SUPPORT')}
+                      className={`flex-1 min-w-[100px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
+                        conflictStances[conflict.conflictId] === 'SUPPORT'
+                          ? 'bg-black text-white'
+                          : 'bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      {conflictTranslation.supportLabel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleConflictStanceChange(conflict.conflictId, 'NEUTRAL')}
+                      className={`flex-1 min-w-[80px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
+                        conflictStances[conflict.conflictId] === 'NEUTRAL'
+                          ? 'bg-black text-white'
+                          : 'bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      {t.neutral}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleConflictStanceChange(conflict.conflictId, 'OPPOSE')}
+                      className={`flex-1 min-w-[100px] px-3 py-2 font-mono text-xs border-2 border-black transition-all ${
+                        conflictStances[conflict.conflictId] === 'OPPOSE'
+                          ? 'bg-black text-white'
+                          : 'bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      {conflictTranslation.opposeLabel}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {/* Step 5: Confirmation */}
         {step === 5 && (
           <div className="space-y-4">
-            <h3 className="font-mono text-sm font-bold uppercase mb-4">Confirm Your Profile</h3>
+            <h3 className="font-mono text-sm font-bold uppercase mb-4">{t.steps.confirm}</h3>
 
             <div className="space-y-3 font-mono text-sm">
               <div className="border-b border-gray-200 pb-2">
-                <span className="text-gray-500">Birth:</span> {birthCountry}
+                <span className="text-gray-500">{t.confirm.birth}:</span> {birthCountry}
               </div>
               <div className="border-b border-gray-200 pb-2">
-                <span className="text-gray-500">Location:</span> {currentState}, {currentCountry}
+                <span className="text-gray-500">{t.confirm.location}:</span> {currentState}, {currentCountry}
               </div>
               <div className="border-b border-gray-200 pb-2">
-                <span className="text-gray-500">Age:</span> {age}
+                <span className="text-gray-500">{t.confirm.age}:</span> {age}
               </div>
               <div className="border-b border-gray-200 pb-2">
-                <span className="text-gray-500">Oppose:</span> {mostHatedInitiative}
+                <span className="text-gray-500">{t.confirm.oppose}:</span> {mostHatedInitiative}
               </div>
               <div className="border-b border-gray-200 pb-2">
-                <span className="text-gray-500">Support:</span> {mostSupportedInitiative}
+                <span className="text-gray-500">{t.confirm.support}:</span> {mostSupportedInitiative}
               </div>
             </div>
 
             <p className="font-mono text-xs text-gray-500 mt-4 p-3 bg-gray-100 border border-gray-300">
-              Your responses will be analyzed by AI to calculate your political fingerprint.
-              Data is stored securely and never shared.
+              {t.confirm.disclaimer}
             </p>
           </div>
         )}
@@ -489,7 +502,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               className="flex items-center gap-1"
             >
               <ChevronLeft size={16} />
-              BACK
+              {t.back}
             </PixelButton>
           ) : (
             <div />
@@ -502,7 +515,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               disabled={!canProceed()}
               className="flex items-center gap-1"
             >
-              NEXT
+              {t.next}
               <ChevronRight size={16} />
             </PixelButton>
           ) : (
@@ -513,7 +526,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               isLoading={isSubmitting}
               className="flex items-center gap-1"
             >
-              CALIBRATE
+              {t.submit}
             </PixelButton>
           )}
         </div>
