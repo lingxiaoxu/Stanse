@@ -114,10 +114,12 @@ const TRANSLATIONS = {
         notifications: "PUSH NOTIFICATIONS",
         loc: "LOCATION SERVICES",
         strict: "STRICT MODE",
+        demo: "DEMO MODE",
         delete: "Delete Account & Wipe Local Data",
         sub_notif: "Alerts for campaign updates",
         sub_loc: "For local store scanning only",
-        sub_strict: "Warn on 'Neutral' alignment"
+        sub_strict: "Warn on 'Neutral' alignment",
+        sub_demo: "Include dummy users in Union data"
     },
     manifesto: {
         title: "MANIFESTO",
@@ -252,10 +254,12 @@ const TRANSLATIONS = {
         notifications: "推送通知",
         loc: "定位服务",
         strict: "严格模式",
+        demo: "演示模式",
         delete: "删除账户并清除本地数据",
         sub_notif: "战役更新提醒",
         sub_loc: "仅用于本地商店扫描",
-        sub_strict: "对“中立”对齐发出警告"
+        sub_strict: "对'中立'对齐发出警告",
+        sub_demo: "联合数据包含演示用户"
     },
     manifesto: {
         title: "宣言",
@@ -390,10 +394,12 @@ const TRANSLATIONS = {
         notifications: "プッシュ通知",
         loc: "位置情報サービス",
         strict: "厳格モード",
+        demo: "デモモード",
         delete: "アカウント削除とデータ消去",
         sub_notif: "キャンペーン更新のアラート",
         sub_loc: "ローカル店舗スキャン用",
-        sub_strict: "「中立」アライメントに警告"
+        sub_strict: "「中立」アライメントに警告",
+        sub_demo: "ユニオンデータにダミーユーザーを含む"
     },
     manifesto: {
         title: "マニフェスト",
@@ -528,10 +534,12 @@ const TRANSLATIONS = {
         notifications: "NOTIFICATIONS PUSH",
         loc: "SERVICES LOCALISATION",
         strict: "MODE STRICT",
+        demo: "MODE DÉMO",
         delete: "Supprimer Compte & Données",
         sub_notif: "Alertes mises à jour campagnes",
         sub_loc: "Pour scan magasins locaux",
-        sub_strict: "Avertir sur alignement 'Neutre'"
+        sub_strict: "Avertir sur alignement 'Neutre'",
+        sub_demo: "Inclure utilisateurs factices dans données Union"
     },
     manifesto: {
         title: "MANIFESTE",
@@ -666,10 +674,12 @@ const TRANSLATIONS = {
         notifications: "NOTIFICACIONES PUSH",
         loc: "SERVICIOS UBICACIÓN",
         strict: "MODO ESTRICTO",
+        demo: "MODO DEMO",
         delete: "Borrar Cuenta y Datos",
         sub_notif: "Alertas actualizaciones campañas",
         sub_loc: "Para escaneo tiendas locales",
-        sub_strict: "Advertir en alineación 'Neutra'"
+        sub_strict: "Advertir en alineación 'Neutra'",
+        sub_demo: "Incluir usuarios ficticios en datos de Unión"
     },
     manifesto: {
         title: "MANIFIESTO",
