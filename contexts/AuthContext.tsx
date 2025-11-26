@@ -18,6 +18,8 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   hasCompletedOnboarding: boolean;
+  demoMode: boolean;
+  setDemoMode: (enabled: boolean) => void;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
   signInGoogle: () => Promise<void>;
@@ -50,8 +52,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Demo Mode state - persists in localStorage
+  const [demoMode, setDemoModeState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('stanse_demo_mode');
+    return saved !== null ? JSON.parse(saved) : true; // Default to ON
+  });
+
+  const setDemoMode = (enabled: boolean) => {
+    setDemoModeState(enabled);
+    localStorage.setItem('stanse_demo_mode', JSON.stringify(enabled));
+  };
+
   // Subscribe to auth state changes
   useEffect(() => {
+    // Set maximum loading time to 3 seconds
+    const loadingTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+
     const unsubscribe = subscribeToAuthState(async (firebaseUser) => {
       setUser(firebaseUser);
 
@@ -67,10 +85,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUserProfile(null);
       }
 
+      clearTimeout(loadingTimeout);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(loadingTimeout);
+      unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -218,6 +240,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     error,
     hasCompletedOnboarding: userProfile?.hasCompletedOnboarding ?? false,
+    demoMode,
+    setDemoMode,
     signIn,
     signUp,
     signInGoogle,
