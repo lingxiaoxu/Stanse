@@ -369,63 +369,61 @@ export const processNewsItems = async (
   rawNews: RawNewsItem[]
 ): Promise<ProcessedNewsItem[]> => {
   const opId = newsLogger.operationStart('processNews', { count: rawNews.length });
-  const processedNews: ProcessedNewsItem[] = [];
   let cached = 0;
   let translated = 0;
 
-  for (const item of rawNews) {
-    const titleHash = createTitleHash(item.title);
+  // OPTIMIZATION: Process all news items in parallel using Promise.all
+  const processedNews = await Promise.all(
+    rawNews.map(async (item) => {
+      const titleHash = createTitleHash(item.title);
 
-    // Check if already in cache
-    const cachedItem = await getNewsFromCache(titleHash);
-    if (cachedItem) {
-      newsLogger.debug('processNews', `Cache hit for: ${item.title.slice(0, 40)}...`);
-      cached++;
-      processedNews.push({
-        ...cachedItem,
+      // Check if already in cache
+      const cachedItem = await getNewsFromCache(titleHash);
+      if (cachedItem) {
+        newsLogger.debug('processNews', `Cache hit for: ${item.title.slice(0, 40)}...`);
+        cached++;
+        return {
+          ...cachedItem,
+          titleHash,
+          originalLanguage: item.language,
+          sources: [item.source],
+        } as ProcessedNewsItem;
+      }
+
+      // OPTIMIZATION: Translate title and summary in parallel
+      const [englishTitle, englishSummary] = await Promise.all([
+        item.language === 'en' ? Promise.resolve(item.title) : translateToEnglish(item.title, item.language),
+        item.language === 'en' ? Promise.resolve(item.summary) : translateToEnglish(item.summary, item.language)
+      ]);
+
+      if (item.language !== 'en') {
+        translated++;
+        newsLogger.debug('processNews', `Translated from ${item.language}: ${englishTitle.slice(0, 40)}...`);
+      }
+
+      // Generate seed for image selection
+      const seed = englishTitle.split('').reduce((acc, char) => {
+        return ((acc << 5) - acc + char.charCodeAt(0)) | 0;
+      }, 0);
+
+      const processedItem: ProcessedNewsItem = {
+        id: `news-${titleHash}`,
         titleHash,
+        title: englishTitle,
+        summary: englishSummary,
+        date: getRelativeDate(item.publishedAt),
+        imageUrl: getImageForCategory(item.category || 'WORLD', seed),
+        category: item.category?.toUpperCase() || 'WORLD',
         originalLanguage: item.language,
         sources: [item.source],
-      } as ProcessedNewsItem);
-      continue;
-    }
+      };
 
-    // Translate if needed
-    const englishTitle = item.language === 'en'
-      ? item.title
-      : await translateToEnglish(item.title, item.language);
-
-    const englishSummary = item.language === 'en'
-      ? item.summary
-      : await translateToEnglish(item.summary, item.language);
-
-    if (item.language !== 'en') {
-      translated++;
-      newsLogger.debug('processNews', `Translated from ${item.language}: ${englishTitle.slice(0, 40)}...`);
-    }
-
-    // Generate seed for image selection
-    const seed = englishTitle.split('').reduce((acc, char) => {
-      return ((acc << 5) - acc + char.charCodeAt(0)) | 0;
-    }, 0);
-
-    const processedItem: ProcessedNewsItem = {
-      id: `news-${titleHash}`,
-      titleHash,
-      title: englishTitle,
-      summary: englishSummary,
-      date: getRelativeDate(item.publishedAt),
-      imageUrl: getImageForCategory(item.category || 'WORLD', seed),
-      category: item.category?.toUpperCase() || 'WORLD',
-      originalLanguage: item.language,
-      sources: [item.source],
-    };
-
-    // Save to cache
-    await saveNewsToCache(processedItem);
-    newsLogger.debug('processNews', `Saved to cache: ${englishTitle.slice(0, 40)}...`);
-    processedNews.push(processedItem);
-  }
+      // Save to cache
+      await saveNewsToCache(processedItem);
+      newsLogger.debug('processNews', `Saved to cache: ${englishTitle.slice(0, 40)}...`);
+      return processedItem;
+    })
+  );
 
   newsLogger.operationSuccess(opId, 'processNews', { processed: processedNews.length });
   newsLogger.summary('processNews', {
