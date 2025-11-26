@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { BrandAlignment, PoliticalCoordinates, OnboardingAnswers, NewsEvent } from "../types";
 import {
@@ -28,8 +27,9 @@ const getBaseUrl = () => {
 
 // Initialize Gemini Client with proxy for production (CORS workaround)
 const baseUrl = getBaseUrl();
+const apiKey = process.env.GEMINI_API_KEY || '';
 const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || '',
+  apiKey: apiKey,
   httpOptions: baseUrl ? { baseUrl } : undefined
 });
 
@@ -536,8 +536,8 @@ export const calculateCoordinatesFromOnboarding = async (
     // Language-specific instructions for the persona TYPE (not full label - nationality is added separately)
     const languageInstructions: Record<string, string> = {
       'en': 'Generate a creative 2-3 word political persona TYPE IN ENGLISH (e.g., "Progressive Globalist", "Traditional Libertarian", "Centrist Pragmatist", "Contrarian Socialist")',
-      'zh': 'Generate a creative 2-3 word political persona TYPE IN CHINESE/中文 (e.g., "进步全球主义者", "传统自由派", "务实中间派")',
-      'ja': 'Generate a creative 2-3 word political persona TYPE IN JAPANESE/日本語 (e.g., "進歩的グローバリスト", "伝統的リバタリアン")',
+      'zh': 'Generate a creative 2-3 word political persona TYPE IN CHINESE/中文 (e.g., "进步全球���义者", "传统自由派", "务实中间派")',
+      'ja': 'Generate a creative 2-3 word political persona TYPE IN JAPANESE/日本語 (e.g., "進歩的グローバリスト", "伝統的リバタリア���")',
       'fr': 'Generate a creative 2-3 word political persona TYPE IN FRENCH/FRANÇAIS (e.g., "Progressiste Mondialiste", "Libéral Traditionnel")',
       'es': 'Generate a creative 2-3 word political persona TYPE IN SPANISH/ESPAÑOL (e.g., "Progresista Globalista", "Liberal Tradicional")'
     };

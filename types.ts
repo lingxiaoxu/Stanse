@@ -128,10 +128,10 @@ export const CURRENT_WARS: Omit<WarStance, 'stance'>[] = [
     sideBName: 'Palestine'
   },
   {
-    warId: 'sudan-civil',
-    warName: 'Sudan Civil War',
-    sideAName: 'Sudanese Army (SAF)',
-    sideBName: 'Rapid Support Forces (RSF)'
+    warId: 'pakistan-india',
+    warName: 'Pakistan-India Conflict',
+    sideAName: 'Pakistan',
+    sideBName: 'India'
   }
 ];
 
@@ -154,9 +154,9 @@ export const CURRENT_CONFLICTS: ConflictQuestion[] = [
   },
   {
     conflictId: 'taiwan-sovereignty',
-    conflictName: 'China Reclaiming Taiwan Sovereignty',
-    supportLabel: 'Support reunification',
-    opposeLabel: 'Oppose reunification',
+    conflictName: 'China-Taiwan Cross-Strait Relations',
+    supportLabel: 'Support Mainland China',
+    opposeLabel: 'Oppose Mainland China',
     description: 'Cross-strait tensions and sovereignty claims'
   },
   {
@@ -220,5 +220,13 @@ export const POLITICAL_QUESTIONS: PoliticalQuestion[] = [
     dimension: 'diplomatic',
     optionA: 'Prioritize national interests, limit foreign involvement',
     optionB: 'Embrace international cooperation and global institutions'
+  },
+  // Religion and governance (1 question) - Social dimension
+  {
+    id: 'social-3',
+    question: 'Should religion play a role in politics and governance?',
+    dimension: 'social',
+    optionA: 'Yes, religious values should guide policies',
+    optionB: 'No, keep religion separate from government'
   }
 ];

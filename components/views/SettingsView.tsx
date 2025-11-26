@@ -12,7 +12,7 @@ export const SettingsView: React.FC = () => {
   const [strictMode, setStrictMode] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const { t, language, setLanguage } = useLanguage();
-  const { resetOnboarding, hasCompletedOnboarding } = useAuth();
+  const { resetOnboarding, hasCompletedOnboarding, demoMode, setDemoMode } = useAuth();
 
   return (
     <div className="max-w-lg mx-auto space-y-6 animate-fade-in pb-20">
@@ -59,6 +59,12 @@ export const SettingsView: React.FC = () => {
                 sub={t('settings', 'sub_strict')}
                 checked={strictMode}
                 onChange={() => setStrictMode(!strictMode)}
+            />
+            <ToggleItem
+                label={t('settings', 'demo')}
+                sub={t('settings', 'sub_demo')}
+                checked={demoMode}
+                onChange={() => setDemoMode(!demoMode)}
             />
 
             {/* Reset Stance Button */}
