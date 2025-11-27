@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { User } from 'firebase/auth';
 import {
   subscribeToAuthState,
@@ -11,6 +11,13 @@ import {
 import { getUserProfile, updateUserCoordinates, saveOnboardingAnswers, resetUserOnboarding, UserProfile } from '../services/userService';
 import { PoliticalCoordinates, OnboardingAnswers } from '../types';
 import { calculateCoordinatesFromOnboarding } from '../services/geminiService';
+import {
+  registerUser,
+  startHeartbeat,
+  stopHeartbeat,
+  setupVisibilityListener,
+  setupBeforeUnloadListener
+} from '../services/userActionService';
 
 interface AuthContextType {
   user: User | null;
@@ -51,6 +58,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Heartbeat management
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const visibilityCleanupRef = useRef<(() => void) | null>(null);
+  const beforeUnloadCleanupRef = useRef<(() => void) | null>(null);
 
   // Demo Mode state - persists in localStorage
   const [demoMode, setDemoModeState] = useState<boolean>(() => {
@@ -95,6 +107,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
+  // Manage heartbeat lifecycle based on user and onboarding status
+  useEffect(() => {
+    // Cleanup function to stop heartbeat
+    const cleanup = () => {
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+      if (visibilityCleanupRef.current) {
+        visibilityCleanupRef.current();
+        visibilityCleanupRef.current = null;
+      }
+      if (beforeUnloadCleanupRef.current) {
+        beforeUnloadCleanupRef.current();
+        beforeUnloadCleanupRef.current = null;
+      }
+    };
+
+    // Start heartbeat if user is logged in and has completed onboarding
+    if (user?.uid && userProfile?.hasCompletedOnboarding) {
+      console.log('🚀 Starting Polis Protocol heartbeat for user:', user.uid);
+
+      // Start heartbeat interval
+      heartbeatIntervalRef.current = startHeartbeat(user.uid);
+
+      // Setup visibility listener
+      visibilityCleanupRef.current = setupVisibilityListener(user.uid);
+
+      // Setup beforeunload listener
+      beforeUnloadCleanupRef.current = setupBeforeUnloadListener(user.uid);
+    } else {
+      // Stop heartbeat if user logs out or hasn't completed onboarding
+      cleanup();
+    }
+
+    // Cleanup on unmount or when user/profile changes
+    return cleanup;
+  }, [user?.uid, userProfile?.hasCompletedOnboarding]);
+
   const signIn = async (email: string, password: string) => {
     setError(null);
     setLoading(true);
@@ -137,6 +188,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     setError(null);
     try {
+      // Send offline status before logging out
+      if (user?.uid && heartbeatIntervalRef.current) {
+        await stopHeartbeat(user.uid, heartbeatIntervalRef.current);
+      }
+
       await logOut();
       setUserProfile(null);
     } catch (err: any) {
@@ -179,6 +235,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Save to Firestore
       await saveOnboardingAnswers(user.uid, answers, coordinates);
+
+      // Register user with Polis Protocol backend
+      try {
+        await registerUser(
+          user.uid,
+          user.displayName || user.email?.split('@')[0] || 'User',
+          coordinates
+        );
+        console.log('✅ User registered with Polis Protocol');
+      } catch (polisErr) {
+        console.error('⚠️ Failed to register with Polis Protocol:', polisErr);
+        // Don't throw - allow onboarding to complete even if Polis registration fails
+      }
 
       // Update local state
       setUserProfile((prev) =>

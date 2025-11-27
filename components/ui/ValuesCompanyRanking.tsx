@@ -5,6 +5,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getCompanyRankingsForUser } from '../../services/companyRankingService';
 import { RankedCompany, CompanyRanking } from '../../services/companyRankingCache';
+import { recordUserAction } from '../../services/userActionService';
 
 interface ValuesCompanyRankingProps {
   className?: string;
@@ -13,7 +14,7 @@ interface ValuesCompanyRankingProps {
 
 export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ className = '', onRankingsChange }) => {
   const { t } = useLanguage();
-  const { userProfile, hasCompletedOnboarding } = useAuth();
+  const { user, userProfile, hasCompletedOnboarding } = useAuth();
   const [rankings, setRankings] = useState<CompanyRanking | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,12 +71,33 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
     return null;
   }
 
+  const handleCompanyClick = async (company: RankedCompany, type: 'support' | 'oppose') => {
+    if (!user?.uid) return;
+
+    try {
+      // Record action with Polis Protocol
+      await recordUserAction(
+        user.uid,
+        type === 'support' ? 'Buycott' : 'Boycott',
+        company.symbol,
+        5000 // Estimated $50 action value
+      );
+      console.log(`📊 Recorded ${type} action for ${company.symbol}`);
+    } catch (error) {
+      console.error('Failed to record company interaction:', error);
+      // Don't show error to user - tracking failure shouldn't interrupt UX
+    }
+  };
+
   const CompanyCard: React.FC<{ company: RankedCompany; type: 'support' | 'oppose' }> = ({ company, type }) => (
-    <div className={`
-      flex items-center justify-between p-2 border-b border-gray-200 last:border-b-0
-      ${type === 'support' ? 'hover:bg-green-50' : 'hover:bg-red-50'}
-      transition-colors
-    `}>
+    <div
+      onClick={() => handleCompanyClick(company, type)}
+      className={`
+        flex items-center justify-between p-2 border-b border-gray-200 last:border-b-0
+        ${type === 'support' ? 'hover:bg-green-50' : 'hover:bg-red-50'}
+        transition-colors cursor-pointer
+      `}
+    >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-mono font-bold text-sm">{company.symbol}</span>
