@@ -126,14 +126,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     // Start heartbeat if user is logged in and has completed onboarding
-    if (user?.uid && userProfile?.hasCompletedOnboarding) {
+    if (user?.uid && userProfile?.hasCompletedOnboarding && userProfile?.coordinates) {
       console.log('🚀 Starting Polis Protocol heartbeat for user:', user.uid);
 
+      // Prepare user profile data for auto-reregistration
+      const profileData = {
+        coordinates: userProfile.coordinates,
+        displayName: user.displayName || user.email?.split('@')[0] || 'User'
+      };
+
       // Start heartbeat interval
-      heartbeatIntervalRef.current = startHeartbeat(user.uid);
+      heartbeatIntervalRef.current = startHeartbeat(user.uid, profileData);
 
       // Setup visibility listener
-      visibilityCleanupRef.current = setupVisibilityListener(user.uid);
+      visibilityCleanupRef.current = setupVisibilityListener(user.uid, profileData);
 
       // Setup beforeunload listener
       beforeUnloadCleanupRef.current = setupBeforeUnloadListener(user.uid);
