@@ -77,7 +77,14 @@ export async function recordUserAction(
 /**
  * 发送心跳（保持在线状态）
  */
-export async function sendHeartbeat(firebaseUid: string, isOnline: boolean = true) {
+export async function sendHeartbeat(
+  firebaseUid: string,
+  isOnline: boolean = true,
+  userProfile?: {
+    coordinates: { economic: number; social: number; diplomatic: number },
+    displayName?: string
+  }
+) {
   try {
     const response = await fetch(`${API_BASE}/users/heartbeat`, {
       method: 'POST',
@@ -91,6 +98,45 @@ export async function sendHeartbeat(firebaseUid: string, isOnline: boolean = tru
     const data = await response.json();
 
     if (!data.success) {
+      // Check if error is "User not found" - means backend lost registration data
+      if (data.error && data.error.includes('User not found') && userProfile) {
+        console.warn('🔄 User not found in backend, attempting auto-reregistration...');
+
+        try {
+          // Auto-reregister the user
+          await registerUser(
+            firebaseUid,
+            userProfile.displayName || auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'User',
+            userProfile.coordinates
+          );
+
+          console.log('✅ Auto-reregistration successful, retrying heartbeat...');
+
+          // Retry heartbeat after successful registration
+          const retryResponse = await fetch(`${API_BASE}/users/heartbeat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              firebase_uid: firebaseUid,
+              is_online: isOnline
+            })
+          });
+
+          const retryData = await retryResponse.json();
+
+          if (retryData.success) {
+            console.log('✅ Heartbeat successful after auto-reregistration');
+          } else {
+            console.warn('⚠️ Heartbeat still failed after reregistration:', retryData.error);
+          }
+
+          return retryData;
+        } catch (reregError) {
+          console.error('❌ Auto-reregistration failed:', reregError);
+          return data; // Return original failed response
+        }
+      }
+
       console.warn('⚠️ Heartbeat failed:', data.error);
     }
 
@@ -105,13 +151,19 @@ export async function sendHeartbeat(firebaseUid: string, isOnline: boolean = tru
 /**
  * 设置heartbeat定时器
  */
-export function startHeartbeat(firebaseUid: string): NodeJS.Timeout {
+export function startHeartbeat(
+  firebaseUid: string,
+  userProfile?: {
+    coordinates: { economic: number; social: number; diplomatic: number },
+    displayName?: string
+  }
+): NodeJS.Timeout {
   // Send initial heartbeat
-  sendHeartbeat(firebaseUid, true);
+  sendHeartbeat(firebaseUid, true, userProfile);
 
   // Set up interval for every 30 seconds
   const intervalId = setInterval(() => {
-    sendHeartbeat(firebaseUid, true).catch(console.error);
+    sendHeartbeat(firebaseUid, true, userProfile).catch(console.error);
   }, 30000); // 每30秒一次
 
   console.log('💓 Heartbeat timer started for user:', firebaseUid);
@@ -131,14 +183,20 @@ export async function stopHeartbeat(firebaseUid: string, intervalId: NodeJS.Time
 /**
  * 设置页面可见性监听器
  */
-export function setupVisibilityListener(firebaseUid: string) {
+export function setupVisibilityListener(
+  firebaseUid: string,
+  userProfile?: {
+    coordinates: { economic: number; social: number; diplomatic: number },
+    displayName?: string
+  }
+) {
   const handleVisibilityChange = () => {
     if (document.hidden) {
       // Page is hidden - send offline status
-      sendHeartbeat(firebaseUid, false);
+      sendHeartbeat(firebaseUid, false, userProfile);
     } else {
       // Page is visible - send online status
-      sendHeartbeat(firebaseUid, true);
+      sendHeartbeat(firebaseUid, true, userProfile);
     }
   };
 
