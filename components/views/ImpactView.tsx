@@ -100,13 +100,11 @@ export const UnionView: React.FC = () => {
         // Fetch global stats
         const globalStats = await PolisAPI.fetchGlobalStats();
         if (globalStats) {
-          // If demo mode is OFF, reduce stats by estimated demo contribution
-          const demoAdjustment = demoMode ? 1 : 0.5; // In strict mode, assume ~50% is demo data
-
-          setLiveCount(Math.round(globalStats.active_allies_online * demoAdjustment));
+          // Display actual backend values directly
+          setLiveCount(globalStats.active_allies_online);
           setCollectiveStats({
-            strength: Math.round(globalStats.total_union_strength * demoAdjustment),
-            divested: Math.round(globalStats.capital_diverted_usd * 100 * demoAdjustment)
+            strength: globalStats.total_union_strength,
+            divested: Math.round(globalStats.capital_diverted_usd * 100) // Convert to cents
           });
         }
 
