@@ -1,0 +1,383 @@
+#!/bin/bash
+
+# Polis Protocol - 负载测试脚本
+# 测试所有API端点的性能和稳定性
+
+set -e
+
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# 配置
+API_URL="${API_URL:-http://localhost:8080}"
+CONCURRENT_USERS="${CONCURRENT_USERS:-10}"
+TEST_DURATION="${TEST_DURATION:-30s}"
+REQUESTS_PER_SECOND="${REQUESTS_PER_SECOND:-100}"
+
+echo -e "${BLUE}================================${NC}"
+echo -e "${BLUE}Polis Protocol 负载测试${NC}"
+echo -e "${BLUE}================================${NC}"
+echo ""
+echo -e "API URL: ${GREEN}$API_URL${NC}"
+echo -e "并发用户: ${GREEN}$CONCURRENT_USERS${NC}"
+echo -e "测试时长: ${GREEN}$TEST_DURATION${NC}"
+echo -e "目标RPS: ${GREEN}$REQUESTS_PER_SECOND${NC}"
+echo ""
+
+# 检查依赖
+check_dependencies() {
+    echo -e "${YELLOW}检查依赖工具...${NC}"
+
+    if ! command -v ab &> /dev/null; then
+        echo -e "${RED}错误: Apache Bench (ab) 未安装${NC}"
+        echo "macOS 安装: 系统自带"
+        echo "Ubuntu 安装: sudo apt-get install apache2-utils"
+        exit 1
+    fi
+
+    if ! command -v curl &> /dev/null; then
+        echo -e "${RED}错误: curl 未安装${NC}"
+        exit 1
+    fi
+
+    echo -e "${GREEN}✓ 依赖检查完成${NC}"
+    echo ""
+}
+
+# 检查服务器是否运行
+check_server() {
+    echo -e "${YELLOW}检查服务器状态...${NC}"
+
+    if curl -s -f "$API_URL/api/v1/health" > /dev/null; then
+        echo -e "${GREEN}✓ 服务器正在运行${NC}"
+    else
+        echo -e "${RED}错误: 服务器未运行或无法访问${NC}"
+        echo "请先启动服务器: cargo run --release"
+        exit 1
+    fi
+    echo ""
+}
+
+# 创建测试结果目录
+RESULTS_DIR="load_test_results_$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$RESULTS_DIR"
+
+echo -e "${BLUE}测试结果将保存到: $RESULTS_DIR${NC}"
+echo ""
+
+# 测试函数
+run_test() {
+    local test_name="$1"
+    local endpoint="$2"
+    local method="${3:-GET}"
+    local data="${4:-}"
+    local requests="${5:-1000}"
+    local concurrency="${6:-$CONCURRENT_USERS}"
+
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}测试: $test_name${NC}"
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+    local url="$API_URL$endpoint"
+    local output_file="$RESULTS_DIR/${test_name// /_}.txt"
+
+    if [ "$method" = "POST" ]; then
+        # POST 请求需要使用不同的方式
+        echo "$data" > /tmp/post_data.json
+        ab -n "$requests" -c "$concurrency" -p /tmp/post_data.json -T "application/json" "$url" > "$output_file" 2>&1
+    else
+        # GET 请求
+        ab -n "$requests" -c "$concurrency" "$url" > "$output_file" 2>&1
+    fi
+
+    # 提取关键指标
+    local requests_per_sec=$(grep "Requests per second:" "$output_file" | awk '{print $4}')
+    local time_per_request=$(grep "Time per request:" "$output_file" | head -1 | awk '{print $4}')
+    local failed_requests=$(grep "Failed requests:" "$output_file" | awk '{print $3}')
+    local success_rate=$(echo "scale=2; (($requests - $failed_requests) / $requests) * 100" | bc)
+
+    echo -e "请求总数: ${GREEN}$requests${NC}"
+    echo -e "并发数: ${GREEN}$concurrency${NC}"
+    echo -e "请求/秒: ${GREEN}${requests_per_sec:-N/A}${NC}"
+    echo -e "平均响应时间: ${GREEN}${time_per_request:-N/A} ms${NC}"
+    echo -e "失败请求: ${RED}${failed_requests:-0}${NC}"
+    echo -e "成功率: ${GREEN}${success_rate}%${NC}"
+    echo ""
+
+    # 保存到汇总文件
+    echo "$test_name,$requests_per_sec,$time_per_request,$failed_requests,$success_rate" >> "$RESULTS_DIR/summary.csv"
+}
+
+# 初始化汇总文件
+echo "测试名称,请求/秒,平均响应时间(ms),失败请求数,成功率(%)" > "$RESULTS_DIR/summary.csv"
+
+# 执行依赖检查
+check_dependencies
+check_server
+
+echo -e "${GREEN}开始负载测试...${NC}"
+echo ""
+
+# ==================== 测试套件 ====================
+
+# 1. 健康检查端点
+run_test "Health Check" "/api/v1/health" "GET" "" 2000 20
+
+# 2. 全局统计端点
+run_test "Global Stats" "/api/v1/stats/global" "GET" "" 1500 15
+
+# 3. 战线列表端点
+run_test "Campaigns List" "/api/v1/campaigns" "GET" "" 1000 10
+
+# 4. 单个战线详情
+run_test "Campaign Detail" "/api/v1/campaigns/fair-wages-initiative" "GET" "" 1000 10
+
+# 5. 用户影响力端点
+run_test "User Impact" "/api/v1/user/did:polis:user1/impact" "GET" "" 1000 10
+
+# 6. Prometheus metrics端点
+run_test "Metrics Endpoint" "/metrics" "GET" "" 500 10
+
+# 7. 提交行动端点 (POST)
+ACTION_DATA='{
+  "user_did": "did:polis:testuser123",
+  "action_type": "BOYCOTT",
+  "target_entity": "TestCorp",
+  "value_diverted": 10000,
+  "zk_proof": "zkproof_load_test_abc123def456789xyz0123456789abcdef",
+  "shard_id": "test_shard"
+}'
+run_test "Submit Action" "/api/v1/actions/submit" "POST" "$ACTION_DATA" 500 10
+
+# ==================== 压力测试 ====================
+
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}压力测试 - 高并发场景${NC}"
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# 高并发测试
+run_test "Stress Test - Health" "/api/v1/health" "GET" "" 5000 50
+run_test "Stress Test - Stats" "/api/v1/stats/global" "GET" "" 5000 50
+
+# ==================== 生成报告 ====================
+
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}负载测试完成!${NC}"
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+# 生成HTML报告
+cat > "$RESULTS_DIR/report.html" << 'EOF'
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polis Protocol 负载测试报告</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .summary {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th {
+            background: #3498db;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .metric {
+            display: inline-block;
+            margin: 10px 20px 10px 0;
+        }
+        .metric-label {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .good { color: #27ae60; }
+        .warning { color: #f39c12; }
+        .bad { color: #e74c3c; }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Polis Protocol 负载测试报告</h1>
+
+    <div class="summary">
+        <h2>测试配置</h2>
+        <div class="metric">
+            <div class="metric-label">API URL</div>
+            <div class="metric-value">PLACEHOLDER_API_URL</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">测试时间</div>
+            <div class="metric-value">PLACEHOLDER_DATE</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">并发用户</div>
+            <div class="metric-value">PLACEHOLDER_CONCURRENT</div>
+        </div>
+    </div>
+
+    <h2>📊 测试结果</h2>
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>测试名称</th>
+                <th>请求/秒 (RPS)</th>
+                <th>平均响应时间 (ms)</th>
+                <th>失败请求数</th>
+                <th>成功率 (%)</th>
+            </tr>
+        </thead>
+        <tbody id="resultsBody">
+            <!-- Results will be inserted here -->
+        </tbody>
+    </table>
+
+    <div class="summary">
+        <h2>📈 性能评估</h2>
+        <p><strong>优秀 (Excellent):</strong> RPS > 1000, 响应时间 < 10ms, 成功率 > 99%</p>
+        <p><strong>良好 (Good):</strong> RPS > 500, 响应时间 < 50ms, 成功率 > 95%</p>
+        <p><strong>可接受 (Acceptable):</strong> RPS > 100, 响应时间 < 200ms, 成功率 > 90%</p>
+        <p><strong>需优化 (Needs Improvement):</strong> 低于上述标准</p>
+    </div>
+
+    <div class="footer">
+        <p>Polis Protocol Load Test Report - Generated by Claude Code Assistant</p>
+    </div>
+
+    <script>
+        // This will be populated by the shell script
+        const csvData = `PLACEHOLDER_CSV_DATA`;
+
+        const lines = csvData.trim().split('\n').slice(1); // Skip header
+        const tbody = document.getElementById('resultsBody');
+
+        lines.forEach(line => {
+            const [name, rps, time, failed, successRate] = line.split(',');
+            const row = tbody.insertRow();
+
+            row.insertCell(0).textContent = name;
+
+            const rpsCell = row.insertCell(1);
+            rpsCell.textContent = rps || 'N/A';
+            if (parseFloat(rps) > 1000) rpsCell.className = 'good';
+            else if (parseFloat(rps) > 500) rpsCell.className = 'warning';
+            else rpsCell.className = 'bad';
+
+            const timeCell = row.insertCell(2);
+            timeCell.textContent = time || 'N/A';
+            if (parseFloat(time) < 10) timeCell.className = 'good';
+            else if (parseFloat(time) < 50) timeCell.className = 'warning';
+            else timeCell.className = 'bad';
+
+            row.insertCell(3).textContent = failed || '0';
+
+            const successCell = row.insertCell(4);
+            successCell.textContent = successRate || 'N/A';
+            if (parseFloat(successRate) > 99) successCell.className = 'good';
+            else if (parseFloat(successRate) > 95) successCell.className = 'warning';
+            else successCell.className = 'bad';
+        });
+    </script>
+</body>
+</html>
+EOF
+
+# 替换占位符 - 使用 perl 更可靠
+CSV_CONTENT=$(cat "$RESULTS_DIR/summary.csv" | sed 's/\\/\\\\/g' | sed 's/`/\\`/g')
+TEST_DATE=$(date '+%Y-%m-%d %H:%M:%S')
+
+# 使用 perl 进行替换（更可靠地处理多行内容）
+perl -pi -e "s|PLACEHOLDER_API_URL|$API_URL|g" "$RESULTS_DIR/report.html"
+perl -pi -e "s|PLACEHOLDER_DATE|$TEST_DATE|g" "$RESULTS_DIR/report.html"
+perl -pi -e "s|PLACEHOLDER_CONCURRENT|$CONCURRENT_USERS|g" "$RESULTS_DIR/report.html"
+
+# CSV内容需要特殊处理
+python3 -c "
+import sys
+with open('$RESULTS_DIR/report.html', 'r') as f:
+    content = f.read()
+with open('$RESULTS_DIR/summary.csv', 'r') as f:
+    csv = f.read()
+content = content.replace('PLACEHOLDER_CSV_DATA', csv)
+with open('$RESULTS_DIR/report.html', 'w') as f:
+    f.write(content)
+" 2>/dev/null || {
+    # 如果Python不可用,使用简化版本
+    sed -i '' "s|PLACEHOLDER_API_URL|$API_URL|g" "$RESULTS_DIR/report.html"
+    sed -i '' "s|PLACEHOLDER_DATE|$TEST_DATE|g" "$RESULTS_DIR/report.html"
+    sed -i '' "s|PLACEHOLDER_CONCURRENT|$CONCURRENT_USERS|g" "$RESULTS_DIR/report.html"
+    sed -i '' "s|PLACEHOLDER_CSV_DATA|See summary.csv|g" "$RESULTS_DIR/report.html"
+}
+
+echo -e "详细结果: ${GREEN}$RESULTS_DIR${NC}"
+echo -e "HTML报告: ${GREEN}$RESULTS_DIR/report.html${NC}"
+echo -e "CSV汇总: ${GREEN}$RESULTS_DIR/summary.csv${NC}"
+echo ""
+
+# 显示汇总
+echo -e "${BLUE}测试汇总:${NC}"
+echo ""
+column -t -s',' "$RESULTS_DIR/summary.csv"
+echo ""
+
+# 打开HTML报告
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo -e "${YELLOW}正在打开HTML报告...${NC}"
+    open "$RESULTS_DIR/report.html"
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    if command -v xdg-open &> /dev/null; then
+        xdg-open "$RESULTS_DIR/report.html"
+    fi
+fi
+
+echo -e "${GREEN}✓ 负载测试完成!${NC}"

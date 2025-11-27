@@ -142,18 +142,31 @@ export const UnionView: React.FC = () => {
     return () => clearInterval(interval);
   }, [user, demoMode]);
 
-  // Simulate blockchain metrics (TPS and block height)
+  // Fetch blockchain metrics from Polis Protocol backend
   useEffect(() => {
-    if (!demoMode && !useBackend) return;
+    const fetchBlockchainStats = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/v1/blockchain/stats');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setBlockHeight(data.data.total_blocks);
+            setTps(data.data.transactions_per_second);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching blockchain stats:', error);
+        // If backend unavailable, keep previous values or fallback to 0
+      }
+    };
 
-    // Simulate block production
-    const blockInterval = setInterval(() => {
-      setBlockHeight(prev => prev + 1);
-      setTps(Math.floor(Math.random() * 5) + 2); // 2-6 TPS
-    }, 5000); // New block every 5 seconds
+    // Fetch immediately
+    fetchBlockchainStats();
 
-    return () => clearInterval(blockInterval);
-  }, [useBackend, demoMode]);
+    // Refresh blockchain stats every 5 seconds
+    const interval = setInterval(fetchBlockchainStats, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Live count animation (only for mock mode with demo ON)
   useEffect(() => {
