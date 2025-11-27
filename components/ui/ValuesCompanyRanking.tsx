@@ -120,7 +120,7 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
       {/* Loading State */}
       {loading && !rankings && (
         <PixelCard className="p-4 text-center">
-          <div className="font-pixel text-sm animate-pulse">
+          <div className="font-pixel text-sm animate-pulse uppercase">
             {t('feed', 'loading_rankings')}
           </div>
         </PixelCard>
