@@ -5,7 +5,10 @@
  * Provides methods to fetch campaigns, global stats, and user impact data.
  */
 
-const POLIS_API_BASE = process.env.POLIS_API_URL || 'http://localhost:8080/api/v1';
+// Use production backend by default, override with localhost for local development
+const POLIS_API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? 'http://localhost:8080/api/v1'
+  : 'https://polis-protocol-yfcontxnkq-uc.a.run.app/api/v1';
 
 // ========== Types ==========
 
