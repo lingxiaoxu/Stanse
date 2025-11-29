@@ -133,6 +133,7 @@ pub fn create_router(state: ApiState) -> Router {
         .route("/api/v1/users/heartbeat", post(user_heartbeat))
         .route("/api/v1/blockchain/stats", get(get_blockchain_stats))
         .route("/api/v1/shards", get(get_all_shards))
+        .route("/api/v1/users/online", get(get_online_users))
         .route("/metrics", get(get_metrics))
         .layer(cors)
         .with_state(Arc::new(state))
@@ -384,6 +385,15 @@ async fn get_all_shards(
     let protocol = state.protocol.lock().unwrap();
     let shards = protocol.get_shard_info();
     Ok(Json(ApiResponse::success(shards)))
+}
+
+/// 获取所有在线用户信息
+async fn get_online_users(
+    State(state): State<Arc<ApiState>>,
+) -> Result<Json<ApiResponse<Vec<crate::blockchain::OnlineUserInfo>>>, StatusCode> {
+    let protocol = state.protocol.lock().unwrap();
+    let online_users = protocol.get_online_users();
+    Ok(Json(ApiResponse::success(online_users)))
 }
 
 /// 启动API服务器

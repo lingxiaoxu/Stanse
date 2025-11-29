@@ -631,6 +631,20 @@ impl PolisProtocol {
             })
             .collect()
     }
+
+    /// 获取所有在线用户信息
+    pub fn get_online_users(&self) -> Vec<OnlineUserInfo> {
+        self.firebase_users
+            .values()
+            .filter(|user| user.is_online)
+            .map(|user| OnlineUserInfo {
+                firebase_uid: user.firebase_uid.clone(),
+                polis_did: user.polis_did.clone(),
+                display_name: user.display_name.clone(),
+                last_activity: user.last_activity,
+            })
+            .collect()
+    }
 }
 
 /// 区块链统计信息
@@ -650,6 +664,15 @@ pub struct ShardInfo {
     pub block_height: u64,
     pub pending_actions: u64,
     pub active_nodes: u64,
+}
+
+/// 在线用户信息
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct OnlineUserInfo {
+    pub firebase_uid: String,
+    pub polis_did: String,
+    pub display_name: String,
+    pub last_activity: i64,
 }
 
 /// 全局统计信息
