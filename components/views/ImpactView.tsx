@@ -255,12 +255,14 @@ export const UnionView: React.FC = () => {
     <div className="max-w-lg promax:max-w-xl mx-auto w-full space-y-6 pb-20">
       {/* Blockchain Status Bar */}
       <div className="bg-black text-white border-2 border-black p-3 relative">
-        {/* Demo Mode Indicator */}
-        {demoMode && (
-          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-black px-2 py-0.5 text-[8px] font-mono font-bold border border-black">
-            DEMO DATA
-          </div>
-        )}
+        {/* Data Mode Indicator */}
+        <div className={`absolute -top-2 left-1/2 transform -translate-x-1/2 px-2 py-0.5 text-[8px] font-mono font-bold border border-black ${
+          demoMode
+            ? 'bg-yellow-400 text-black'
+            : 'bg-green-500 text-white'
+        }`}>
+          {demoMode ? 'DEMO DATA' : 'REAL TIME DATA'}
+        </div>
 
         <div className="grid grid-cols-2 gap-4 font-mono text-xs">
           <div className="flex items-center gap-2">
