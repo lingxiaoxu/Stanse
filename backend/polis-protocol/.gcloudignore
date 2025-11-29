@@ -1,0 +1,14 @@
+# .gcloudignore - Controls which files are uploaded to Cloud Build
+# SECURITY: Inherit .gitignore rules to prevent uploading sensitive files (API keys, etc.)
+#!include:.gitignore
+
+# Additional files to exclude from Cloud Build
+.git/
+.gcloudignore
+
+# Build artifacts (will be rebuilt in Docker)
+target/
+
+# CRITICAL: Override .gitignore to INCLUDE Cargo.lock for reproducible builds
+# This is safe because Cargo.lock doesn't contain API keys, only dependency versions
+!Cargo.lock
