@@ -6,9 +6,9 @@
  */
 
 // API 基础 URL（开发环境 / 生产环境自动切换）
-const POLIS_API_BASE = process.env.NODE_ENV === 'production'
-  ? 'https://your-polis-api.com/api/v1'  // 生产环境 URL
-  : 'http://localhost:8080/api/v1';       // 本地开发 URL
+const POLIS_API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? 'http://localhost:8080/api/v1'
+  : 'https://polis-protocol-yfcontxnkq-uc.a.run.app/api/v1';
 
 /**
  * 全局统计信息类型（对应 Rust GlobalStatsResponse）
