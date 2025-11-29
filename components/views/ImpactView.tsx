@@ -7,6 +7,13 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import * as PolisAPI from '../../services/polisApi';
 
+// Helper function to get the API base URL
+const getApiBaseUrl = () => {
+  return typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:8080/api/v1'
+    : 'https://polis-protocol-yfcontxnkq-uc.a.run.app/api/v1';
+};
+
 // Mock Campaigns (fallback if backend unavailable)
 const MOCK_CAMPAIGNS: Campaign[] = [
   {
@@ -146,7 +153,7 @@ export const UnionView: React.FC = () => {
   useEffect(() => {
     const fetchBlockchainStats = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/v1/blockchain/stats');
+        const response = await fetch(`${getApiBaseUrl()}/blockchain/stats`);
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {
