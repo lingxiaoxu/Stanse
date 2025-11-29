@@ -251,6 +251,11 @@ export const UnionView: React.FC = () => {
     }, 2000);
   };
 
+  // Debug: log demoMode changes
+  useEffect(() => {
+    console.log('🔍 ImpactView - demoMode:', demoMode);
+  }, [demoMode]);
+
   return (
     <div className="max-w-lg promax:max-w-xl mx-auto w-full space-y-6 pb-20">
       {/* Blockchain Status Bar */}
