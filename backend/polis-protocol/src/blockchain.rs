@@ -637,11 +637,42 @@ impl PolisProtocol {
         self.firebase_users
             .values()
             .filter(|user| user.is_online)
-            .map(|user| OnlineUserInfo {
-                firebase_uid: user.firebase_uid.clone(),
-                polis_did: user.polis_did.clone(),
-                display_name: user.display_name.clone(),
-                last_activity: user.last_activity,
+            .map(|user| {
+                // 收集用户所在的所有分片信息
+                let mut shard_memberships = Vec::new();
+
+                // 从 user_routes 获取用户的分片列表
+                if let Some(shard_ids) = self.user_routes.get(&user.polis_did) {
+                    for shard_id in shard_ids {
+                        // 检查分片中是否存在该用户的节点
+                        if let Some(shard) = self.shards.get(shard_id) {
+                            if let Some(node) = shard.nodes.get(&user.polis_did) {
+                                shard_memberships.push(ShardMembership {
+                                    shard_id: shard_id.clone(),
+                                    joined_at: user.last_activity, // 简化版：使用last_activity作为joined_at
+                                    left_at: if node.is_online { None } else { Some(user.last_activity) },
+                                    is_active: node.is_online,
+                                });
+                            } else {
+                                // 如果在路由表中但不在节点列表中，说明曾经活跃但现在不活跃
+                                shard_memberships.push(ShardMembership {
+                                    shard_id: shard_id.clone(),
+                                    joined_at: user.last_activity,
+                                    left_at: Some(user.last_activity),
+                                    is_active: false,
+                                });
+                            }
+                        }
+                    }
+                }
+
+                OnlineUserInfo {
+                    firebase_uid: user.firebase_uid.clone(),
+                    polis_did: user.polis_did.clone(),
+                    display_name: user.display_name.clone(),
+                    last_activity: user.last_activity,
+                    shards: shard_memberships,
+                }
             })
             .collect()
     }
@@ -666,6 +697,15 @@ pub struct ShardInfo {
     pub active_nodes: u64,
 }
 
+/// 用户在分片中的活动信息
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ShardMembership {
+    pub shard_id: String,
+    pub joined_at: i64,        // 加入分片的时间戳
+    pub left_at: Option<i64>,  // 离开分片的时间戳 (None = 仍在分片中)
+    pub is_active: bool,       // 当前是否活跃在该分片
+}
+
 /// 在线用户信息
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct OnlineUserInfo {
@@ -673,6 +713,7 @@ pub struct OnlineUserInfo {
     pub polis_did: String,
     pub display_name: String,
     pub last_activity: i64,
+    pub shards: Vec<ShardMembership>,  // 用户所在的所有分片
 }
 
 /// 全局统计信息
