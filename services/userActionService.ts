@@ -3,7 +3,7 @@ import { auth } from './firebase';
 // Use production backend by default, override with localhost for local development
 const API_BASE = window.location.hostname === 'localhost'
   ? 'http://localhost:8080/api/v1'
-  : 'https://polis-protocol-837715360412.us-central1.run.app/api/v1';
+  : 'https://polis-protocol-yfcontxnkq-uc.a.run.app/api/v1';
 
 /**
  * 用户注册（首次登录时调用）
