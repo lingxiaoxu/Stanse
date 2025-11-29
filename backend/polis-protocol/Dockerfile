@@ -10,12 +10,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy manifests
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 
 # Copy source code
 COPY src ./src
 
-# Build for release
+# Build for release (will generate Cargo.lock automatically)
 RUN cargo build --release
 
 # Runtime stage
