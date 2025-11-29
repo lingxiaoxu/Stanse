@@ -49,12 +49,11 @@ tower-http = { version = "0.5", features = ["cors"] }
 # UUID generation
 uuid = { version = "1.6", features = ["v4", "serde"] }
 
+# Force older version of base64ct to avoid edition2024 requirement
+base64ct = "=1.6.0"
+
 [dev-dependencies]
 tokio-test = "0.4"
-
-# Patch dependencies to avoid edition2024 requirement
-[patch.crates-io]
-base64ct = "=1.6.0"  # Lock to older version that doesn't require edition2024
 
 [profile.release]
 opt-level = 3
