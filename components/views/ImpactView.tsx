@@ -6,6 +6,8 @@ import { Campaign } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import * as PolisAPI from '../../services/polisApi';
+import { LogActionModal } from '../modals/LogActionModal';
+import { recordUserAction } from '../../services/userActionService';
 
 // Helper function to get the API base URL
 const getApiBaseUrl = () => {
@@ -47,6 +49,7 @@ export const UnionView: React.FC = () => {
   const [blockHeight, setBlockHeight] = useState(0);
   const [tps, setTps] = useState(0);
   const [showAllCampaigns, setShowAllCampaigns] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const { t } = useLanguage();
   const { user, demoMode } = useAuth();
 
@@ -193,9 +196,59 @@ export const UnionView: React.FC = () => {
     }
   };
 
-  // Handle campaign amplify
+  // Handle campaign amplify - now opens LOG ACTION modal
   const handleAmplify = (campaignId: string) => {
-    alert(`Amplifying campaign: ${campaignId}\n\nThis will submit a blockchain transaction to increase your impact on this campaign.`);
+    const campaign = campaigns.find(c => c.id === campaignId);
+    if (campaign) {
+      setSelectedCampaign(campaign);
+    }
+  };
+
+  // Handle action submission
+  const handleActionSubmit = async (actionType: 'BOYCOTT' | 'BUYCOTT', amountCents: number) => {
+    if (!user?.uid) {
+      throw new Error('Please sign in to submit actions');
+    }
+
+    // Use the campaign's target as the target entity
+    const target = selectedCampaign?.target || 'Unknown';
+
+    // Convert action type to backend format (capitalize first letter only)
+    const backendActionType = actionType === 'BOYCOTT' ? 'Boycott' : 'Buycott';
+
+    // Record action to backend
+    await recordUserAction(user.uid, backendActionType as 'Boycott' | 'Buycott' | 'Vote', target, amountCents);
+
+    // Refresh campaign data after submission
+    setTimeout(async () => {
+      try {
+        const backendCampaigns = await PolisAPI.fetchCampaigns();
+        if (backendCampaigns && backendCampaigns.length > 0) {
+          setCampaigns(backendCampaigns.map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            target: c.target,
+            type: c.type || 'PETITION',
+            participants: c.participants,
+            goal: c.goal,
+            description: c.description,
+            daysActive: c.days_active || c.daysActive || 0
+          })));
+        }
+
+        // Refresh global stats
+        const globalStats = await PolisAPI.fetchGlobalStats();
+        if (globalStats) {
+          setLiveCount(globalStats.active_allies_online);
+          setCollectiveStats({
+            strength: globalStats.total_union_strength,
+            divested: globalStats.capital_diverted_usd * 100
+          });
+        }
+      } catch (error) {
+        console.error('Error refreshing data after action submission:', error);
+      }
+    }, 2000);
   };
 
   return (
@@ -384,6 +437,15 @@ export const UnionView: React.FC = () => {
             </div>
         </div>
       </PixelCard>
+
+      {/* LOG ACTION Modal */}
+      {selectedCampaign && (
+        <LogActionModal
+          campaign={selectedCampaign}
+          onClose={() => setSelectedCampaign(null)}
+          onSubmit={handleActionSubmit}
+        />
+      )}
     </div>
   );
 };

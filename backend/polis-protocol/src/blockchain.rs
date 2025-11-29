@@ -544,6 +544,20 @@ impl PolisProtocol {
         if let Some(shard_ids) = self.user_routes.get(&polis_did) {
             for shard_id in shard_ids {
                 if let Some(shard) = self.shards.get_mut(shard_id) {
+                    // 自动创建或更新 campaign（以 target_entity 作为 campaign_id）
+                    let campaign_id = action.target_entity.clone();
+
+                    // 检查 campaign 是否存在，如果不存在则创建
+                    if shard.get_campaign_state(&campaign_id).is_none() {
+                        // 创建新 campaign，默认目标参与者数为 1000，持续时间为 10000 个区块
+                        if let Err(e) = shard.create_campaign(campaign_id.clone(), 1000, 10000) {
+                            eprintln!("Failed to create campaign {}: {}", campaign_id, e);
+                        }
+                    }
+
+                    // 更新 campaign 状态
+                    shard.update_campaign_state(campaign_id, &action);
+
                     shard.add_pending_action(action.clone())?;
 
                     // 如果待处理action数量达到阈值，自动生成区块
