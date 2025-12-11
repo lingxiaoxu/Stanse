@@ -1,0 +1,11 @@
+# Python Dependencies for Stanse Project
+# Used for data processing scripts (e.g., FEC data downloader/parser)
+
+# HTTP requests for downloading files
+requests>=2.31.0
+
+# Firebase Admin SDK for Firestore operations
+firebase-admin>=6.2.0
+
+# Google Cloud Firestore client
+google-cloud-firestore>=2.13.0

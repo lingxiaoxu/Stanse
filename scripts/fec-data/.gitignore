@@ -1,0 +1,14 @@
+# FEC Data - Downloaded and extracted files
+raw_data/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+env/
+ENV/
