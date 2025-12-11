@@ -1,0 +1,57 @@
+{
+  "timestamp": "2025-12-11T11:30:45.065439",
+  "summary": {
+    "total_collections": 5,
+    "matching": 4,
+    "with_duplicates": 0,
+    "with_errors": 0,
+    "all_good": false
+  },
+  "results": [
+    {
+      "collection": "fec_raw_committees",
+      "description": "委员会原始数据",
+      "expected": 20934,
+      "actual": 20934,
+      "match": true,
+      "duplicates": 0,
+      "duplicate_ids": []
+    },
+    {
+      "collection": "fec_raw_candidates",
+      "description": "候选人原始数据",
+      "expected": 9809,
+      "actual": 9809,
+      "match": true,
+      "duplicates": 0,
+      "duplicate_ids": []
+    },
+    {
+      "collection": "fec_raw_contributions_pac_to_candidate",
+      "description": "PAC捐款原始数据",
+      "expected": 74550,
+      "actual": 74600,
+      "match": false,
+      "duplicates": 0,
+      "duplicate_ids": []
+    },
+    {
+      "collection": "fec_company_index",
+      "description": "公司索引",
+      "expected": 0,
+      "actual": 0,
+      "match": true,
+      "duplicates": 0,
+      "duplicate_ids": []
+    },
+    {
+      "collection": "fec_company_party_summary",
+      "description": "公司政党汇总",
+      "expected": 1,
+      "actual": 1,
+      "match": true,
+      "duplicates": 0,
+      "duplicate_ids": []
+    }
+  ]
+}
