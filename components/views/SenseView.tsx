@@ -1,9 +1,10 @@
 
 import React, { useState } from 'react';
-import { Search, ShieldAlert, CheckCircle, FileText, ExternalLink, Users, Newspaper, Twitter, Activity, X, ThumbsUp, ThumbsDown, AlertTriangle } from 'lucide-react';
+import { Search, ShieldAlert, CheckCircle, FileText, ExternalLink, Users, Newspaper, Twitter, Activity, X, ThumbsUp, ThumbsDown, AlertTriangle, DollarSign } from 'lucide-react';
 import { PixelCard } from '../ui/PixelCard';
 import { PixelButton } from '../ui/PixelButton';
 import { analyzeBrandAlignment, UserDemographicsForAnalysis } from '../../services/geminiService';
+import { queryCompanyFECData, FECCompanyData, FECPartyData, formatPartyName, getPartyColor } from '../../services/fecService';
 import { PoliticalCoordinates, BrandAlignment, ViewState } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -33,6 +34,7 @@ export const SenseView: React.FC<SenseViewProps> = ({
   const [localQuery, setLocalQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [localResult, setLocalResult] = useState<BrandAlignment | null>(null);
+  const [fecData, setFecData] = useState<FECCompanyData | null>(null);
   const { t } = useLanguage();
 
   // Use persisted values if provided
@@ -51,9 +53,15 @@ export const SenseView: React.FC<SenseViewProps> = ({
     if (!query.trim()) return;
     setLoading(true);
     setResult(null);
+    setFecData(null);
     try {
-      const data = await analyzeBrandAlignment(query, userProfile, userDemographics);
-      setResult(data);
+      // Query both Gemini and FEC data in parallel
+      const [brandData, fecResult] = await Promise.all([
+        analyzeBrandAlignment(query, userProfile, userDemographics),
+        queryCompanyFECData(query)
+      ]);
+      setResult(brandData);
+      setFecData(fecResult);
     } catch (e) {
       console.error(e);
     } finally {
@@ -185,6 +193,63 @@ export const SenseView: React.FC<SenseViewProps> = ({
                   </div>
                 )}
 
+                {/* FEC Political Donations */}
+                {fecData && (
+                  <div className="bg-blue-50 p-4 border border-blue-300 relative">
+                    <div className="absolute -top-3 left-3 bg-white px-2 font-mono text-[10px] font-bold flex items-center gap-1 border border-blue-400 text-blue-700">
+                      <DollarSign size={10} />
+                      Political Donations
+                    </div>
+                    <div className="space-y-3">
+                      <p className="font-mono text-xs text-gray-700">
+                        <strong className="uppercase">{fecData.display_name}</strong> contributed{' '}
+                        <strong>${fecData.total_usd.toLocaleString()}</strong> to federal candidates{' '}
+                        ({fecData.years[0]}-{fecData.years[fecData.years.length - 1]})
+                      </p>
+
+                      {/* Party Breakdown Bars */}
+                      <div className="space-y-2">
+                        {Object.entries(fecData.party_totals)
+                          .sort(([, a], [, b]) => (b as any).percentage - (a as any).percentage)
+                          .map(([party, partyData]) => {
+                            const data = partyData as FECPartyData;
+                            const colors = getPartyColor(party);
+                            const maxPercentage = Math.max(
+                              ...Object.values(fecData.party_totals).map((p: any) => p.percentage)
+                            );
+                            const isLargest = data.percentage === maxPercentage;
+
+                            return (
+                              <div key={party} className="space-y-1">
+                                <div className="flex justify-between font-mono text-[10px] text-gray-600">
+                                  <span className="font-bold uppercase">{formatPartyName(party)}</span>
+                                  <span>{data.percentage.toFixed(1)}%</span>
+                                </div>
+                                <div className="h-6 border-2 border-black flex items-center overflow-hidden">
+                                  <div
+                                    className="h-full flex items-center justify-end pr-2 transition-all"
+                                    style={{
+                                      width: `${data.percentage}%`,
+                                      backgroundColor: isLargest ? colors.dark : colors.light
+                                    }}
+                                  >
+                                    <span className="font-mono text-[10px] font-bold" style={{ color: isLargest ? 'white' : colors.dark }}>
+                                      ${data.total_amount_usd.toLocaleString()}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+
+                      <p className="font-mono text-[9px] text-gray-500 italic pt-1">
+                        Source: FEC data via PAC contributions to federal candidates
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Intelligence Sources */}
                 <div className="pt-4 border-t-2 border-gray-100">
                     <div className="flex items-center gap-2 mb-2 opacity-50">
@@ -245,9 +310,14 @@ export const SenseView: React.FC<SenseViewProps> = ({
                                     setTimeout(async () => {
                                         setLoading(true);
                                         setResult(null);
+                                        setFecData(null);
                                         try {
-                                            const data = await analyzeBrandAlignment(entityName, userProfile, userDemographics);
-                                            setResult(data);
+                                            const [brandData, fecResult] = await Promise.all([
+                                                analyzeBrandAlignment(entityName, userProfile, userDemographics),
+                                                queryCompanyFECData(entityName)
+                                            ]);
+                                            setResult(brandData);
+                                            setFecData(fecResult);
                                         } catch (e) {
                                             console.error(e);
                                         } finally {

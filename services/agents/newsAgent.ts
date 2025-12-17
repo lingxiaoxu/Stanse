@@ -27,35 +27,36 @@ const ai = new GoogleGenAI({
 });
 
 // Curated Unsplash images for news categories
+// Use data URIs for reliable, fast-loading placeholder images (SVG patterns)
 const CATEGORY_IMAGES: Record<string, string[]> = {
   'POLITICS': [
-    'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=800&h=450&fit=crop',
-    'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&h=450&fit=crop',
-    'https://images.unsplash.com/photo-1555848962-6e79363ec58f?w=800&h=450&fit=crop',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23dc2626" width="800" height="450"/%3E%3Ccircle cx="400" cy="225" r="120" fill="%23991b1b" opacity="0.3"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23b91c1c" width="800" height="450"/%3E%3Crect x="200" y="100" width="400" height="250" fill="%23dc2626" opacity="0.5"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23991b1b" width="800" height="450"/%3E%3Cpath d="M0,225 L400,0 L800,225 L400,450 Z" fill="%23dc2626" opacity="0.4"/%3E%3C/svg%3E',
   ],
   'TECH': [
-    'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&h=450&fit=crop',
-    'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&h=450&fit=crop',
-    'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&h=450&fit=crop',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%233b82f6" width="800" height="450"/%3E%3Ccircle cx="600" cy="150" r="100" fill="%231d4ed8" opacity="0.4"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%232563eb" width="800" height="450"/%3E%3Crect x="100" y="50" width="600" height="350" fill="%233b82f6" opacity="0.3"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%231d4ed8" width="800" height="450"/%3E%3Cpath d="M0,0 L800,0 L400,450 Z" fill="%233b82f6" opacity="0.5"/%3E%3C/svg%3E',
   ],
   'MILITARY': [
-    'https://images.unsplash.com/photo-1579912437766-7896df6d3cd3?w=800&h=450&fit=crop',
-    'https://images.unsplash.com/photo-1580752300992-559f8e6a7b36?w=800&h=450&fit=crop',
-    'https://images.unsplash.com/photo-1562564055-71e051d33c19?w=800&h=450&fit=crop',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23525252" width="800" height="450"/%3E%3Crect x="150" y="100" width="500" height="250" fill="%23404040" opacity="0.6"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23404040" width="800" height="450"/%3E%3Ccircle cx="300" cy="225" r="150" fill="%23525252" opacity="0.4"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23525252" width="800" height="450"/%3E%3Cpath d="M0,450 L400,0 L800,450 Z" fill="%23737373" opacity="0.3"/%3E%3C/svg%3E',
   ],
   'WORLD': [
-    'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=450&fit=crop',
-    'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=800&h=450&fit=crop',
-    'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800&h=450&fit=crop',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%2316a34a" width="800" height="450"/%3E%3Ccircle cx="400" cy="225" r="180" fill="%23166534" opacity="0.3"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23166534" width="800" height="450"/%3E%3Crect x="250" y="125" width="300" height="200" fill="%2316a34a" opacity="0.5"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%2315803d" width="800" height="450"/%3E%3Cpath d="M0,225 L800,0 L800,450 Z" fill="%2316a34a" opacity="0.4"/%3E%3C/svg%3E',
   ],
   'BUSINESS': [
-    'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=450&fit=crop',
-    'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&h=450&fit=crop',
-    'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&h=450&fit=crop',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23f59e0b" width="800" height="450"/%3E%3Crect x="200" y="150" width="400" height="150" fill="%23d97706" opacity="0.4"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23d97706" width="800" height="450"/%3E%3Ccircle cx="500" cy="200" r="130" fill="%23f59e0b" opacity="0.5"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%23ea580c" width="800" height="450"/%3E%3Cpath d="M0,0 L400,225 L800,0 Z" fill="%23f59e0b" opacity="0.3"/%3E%3C/svg%3E',
   ],
 };
 
-const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&h=450&fit=crop';
+const DEFAULT_IMAGE = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="450"%3E%3Crect fill="%236b7280" width="800" height="450"/%3E%3Ccircle cx="400" cy="225" r="100" fill="%23374151" opacity="0.5"/%3E%3C/svg%3E';
 
 /**
  * Get image URL for a news category
@@ -382,9 +383,21 @@ export const processNewsItems = async (
       if (cachedItem) {
         newsLogger.debug('processNews', `Cache hit for: ${item.title.slice(0, 40)}...`);
         cached++;
+
+        // Fix: Ensure cached items have imageUrl (for legacy data without images)
+        let imageUrl = cachedItem.imageUrl;
+        if (!imageUrl) {
+          const seed = cachedItem.title.split('').reduce((acc, char) => {
+            return ((acc << 5) - acc + char.charCodeAt(0)) | 0;
+          }, 0);
+          imageUrl = getImageForCategory(cachedItem.category || 'WORLD', seed);
+          newsLogger.debug('processNews', `Added missing imageUrl for cached item: ${cachedItem.title.slice(0, 40)}...`);
+        }
+
         return {
           ...cachedItem,
           titleHash,
+          imageUrl,
           originalLanguage: item.language,
           sources: [item.source],
         } as ProcessedNewsItem;

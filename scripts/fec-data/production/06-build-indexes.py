@@ -11,6 +11,7 @@ import re
 import time
 import random
 import subprocess
+import json
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
@@ -30,11 +31,78 @@ MIN_DELAY = 3.0
 MAX_DELAY = 300.0
 INITIAL_RETRY_DELAY = 30.0
 
+# 进度文件路径
+SCRIPT_DIR = Path(__file__).parent
+PROGRESS_FILE = SCRIPT_DIR.parent / 'reports' / '06-index-build-progress.json'
+
+# 日志目录路径
+LOG_DIR = Path('/Users/xuling/code/Stanse/logs/fec-data')
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
 db = None
+progress = {}
+token_refresh_time = None
+
+def refresh_token_if_needed():
+    """每45分钟刷新一次token"""
+    global db, token_refresh_time
+
+    current_time = time.time()
+
+    # 如果是第一次或距离上次刷新超过45分钟
+    if token_refresh_time is None or (current_time - token_refresh_time) > 2700:
+        print('\n🔄 刷新access token...')
+        try:
+            # 获取新token
+            result = subprocess.run(
+                ['gcloud', 'auth', 'print-access-token'],
+                capture_output=True, text=True, check=True
+            )
+            new_token = result.stdout.strip()
+
+            # 重新初始化Firebase Admin
+            if firebase_admin._apps:
+                firebase_admin.delete_app(firebase_admin.get_app())
+
+            from google.oauth2 import credentials as oauth_creds
+            cred = oauth_creds.Credentials(new_token)
+            firebase_admin.initialize_app(cred, options={'projectId': PROJECT_ID})
+
+            db = firestore.client()
+            token_refresh_time = current_time
+            print(f'  ✓ Token已刷新')
+        except Exception as e:
+            print(f'  ⚠️  Token刷新失败: {e}')
+
+def load_progress():
+    """加载进度文件"""
+    global progress
+    if PROGRESS_FILE.exists():
+        with open(PROGRESS_FILE, 'r') as f:
+            progress = json.load(f)
+        print(f'📖 加载进度: {PROGRESS_FILE.name}')
+    else:
+        progress = {
+            'company_index_completed': False,
+            'company_index_uploaded': 0,
+            'party_summary_completed': False,
+            'party_summary_processed': 0,
+            'party_summary_uploaded': 0,
+            'last_updated': None
+        }
+        save_progress()
+
+def save_progress():
+    """保存进度文件"""
+    global progress
+    progress['last_updated'] = datetime.utcnow().isoformat()
+    PROGRESS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(PROGRESS_FILE, 'w') as f:
+        json.dump(progress, f, indent=2)
 
 def init_firestore():
     """初始化Firestore"""
-    global db
+    global db, token_refresh_time
     print('\n🔧 初始化Firestore连接...')
 
     try:
@@ -56,6 +124,7 @@ def init_firestore():
             firebase_admin.initialize_app(cred, options={'projectId': PROJECT_ID})
 
         db = firestore.client()
+        token_refresh_time = time.time()  # 记录初始时间
         print(f'✅ Firestore已连接 (项目: {PROJECT_ID})')
         return db
     except Exception as e:
@@ -103,6 +172,10 @@ def build_company_index():
     print(f'\n{"="*70}')
     print('🏗️  步骤1: 构建Company Index')
     print(f'{"="*70}')
+
+    if progress.get('company_index_completed'):
+        print('  ℹ️  Company Index已完成，跳过')
+        return progress.get('company_index_uploaded', 0)
 
     # 从fec_raw_committees提取所有唯一公司
     companies = {}
@@ -185,11 +258,15 @@ def build_company_index():
             if commit_with_retry(batch):
                 uploaded += batch_count
                 print(f'  ✓ 已上传 {uploaded}/{len(companies)} 个公司索引')
+                progress['company_index_uploaded'] = uploaded
+                save_progress()
                 time.sleep(MIN_DELAY)
                 batch = db.batch()
                 batch_count = 0
             else:
                 print(f'  ❌ 上传失败，已完成 {uploaded} 个')
+                progress['company_index_uploaded'] = uploaded
+                save_progress()
                 return uploaded
 
     if batch_count > 0:
@@ -197,6 +274,9 @@ def build_company_index():
             uploaded += batch_count
 
     print(f'✅ Company Index构建完成: {uploaded} 个公司')
+    progress['company_index_uploaded'] = uploaded
+    progress['company_index_completed'] = True
+    save_progress()
     return uploaded
 
 def build_company_summaries():
@@ -205,6 +285,10 @@ def build_company_summaries():
     print('🏗️  步骤2: 构建Company Party Summaries')
     print(f'{"="*70}')
 
+    if progress.get('party_summary_completed'):
+        print('  ℹ️  Company Party Summaries已完成，跳过')
+        return progress.get('party_summary_uploaded', 0)
+
     # 从company_index获取所有公司
     print('  📖 读取company_index...')
     companies_ref = db.collection('fec_company_index')
@@ -212,10 +296,20 @@ def build_company_summaries():
 
     print(f'  找到 {len(companies)} 个公司')
 
-    uploaded = 0
+    uploaded = progress.get('party_summary_uploaded', 0)
     skipped = 0
+    start_idx = progress.get('party_summary_processed', 0)
+
+    if start_idx > 0:
+        print(f'  ↻ 从第 {start_idx + 1} 个公司继续...')
 
     for idx, company_doc in enumerate(companies, 1):
+        if idx <= start_idx:
+            continue
+
+        # 每处理一个公司都检查token（函数内部会判断是否需要刷新）
+        refresh_token_if_needed()
+
         company_data = company_doc.to_dict()
         normalized_name = company_data['normalized_name']
         committee_ids = [c['committee_id'] for c in company_data['committee_ids']]
@@ -259,6 +353,8 @@ def build_company_summaries():
         if not years_data:
             print(f'    ⚠️  无捐款数据，跳过')
             skipped += 1
+            progress['party_summary_processed'] = idx
+            save_progress()
             continue
 
         # 为每个年份创建汇总文档
@@ -288,6 +384,9 @@ def build_company_summaries():
             if commit_with_retry(batch):
                 uploaded += batch_count
                 print(f'    ✓ 上传 {batch_count} 个年份的汇总')
+                progress['party_summary_processed'] = idx
+                progress['party_summary_uploaded'] = uploaded
+                save_progress()
                 time.sleep(MIN_DELAY)
             else:
                 print(f'    ❌ 上传失败')
@@ -295,6 +394,8 @@ def build_company_summaries():
     print(f'\n✅ Company Summaries构建完成:')
     print(f'   上传: {uploaded} 个汇总')
     print(f'   跳过: {skipped} 个公司（无数据）')
+    progress['party_summary_completed'] = True
+    save_progress()
     return uploaded
 
 def main():
@@ -303,6 +404,7 @@ def main():
     print('🚀 FEC索引和汇总表构建')
     print('='*70)
 
+    load_progress()
     init_firestore()
 
     # 步骤1: 构建公司索引
@@ -317,6 +419,7 @@ def main():
     print(f'\n📊 统计:')
     print(f'  Company Index: {company_count} 个公司')
     print(f'  Company Summaries: {summary_count} 个汇总')
+    print(f'\n进度文件: {PROGRESS_FILE}')
     print()
 
 if __name__ == '__main__':

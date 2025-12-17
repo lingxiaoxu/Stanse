@@ -1,38 +1,45 @@
 #!/usr/bin/env python3
 """
-增量式FEC数据上传 - 带自动重试和指数退避
+增量式FEC数据上传 - 带自动重试
 
 特点：
 1. 检查并跳过已上传的记录
 2. 遇到配额错误时自动等待并重试（指数退避）
 3. 保存进度，可以中断后继续
 4. 详细进度显示
-5. 可以无人值守运行直到完成
+5. 使用默认凭证，无需手动刷新token
+6. 可以无人值守运行直到完成
+7. 支持限制上传数量（用于测试）
+
+用法：
+  python3 02-upload-incremental.py              # 上传全部
+  python3 02-upload-incremental.py --limit 100  # 只上传100条（测试）
 """
 
 import sys
 import re
+import argparse
 import time
 import json
 import os
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
-import subprocess
 import random
 
 try:
     import firebase_admin
     from firebase_admin import credentials, firestore
-    from google.api_core.exceptions import ResourceExhausted, DeadlineExceeded
+    from google.api_core.exceptions import ResourceExhausted, DeadlineExceeded, Unauthenticated
+    import google.auth
 except ImportError:
     print('❌ Firebase库未安装')
     sys.exit(1)
 
 # 配置
-DATA_DIR = Path(__file__).parent / 'raw_data'
+DATA_DIR = Path(__file__).parent.parent / 'raw_data'
 PROJECT_ID = 'stanseproject'
-PROGRESS_FILE = Path(__file__).parent / 'upload_progress.json'
+PROGRESS_FILE = Path(__file__).parent.parent / 'reports' / '01-upload-progress.json'
 
 # 批次配置
 BATCH_SIZE = 50  # 更小的批次以避免超时
@@ -62,45 +69,97 @@ def load_progress():
     }
 
 def init_firestore():
-    """初始化Firestore"""
+    """初始化Firestore - 使用gcloud auth"""
     global db
     print('\n🔧 初始化Firestore连接...')
 
     try:
         if not firebase_admin._apps:
-            # 优先使用环境变量中的access token（避免subprocess挂起）
-            access_token = os.environ.get('GCLOUD_ACCESS_TOKEN')
-
-            if not access_token:
-                # 如果环境变量不存在，才调用gcloud
-                print('  ℹ️  从gcloud获取access token...')
-                result = subprocess.run(
-                    ['gcloud', 'auth', 'print-access-token'],
-                    capture_output=True, text=True, check=True
-                )
-                access_token = result.stdout.strip()
-            else:
-                print('  ✓ 使用环境变量中的access token')
-
-            from google.oauth2 import credentials as oauth_creds
-            cred = oauth_creds.Credentials(access_token)
-            firebase_admin.initialize_app(cred, options={'projectId': PROJECT_ID})
+            # 直接使用 Firebase Admin，它会自动查找凭证
+            # 按顺序尝试: 环境变量 -> ADC -> gcloud auth
+            print('  ℹ️  使用默认凭证链（gcloud/环境变量）...')
+            firebase_admin.initialize_app(options={'projectId': PROJECT_ID})
 
         db = firestore.client()
         print(f'✅ Firestore已连接 (项目: {PROJECT_ID})')
+        print('  💡 使用已登录的 gcloud 凭证')
         return db
     except Exception as e:
         print(f'❌ 失败: {e}')
+        print('  提示: 请确保已运行 gcloud auth login')
         sys.exit(1)
 
-def commit_with_retry(batch, retry_count=0, max_retries=10):
+def refresh_firestore_client():
+    """刷新Firestore客户端和token"""
+    global db
+    print('  🔄 刷新Firestore连接和token...')
+
+    try:
+        # 重新获取Firestore客户端
+        # Firebase Admin SDK会自动刷新ADC token
+        db = firestore.client()
+        print('  ✅ Token已刷新')
+        return True
+    except Exception as e:
+        print(f'  ❌ 刷新失败: {e}')
+        return False
+
+def commit_batch_with_token_refresh(batch_docs, collection_ref):
     """
-    提交批次，带指数退避重试
+    提交批次文档，自动处理token刷新
+
+    Args:
+        batch_docs: List of (doc_ref, doc_data) tuples
+        collection_ref: Firestore collection reference
+
+    Returns:
+        True if successful, False otherwise
+    """
+    global db
+
+    # 创建新batch
+    batch = db.batch()
+    for doc_ref, doc_data in batch_docs:
+        batch.set(doc_ref, doc_data)
+
+    # 尝试提交
+    try:
+        batch.commit()
+        return True
+    except Unauthenticated as e:
+        print(f'  ⚠️  Token过期，正在刷新并重试...')
+        if refresh_firestore_client():
+            # Token刷新后，用新的db客户端重新创建batch
+            new_batch = db.batch()
+            for doc_ref, doc_data in batch_docs:
+                # 使用新的db客户端重新创建doc_ref
+                new_doc_ref = collection_ref.document(doc_ref.id)
+                new_batch.set(new_doc_ref, doc_data)
+
+            # 重试提交
+            try:
+                new_batch.commit()
+                print('  ✅ Token刷新后重试成功')
+                return True
+            except Exception as retry_err:
+                print(f'  ❌ Token刷新后重试仍失败: {retry_err}')
+                return False
+        else:
+            return False
+    except Exception as e:
+        print(f'  ❌ 提交失败: {e}')
+        return False
+
+def commit_with_retry(batch, retry_count=0, max_retries=10, batch_docs=None, collection_ref=None):
+    """
+    提交批次，带指数退避重试和token自动刷新
 
     Args:
         batch: Firestore batch
         retry_count: 当前重试次数
         max_retries: 最大重试次数
+        batch_docs: List of (doc_ref, doc_data) - 用于token刷新时重建batch
+        collection_ref: Collection reference - 用于token刷新时重建batch
 
     Returns:
         True if successful, False if max retries exceeded
@@ -108,6 +167,13 @@ def commit_with_retry(batch, retry_count=0, max_retries=10):
     try:
         batch.commit()
         return True
+    except Unauthenticated as e:
+        if batch_docs and collection_ref:
+            print(f'  ⚠️  Token过期，正在刷新并重新提交...')
+            return commit_batch_with_token_refresh(batch_docs, collection_ref)
+        else:
+            print(f'  ❌ Token过期但无法自动刷新（缺少batch_docs或collection_ref）')
+            return False
     except (ResourceExhausted, DeadlineExceeded) as e:
         if retry_count >= max_retries:
             print(f'  ❌ 达到最大重试次数 ({max_retries})')
@@ -123,7 +189,7 @@ def commit_with_retry(batch, retry_count=0, max_retries=10):
         time.sleep(delay)
 
         # 递归重试
-        return commit_with_retry(batch, retry_count + 1, max_retries)
+        return commit_with_retry(batch, retry_count + 1, max_retries, batch_docs, collection_ref)
     except Exception as e:
         print(f'  ❌ 未知错误: {e}')
         return False
@@ -337,8 +403,15 @@ def upload_candidates_incremental(year, year_suffix, progress):
     print(f'✅ 成功上传 {uploaded} 条候选人记录')
     return uploaded
 
-def upload_contributions_incremental(year, year_suffix, progress):
-    """增量上传捐款数据"""
+def upload_contributions_incremental(year, year_suffix, progress, limit=None):
+    """增量上传捐款数据
+
+    Args:
+        year: 数据年份
+        year_suffix: 年份后缀
+        progress: 进度字典
+        limit: 限制上传数量（None表示不限制，用于测试）
+    """
     collection_name = 'fec_raw_contributions_pac_to_candidate'
     file_path = DATA_DIR / 'contributions' / 'itpas2.txt'
 
@@ -388,26 +461,30 @@ def upload_contributions_incremental(year, year_suffix, progress):
             doc_id = f'{committee_id}_{candidate_id}_{line_num}'
             doc_ref = db.collection(collection_name).document(doc_id)
 
+            # ✅ 根据FEC官方header文件 pas2_header_file.csv 的正确映射
+            # 0:CMTE_ID 1:AMNDT_IND 2:RPT_TP 3:TRANSACTION_PGI 4:IMAGE_NUM 5:TRANSACTION_TP
+            # 6:ENTITY_TP 7:NAME 8:CITY 9:STATE 10:ZIP_CODE 11:EMPLOYER 12:OCCUPATION
+            # 13:TRANSACTION_DT 14:TRANSACTION_AMT 15:OTHER_ID 16:CAND_ID 17:TRAN_ID
             doc_data = {
-                'committee_id': committee_id,
-                'amendment_indicator': fields[1] if len(fields) > 1 else '',
-                'report_type': fields[2] if len(fields) > 2 else '',
-                'election_type': fields[3] if len(fields) > 3 else '',
-                'fec_record_number': fields[4] if len(fields) > 4 else '',
-                'image_number': fields[5] if len(fields) > 5 else '',
-                'transaction_type': fields[6] if len(fields) > 6 else '',
-                'entity_type': fields[7] if len(fields) > 7 else '',
-                'name': fields[8] if len(fields) > 8 else '',
-                'city': fields[9] if len(fields) > 9 else '',
-                'state': fields[10] if len(fields) > 10 else '',
-                'zip': fields[11] if len(fields) > 11 else '',
-                'employer': fields[12] if len(fields) > 12 else '',
-                'occupation': fields[13] if len(fields) > 13 else '',
-                'transaction_date': fields[14] if len(fields) > 14 else '',
-                'transaction_amount': amount_cents,
-                'other_id': fields[15] if len(fields) > 15 else '',
-                'candidate_id': candidate_id,
-                'transaction_pgi': fields[17] if len(fields) > 17 else '',
+                'committee_id': fields[0],  # 0:CMTE_ID
+                'amendment_indicator': fields[1] if len(fields) > 1 else '',  # 1:AMNDT_IND
+                'report_type': fields[2] if len(fields) > 2 else '',  # 2:RPT_TP
+                'election_type': fields[3] if len(fields) > 3 else '',  # 3:TRANSACTION_PGI
+                'fec_record_number': fields[4] if len(fields) > 4 else '',  # 4:IMAGE_NUM
+                'image_number': fields[4] if len(fields) > 4 else '',  # 4:IMAGE_NUM
+                'transaction_type': fields[5] if len(fields) > 5 else '',  # 5:TRANSACTION_TP
+                'entity_type': fields[6] if len(fields) > 6 else '',  # 6:ENTITY_TP
+                'name': fields[7] if len(fields) > 7 else '',  # 7:NAME
+                'city': fields[8] if len(fields) > 8 else '',  # 8:CITY
+                'state': fields[9] if len(fields) > 9 else '',  # 9:STATE
+                'zip': fields[10] if len(fields) > 10 else '',  # 10:ZIP_CODE
+                'employer': fields[11] if len(fields) > 11 else '',  # 11:EMPLOYER
+                'occupation': fields[12] if len(fields) > 12 else '',  # 12:OCCUPATION
+                'transaction_date': fields[13] if len(fields) > 13 else '',  # 13:TRANSACTION_DT
+                'transaction_amount': amount_cents,  # 14:TRANSACTION_AMT (从fields[14]解析)
+                'other_id': fields[15] if len(fields) > 15 else '',  # 15:OTHER_ID
+                'candidate_id': fields[16],  # 16:CAND_ID
+                'transaction_pgi': fields[3] if len(fields) > 3 else '',  # 3:TRANSACTION_PGI
                 'data_year': year,
                 'election_cycle': f'{year-1}-{year}',
                 'source_file': f'pas2{year_suffix}.zip',
@@ -417,6 +494,24 @@ def upload_contributions_incremental(year, year_suffix, progress):
 
             batch.set(doc_ref, doc_data)
             batch_count += 1
+
+            # 检查是否达到测试限制
+            if limit and uploaded + batch_count >= limit:
+                if commit_with_retry(batch):
+                    uploaded += batch_count
+                    print(f'  ✓ 第 {current_line} 行 | 已上传 {uploaded} 条捐款记录')
+                    print(f'\n⚠️  已达到测试限制 ({limit} 条)')
+
+                    progress['contributions_last_line'] = current_line
+                    progress['contributions_uploaded'] = uploaded
+                    progress['last_updated'] = datetime.utcnow().isoformat()
+                    save_progress(progress)
+                    return uploaded
+                else:
+                    progress['contributions_last_line'] = current_line
+                    progress['contributions_uploaded'] = uploaded
+                    save_progress(progress)
+                    return uploaded
 
             if batch_count >= BATCH_SIZE:
                 if commit_with_retry(batch):
@@ -452,9 +547,17 @@ def upload_contributions_incremental(year, year_suffix, progress):
 
 def main():
     """主函数"""
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description='增量上传FEC数据到Firestore')
+    parser.add_argument('--limit', type=int, help='限制上传数量（用于测试，仅对contributions生效）')
+    args = parser.parse_args()
+
     print('\n' + '='*70)
     print('🚀 FEC数据增量上传（带自动重试）')
     print('='*70)
+
+    if args.limit:
+        print(f'\n⚠️  测试模式：仅上传 {args.limit} 条contribution记录')
 
     # 加载进度
     progress = load_progress()
@@ -491,8 +594,10 @@ def main():
 
     # 上传捐款数据
     if not progress.get('contributions_completed'):
-        contributions_count = upload_contributions_incremental(year, year_suffix, progress)
+        contributions_count = upload_contributions_incremental(year, year_suffix, progress, limit=args.limit)
         print(f'\n✓ 捐款数据: 已上传 {contributions_count} 条')
+        if args.limit and contributions_count >= args.limit:
+            print(f'   ⚠️  已达到测试限制，未标记为完成')
     else:
         print(f'\n✓ 捐款数据已完成（{progress.get("contributions_uploaded", 0)} 条）')
 

@@ -1,0 +1,152 @@
+{
+  "statistics": {
+    "total_companies": 3065,
+    "verified_companies": 9,
+    "auto_detected_companies": 3056,
+    "total_committees": 10271,
+    "avg_variants_per_company": 1.0792822185970636,
+    "generated_at": "2025-12-14T20:42:24.324942"
+  },
+  "top_20_companies": [
+    {
+      "canonical_name": "NONE",
+      "display_name": "NONE",
+      "committee_count": 6577,
+      "variant_count": 1,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "CALIFORNIA REPUBLICAN PARTY",
+      "display_name": "CALIFORNIA REPUBLICAN PARTY FEDERAL ACCT.",
+      "committee_count": 35,
+      "variant_count": 5,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "TAKE BACK THE HOUSE",
+      "display_name": "TAKE BACK THE HOUSE 2020",
+      "committee_count": 19,
+      "variant_count": 3,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "GROW THE MAJORITY",
+      "display_name": "GROW THE MAJORITY NY",
+      "committee_count": 17,
+      "variant_count": 2,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "INTERNATIONAL UNION OF OPERATING ENGINEERS",
+      "display_name": "INTERNATIONAL UNION OF OPERATING ENGINEERS LOCAL 15 A B C D",
+      "committee_count": 15,
+      "variant_count": 14,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "KENNEDY VICTORY FUND",
+      "display_name": "KENNEDY VICTORY FUND 2024",
+      "committee_count": 14,
+      "variant_count": 3,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "KS STATE PARTY VICTORY FUND",
+      "display_name": "DNC STATE PARTY VICTORY FUND (TX)",
+      "committee_count": 12,
+      "variant_count": 7,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "AMERICAN VICTORY FUND",
+      "display_name": "SERVE AMERICA VICTORY FUND",
+      "committee_count": 12,
+      "variant_count": 2,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "DEMOCRATIC GRASSROOTS VICTORY FUND",
+      "display_name": "DEMOCRATIC GRASSROOTS VICTORY FUND",
+      "committee_count": 11,
+      "variant_count": 1,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "EMMER VICTORY COMMITTEE",
+      "display_name": "SCHWEIKERT VICTORY COMMITTEE",
+      "committee_count": 11,
+      "variant_count": 6,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "DNC SERVICES CORPDEMOCRATIC NATIONAL COMMITTEE",
+      "display_name": "DNC SERVICES CORPORATION / DEMOCRATIC NATIONAL COMMITTEE",
+      "committee_count": 10,
+      "variant_count": 4,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "DEMOCRATIC PARTY OF VIRGINIA",
+      "display_name": "DEMOCRATIC PARTY OF VIRGINIA",
+      "committee_count": 10,
+      "variant_count": 1,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "DNC VICTORY FUND",
+      "display_name": "DURBIN VICTORY FUND",
+      "committee_count": 8,
+      "variant_count": 6,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "AMERICAN BANKERS ASSOCIATION BANKPAC",
+      "display_name": "AMERICAN BANKERS ASSOCIATION PAC (BANKPAC)",
+      "committee_count": 8,
+      "variant_count": 2,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "NEAL VICTORY FUND",
+      "display_name": "PAUL JUNGE VICTORY FUND",
+      "committee_count": 8,
+      "variant_count": 7,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "FRESHMAN AGRICULTURAL REPUBLICAN MEMBERS TRUST AKA FARM TRUST",
+      "display_name": "FRESHMAN AGRICULTURAL REPUBLICAN MEMBERS TRUST AKA FARM TRUST",
+      "committee_count": 8,
+      "variant_count": 1,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "REPUBLICAN PARTY OF VIRGINIA",
+      "display_name": "REPUBLICAN PARTY OF VIRGINIA, INC",
+      "committee_count": 7,
+      "variant_count": 1,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "TRUMP 47 COMMITTEE",
+      "display_name": "TRUMP 47 COMMITTEE, INC.",
+      "committee_count": 7,
+      "variant_count": 2,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "STEIL VICTORY FUND",
+      "display_name": "SESSLER VICTORY FUND",
+      "committee_count": 7,
+      "variant_count": 5,
+      "is_verified": false
+    },
+    {
+      "canonical_name": "TRUMP VICTORY",
+      "display_name": "TRUMP VICTORY",
+      "committee_count": 7,
+      "variant_count": 1,
+      "is_verified": false
+    }
+  ]
+}

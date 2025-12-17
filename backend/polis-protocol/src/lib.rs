@@ -4,6 +4,7 @@ pub mod types;
 pub mod crypto;
 pub mod metrics;
 pub mod p2p;
+pub mod fec;
 
 // ========== DEMO DATA MODULE ==========
 // Remove this line for production:

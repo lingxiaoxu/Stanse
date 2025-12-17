@@ -18,7 +18,7 @@ except ImportError:
     sys.exit(1)
 
 PROJECT_ID = 'stanseproject'
-PROGRESS_FILE = Path(__file__).parent / 'upload_progress.json'
+PROGRESS_FILE = Path(__file__).parent.parent / 'reports' / '01-upload-progress.json'
 db = None
 
 def init_firestore():
@@ -291,7 +291,7 @@ def main():
     print()
 
     # 保存结果到JSON
-    result_file = Path(__file__).parent / 'verification_result.json'
+    result_file = Path(__file__).parent.parent / 'reports' / '05-verification-result.json'
     with open(result_file, 'w') as f:
         json.dump({
             'timestamp': datetime.now().isoformat(),

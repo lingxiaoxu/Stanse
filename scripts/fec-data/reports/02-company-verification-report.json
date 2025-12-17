@@ -1,0 +1,548 @@
+{
+  "timestamp": "2025-12-12T01:11:01.263188",
+  "total_companies": 8,
+  "passed_count": 4,
+  "failed_count": 4,
+  "results": [
+    {
+      "company_name": "THE BOEING COMPANY",
+      "timestamp": "2025-12-12T01:10:32.709113",
+      "passed": true,
+      "committees": [
+        {
+          "id": "C00142711",
+          "name": "THE BOEING COMPANY POLITICAL ACTION COMMITTEE",
+          "type": "Q"
+        }
+      ],
+      "contribution_count": 726,
+      "candidate_count": 255,
+      "party_distribution": {
+        "DEM": {
+          "amount_cents": 32400000,
+          "amount_dollars": 324000.0,
+          "count": 260
+        },
+        "REP": {
+          "amount_cents": 55200000,
+          "amount_dollars": 552000.0,
+          "count": 461
+        },
+        "IND": {
+          "amount_cents": 1250000,
+          "amount_dollars": 12500.0,
+          "count": 5
+        }
+      },
+      "issues": [],
+      "sample_contributions": [
+        {
+          "amount_cents": 100000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "1000"
+        },
+        {
+          "amount_cents": -100000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "-1000"
+        },
+        {
+          "amount_cents": 200000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "2000"
+        },
+        {
+          "amount_cents": 100000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "1000"
+        },
+        {
+          "amount_cents": 50000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "500"
+        }
+      ]
+    },
+    {
+      "company_name": "AT&T INC.",
+      "timestamp": "2025-12-12T01:10:37.048936",
+      "passed": true,
+      "committees": [
+        {
+          "id": "C00109017",
+          "name": "AT&T INC. EMPLOYEE FEDERAL POLITICAL ACTION COMMITTEE (AT&T EMPLOYEE FEDERAL PAC)",
+          "type": "Q"
+        },
+        {
+          "id": "C00377044",
+          "name": "AT&T INC. OHIO EMPLOYEE POLITICAL ACTION COMMITTEE (AT&T OHIO PAC)",
+          "type": "Q"
+        }
+      ],
+      "contribution_count": 525,
+      "candidate_count": 352,
+      "party_distribution": {
+        "REP": {
+          "amount_cents": 53750000,
+          "amount_dollars": 537500.0,
+          "count": 260
+        },
+        "DEM": {
+          "amount_cents": 50050000,
+          "amount_dollars": 500500.0,
+          "count": 259
+        },
+        "IND": {
+          "amount_cents": 700000,
+          "amount_dollars": 7000.0,
+          "count": 6
+        }
+      },
+      "issues": [],
+      "sample_contributions": [
+        {
+          "amount_cents": 200000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "2000"
+        },
+        {
+          "amount_cents": 200000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "2000"
+        },
+        {
+          "amount_cents": 500000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "5000"
+        },
+        {
+          "amount_cents": 400000,
+          "candidate_name": "WOMACK, STEPHEN A THE HON",
+          "party": "REP",
+          "date": "4000"
+        },
+        {
+          "amount_cents": 100000,
+          "candidate_name": "BERA, AMERISH",
+          "party": "DEM",
+          "date": "1000"
+        }
+      ]
+    },
+    {
+      "company_name": "WALMART INC.",
+      "timestamp": "2025-12-12T01:10:42.854162",
+      "passed": true,
+      "committees": [
+        {
+          "id": "C00093054",
+          "name": "WALMART INC. PAC FOR RESPONSIBLE GOVERNMENT",
+          "type": "Q"
+        }
+      ],
+      "contribution_count": 410,
+      "candidate_count": 249,
+      "party_distribution": {
+        "DEM": {
+          "amount_cents": 23150000,
+          "amount_dollars": 231500.0,
+          "count": 175
+        },
+        "REP": {
+          "amount_cents": 30850000,
+          "amount_dollars": 308500.0,
+          "count": 233
+        },
+        "IND": {
+          "amount_cents": 500000,
+          "amount_dollars": 5000.0,
+          "count": 2
+        }
+      },
+      "issues": [],
+      "sample_contributions": [
+        {
+          "amount_cents": 250000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "2500"
+        },
+        {
+          "amount_cents": 250000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "2500"
+        },
+        {
+          "amount_cents": 500000,
+          "candidate_name": "WOMACK, STEPHEN A THE HON",
+          "party": "REP",
+          "date": "5000"
+        },
+        {
+          "amount_cents": 100000,
+          "candidate_name": "OBERNOLTE, JAY",
+          "party": "REP",
+          "date": "1000"
+        },
+        {
+          "amount_cents": 150000,
+          "candidate_name": "OBERNOLTE, JAY",
+          "party": "REP",
+          "date": "1500"
+        }
+      ]
+    },
+    {
+      "company_name": "COMCAST CORPORATION",
+      "timestamp": "2025-12-12T01:10:45.882130",
+      "passed": false,
+      "committees": [
+        {
+          "id": "C00248716",
+          "name": "COMCAST CORPORATION & NBCUNIVERSAL POLITICAL ACTION COMMITTEE - FEDERAL",
+          "type": "Q"
+        }
+      ],
+      "contribution_count": 360,
+      "candidate_count": 251,
+      "party_distribution": {
+        "REP": {
+          "amount_cents": 48850000,
+          "amount_dollars": 488500.0,
+          "count": 150
+        },
+        "DEM": {
+          "amount_cents": 41700000,
+          "amount_dollars": 417000.0,
+          "count": 205
+        },
+        "IND": {
+          "amount_cents": 1700000,
+          "amount_dollars": 17000.0,
+          "count": 4
+        }
+      },
+      "issues": [
+        "1 位候选人缺失党派信息"
+      ],
+      "sample_contributions": [
+        {
+          "amount_cents": 250000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "2500"
+        },
+        {
+          "amount_cents": 100000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "1000"
+        },
+        {
+          "amount_cents": 500000,
+          "candidate_name": "WOMACK, STEPHEN A THE HON",
+          "party": "REP",
+          "date": "5000"
+        },
+        {
+          "amount_cents": 500000,
+          "candidate_name": "OBERNOLTE, JAY",
+          "party": "REP",
+          "date": "5000"
+        },
+        {
+          "amount_cents": 100000,
+          "candidate_name": "DESAULNIER, MARK",
+          "party": "DEM",
+          "date": "1000"
+        }
+      ]
+    },
+    {
+      "company_name": "HONEYWELL INTERNATIONAL",
+      "timestamp": "2025-12-12T01:10:48.885075",
+      "passed": false,
+      "committees": [
+        {
+          "id": "C00096156",
+          "name": "HONEYWELL INTERNATIONAL POLITICAL ACTION COMMITTEE",
+          "type": "Q"
+        }
+      ],
+      "contribution_count": 544,
+      "candidate_count": 238,
+      "party_distribution": {
+        "REP": {
+          "amount_cents": 55150000,
+          "amount_dollars": 551500.0,
+          "count": 260
+        },
+        "DEM": {
+          "amount_cents": 59200000,
+          "amount_dollars": 592000.0,
+          "count": 270
+        },
+        "IND": {
+          "amount_cents": 1900000,
+          "amount_dollars": 19000.0,
+          "count": 7
+        }
+      },
+      "issues": [
+        "4 位候选人缺失党派信息"
+      ],
+      "sample_contributions": [
+        {
+          "amount_cents": 150000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "1500"
+        },
+        {
+          "amount_cents": 250000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "2500"
+        },
+        {
+          "amount_cents": 100000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "1000"
+        },
+        {
+          "amount_cents": 200000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "2000"
+        },
+        {
+          "amount_cents": 150000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "1500"
+        }
+      ]
+    },
+    {
+      "company_name": "AMERICAN BANKERS ASSOCIATION (ABA)",
+      "timestamp": "2025-12-12T01:10:51.787480",
+      "passed": false,
+      "committees": [
+        {
+          "id": "C00004275",
+          "name": "AMERICAN BANKERS ASSOCIATION PAC (BANKPAC)",
+          "type": "Q"
+        }
+      ],
+      "contribution_count": 596,
+      "candidate_count": 302,
+      "party_distribution": {
+        "REP": {
+          "amount_cents": 81200000,
+          "amount_dollars": 812000.0,
+          "count": 369
+        },
+        "DEM": {
+          "amount_cents": 44250000,
+          "amount_dollars": 442500.0,
+          "count": 218
+        },
+        "IND": {
+          "amount_cents": 1000000,
+          "amount_dollars": 10000.0,
+          "count": 4
+        }
+      },
+      "issues": [
+        "3 位候选人缺失党派信息"
+      ],
+      "sample_contributions": [
+        {
+          "amount_cents": 250000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "2500"
+        },
+        {
+          "amount_cents": 250000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "2500"
+        },
+        {
+          "amount_cents": 250000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "2500"
+        },
+        {
+          "amount_cents": 250000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "2500"
+        },
+        {
+          "amount_cents": 250000,
+          "candidate_name": "WOMACK, STEPHEN A THE HON",
+          "party": "REP",
+          "date": "2500"
+        }
+      ]
+    },
+    {
+      "company_name": "NATIONAL ASSOCIATION OF REALTORS",
+      "timestamp": "2025-12-12T01:10:55.041375",
+      "passed": false,
+      "committees": [
+        {
+          "id": "C00030718",
+          "name": "NATIONAL ASSOCIATION OF REALTORS POLITICAL ACTION COMMITTEE",
+          "type": "Q"
+        },
+        {
+          "id": "C00488742",
+          "name": "NATIONAL ASSOCIATION OF REALTORS CONGRESSIONAL FUND",
+          "type": "O"
+        }
+      ],
+      "contribution_count": 655,
+      "candidate_count": 395,
+      "party_distribution": {
+        "REP": {
+          "amount_cents": 51825000,
+          "amount_dollars": 518250.0,
+          "count": 304
+        },
+        "DEM": {
+          "amount_cents": 59100000,
+          "amount_dollars": 591000.0,
+          "count": 335
+        },
+        "DFL": {
+          "amount_cents": 500000,
+          "amount_dollars": 5000.0,
+          "count": 3
+        },
+        "IND": {
+          "amount_cents": 900000,
+          "amount_dollars": 9000.0,
+          "count": 3
+        },
+        "UNK": {
+          "amount_cents": 50000,
+          "amount_dollars": 500.0,
+          "count": 1
+        }
+      },
+      "issues": [
+        "5 位候选人缺失党派信息"
+      ],
+      "sample_contributions": [
+        {
+          "amount_cents": 200000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "2000"
+        },
+        {
+          "amount_cents": 100000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "1000"
+        },
+        {
+          "amount_cents": 200000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "2000"
+        },
+        {
+          "amount_cents": 100000,
+          "candidate_name": "SEWELL, TERRI A.",
+          "party": "DEM",
+          "date": "1000"
+        },
+        {
+          "amount_cents": 500000,
+          "candidate_name": "CRAWFORD, ERIC ALAN RICK",
+          "party": "REP",
+          "date": "5000"
+        }
+      ]
+    },
+    {
+      "company_name": "RTX CORPORATION",
+      "timestamp": "2025-12-12T01:10:58.971820",
+      "passed": true,
+      "committees": [
+        {
+          "id": "C00097568",
+          "name": "EMPLOYEES OF RTX CORPORATION POLITICAL ACTION COMMITTEE",
+          "type": "Q"
+        }
+      ],
+      "contribution_count": 487,
+      "candidate_count": 201,
+      "party_distribution": {
+        "REP": {
+          "amount_cents": 35300000,
+          "amount_dollars": 353000.0,
+          "count": 285
+        },
+        "DEM": {
+          "amount_cents": 26450000,
+          "amount_dollars": 264500.0,
+          "count": 200
+        },
+        "IND": {
+          "amount_cents": 200000,
+          "amount_dollars": 2000.0,
+          "count": 2
+        }
+      },
+      "issues": [],
+      "sample_contributions": [
+        {
+          "amount_cents": 150000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "1500"
+        },
+        {
+          "amount_cents": 100000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "1000"
+        },
+        {
+          "amount_cents": 100000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "1000"
+        },
+        {
+          "amount_cents": 100000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "1000"
+        },
+        {
+          "amount_cents": 100000,
+          "candidate_name": "CARL, JERRY LEE, JR",
+          "party": "REP",
+          "date": "1000"
+        }
+      ]
+    }
+  ]
+}
