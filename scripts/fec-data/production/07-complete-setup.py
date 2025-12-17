@@ -32,7 +32,7 @@ except ImportError:
 # 配置
 DATA_DIR = Path(__file__).parent / 'raw_data'
 PROJECT_ID = 'stanseproject'
-PROGRESS_FILE = Path(__file__).parent / 'upload_progress.json'
+PROGRESS_FILE = Path(__file__).parent.parent / 'reports' / '01-upload-progress.json'
 BASE_URL = 'https://www.fec.gov/files/bulk-downloads'
 
 # 批次配置

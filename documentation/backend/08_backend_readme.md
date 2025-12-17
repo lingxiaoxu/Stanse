@@ -247,6 +247,79 @@ cargo test -- --nocapture
 
 ---
 
+## ☁️ Production Deployment Architecture
+
+### Google Cloud Projects
+
+The application uses **three separate Google Cloud projects**:
+
+#### 1. gen-lang-client-0960644135 (Main Application)
+- **Project Name**: StanseProject
+- **Project Number**: 837715360412
+- **Purpose**: Hosts both frontend and backend on Cloud Run
+- **Services**:
+  - **Backend (Polis Protocol)**: https://polis-protocol-837715360412.us-central1.run.app
+  - **Frontend (Stanse)**: https://stanse-837715360412.us-central1.run.app
+
+#### 2. stanseproject (Database)
+- **Project Name**: StanseProject
+- **Project Number**: 626045766180
+- **Purpose**: Hosts Firestore database with all application data
+- **Database**: Firebase/Firestore (Native mode)
+- **Collections**:
+  - FEC data: `fec_raw_committees`, `fec_raw_candidates`, `fec_raw_contributions_pac_to_candidate`
+  - Indexes: `fec_company_index`, `fec_company_party_summary`
+  - User data: `polis_users`, `user_actions`, `polis_transactions`
+  - Cache: `news`, `news_images`, `news_embeddings`, `company_rankings`
+
+#### 3. gen-lang-client-0964921300 (AI Services)
+- **Project Name**: Gemini API
+- **Project Number**: 743497470919
+- **Purpose**: Gemini API for AI features (news summarization, embeddings, etc.)
+- **Services**: Generative Language API
+
+### Cross-Project Access
+
+The backend (in project #837715360412) can access Firestore data (in project #626045766180) through:
+
+1. **Firestore Security Rules** ([firestore.rules](../../../firestore.rules))
+   - FEC data collections are set to public read (`allow read: if true`)
+   - User data requires authentication
+   - Rules deployed via: `gcloud alpha firestore rules release /Users/xuling/code/Stanse/firestore.rules --project=stanseproject --database='(default)'`
+
+2. **Service Account Permissions**
+   - Cloud Run service accounts have appropriate IAM roles for cross-project access
+
+### Deployment Commands
+
+**Backend Deployment:**
+```bash
+cd /Users/xuling/code/Stanse/backend/polis-protocol
+gcloud builds submit --config=cloudbuild.yaml
+```
+
+**Firestore Rules Update:**
+```bash
+gcloud alpha firestore rules release /Users/xuling/code/Stanse/firestore.rules --project=stanseproject --database='(default)'
+```
+
+**Load Testing:**
+```bash
+export API_URL=https://polis-protocol-837715360412.us-central1.run.app
+/Users/xuling/code/Stanse/backend/polis-protocol/scripts/load_test.sh
+```
+
+### Environment Configuration
+
+The backend automatically detects the environment and uses the appropriate API URL:
+
+- **Production**: `https://polis-protocol-837715360412.us-central1.run.app`
+- **Local Development**: `http://localhost:8080`
+
+Frontend environment configuration is in [config.ts](../../../src/config/config.ts).
+
+---
+
 ## 🔗 Integration with Frontend
 
 ### TypeScript Service (Create in `services/polisService.ts`)

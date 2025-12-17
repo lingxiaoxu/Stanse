@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 用户数据 - 只有认证用户可以读写自己的数据
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Polis Protocol user data
+    match /polis_users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // User actions - users can read/write their own actions
+    match /user_actions/{actionId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+    }
+    
+    // FEC 公开数据 - 所有人可读，禁止写入
+    match /fec_raw_committees/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    match /fec_raw_candidates/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    match /fec_raw_contributions_pac_to_candidate/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    match /fec_company_index/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    match /fec_company_party_summary/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /fec_company_name_variants/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;  // Authenticated users can update variants with AI
+    }
+
+    // Polis Protocol 数据 - 需要认证
+    match /polis_transactions/{txId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // 新闻和更新 - 公开读，管理员写，但也允许认证用户缓存
+    match /news/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // 新闻图片缓存 - 认证用户可以读写
+    match /news_images/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // 新闻向量嵌入缓存 - 认证用户可以读写
+    match /news_embeddings/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // 公司排名缓存 - 认证用户可以读写
+    match /company_rankings/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Sense reports - users can read/write their own reports
+    match /sense_reports/{userId}/{report=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Public read for certain collections
+    match /public_data/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // 默认拒绝所有
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -11,7 +11,7 @@
 ### 🔴 严重问题 (Critical Issues): 0个
 **无严重问题发现**
 
-### 🟡 轻微问题 (Minor Issues): 1个
+### 🟡 轻微问题 (Minor Issues): 2个
 需要处理，但不影响核心功能
 
 ### 🔵 信息性问题 (Informational): 3个
@@ -21,7 +21,310 @@
 
 ## 🟡 轻微问题 (Minor Issues)
 
-### 问题 1: 重复的API路由
+### 问题 1: FEC数据中"NONE"公司的处理问题
+**严重程度**: 🟡 轻微
+**位置**: `scripts/fec-data/production/06-build-indexes.py` (Lines 166-354) 和 Firestore collection `fec_company_index`
+**发现日期**: 2025-12-17
+
+**详细描述**:
+在构建公司索引(company_index)时,脚本将所有FEC数据中 `connected_org_name = "NONE"` 的PACs合并为一个名为"NONE"的"公司",导致6577个无公司关联的委员会被错误地作为单个实体处理。
+
+**影响**:
+1. **处理时间浪费**: 处理"NONE"公司需要数小时,因为需要查询6577个PAC的捐款记录
+2. **数据质量问题**: 这些PACs大多数是候选人委员会(Candidate Committees),不符合本应用追踪企业政治影响力的目标
+3. **资源浪费**: 约90%的这些PACs没有任何捐款数据,查询它们纯属浪费
+4. **索引构建阻塞**: 在party_summary构建阶段,卡在处理"NONE"公司上,导致整个索引构建流程停滞
+
+**统计发现**:
+- 总PACs数量: 6577
+- 随机抽样10个PAC:
+  - 9个 (90%) **无任何捐款记录**
+  - 1个 (10%) 有捐款记录
+- 委员会类型分布:
+  - H (House候选人委员会): 40%
+  - S (Senate候选人委员会): 20%
+  - P (Presidential候选人委员会): 10%
+  - V (Super PAC): 10%
+  - O (Independent Expenditure): 10%
+  - N (Joint Fundraising): 10%
+
+**10个详细示例**:
+
+#### 示例 1: THE KING GROUP PAC (C00841163)
+```
+委员会信息:
+  committee_id: C00841163
+  committee_name: THE KING GROUP PAC
+  committee_type: V (Super PAC)
+  connected_org_name: NONE
+  treasurer_name: HARMON, CHRIS, , ,
+  street_1: 1317 W FOOTHILL BLVD # 120
+  city: UPLAND
+  state: CA
+  zip_code: 91786
+  data_year: 2024
+
+捐款数据: 无任何捐款记录
+
+候选人关联: 无
+```
+
+#### 示例 2: COMMITTEE TO ELECT LUCAS CONNOR FOR PRESIDENT (C00892430)
+```
+委员会信息:
+  committee_id: C00892430
+  committee_name: COMMITTEE TO ELECT LUCAS CONNOR FOR PRESIDENT
+  committee_type: P (Presidential)
+  connected_org_name: NONE
+  treasurer_name: CONNOR, LUCAS, , ,
+  street_1: 3408 PORT HOPE AVE
+  city: BALTIMORE
+  state: MD
+  zip_code: 21224
+  data_year: 2024
+
+捐款数据: 无任何捐款记录
+
+候选人关联: 无
+```
+
+#### 示例 3: ROMANOFF FOR COLORAO (C00696732)
+```
+委员会信息:
+  committee_id: C00696732
+  committee_name: ROMANOFF FOR COLORAO
+  committee_type: S (Senate)
+  connected_org_name: NONE
+  treasurer_name: CUNNIFF, CHRIS, , ,
+  street_1: 1600 DOWNING STREET
+  city: DENVER
+  state: CO
+  zip_code: 80218
+  data_year: 2024
+
+捐款数据: 无任何捐款记录
+
+候选人关联: 无
+```
+
+#### 示例 4: CODY FOR CALIFORNIA (C00894634)
+```
+委员会信息:
+  committee_id: C00894634
+  committee_name: CODY FOR CALIFORNIA
+  committee_type: H (House)
+  connected_org_name: NONE
+  treasurer_name: CODY, MORGAN, GARRETT, ,
+  street_1: 2155 STONECREST DR
+  city: ESCONDIDO
+  state: CA
+  zip_code: 92029
+  data_year: 2024
+
+捐款数据: 无任何捐款记录
+
+候选人关联: 无
+```
+
+#### 示例 5: ASHLEY EHASZ VICTORY FUND (C00847509)
+```
+委员会信息:
+  committee_id: C00847509
+  committee_name: ASHLEY EHASZ VICTORY FUND
+  committee_type: N (Joint Fundraising)
+  connected_org_name: NONE
+  treasurer_name: DUBENSKY, CAROLYN, , ,
+  street_1: 2940 16TH STREET
+  suite: 214-9
+  city: SAN FRANCISCO
+  state: CA
+  zip_code: 94103
+  data_year: 2024
+
+捐款数据: 无任何捐款记录
+
+候选人关联: 无
+```
+
+#### 示例 6: DEMOCRACY WINS (C00878728) ⭐ **唯一有捐款的例子**
+```
+委员会信息:
+  committee_id: C00878728
+  committee_name: DEMOCRACY WINS
+  committee_type: O (Independent Expenditure-Only)
+  connected_org_name: NONE
+  treasurer_name: SEIDEL, ANDREW, , ,
+  street_1: 1155 15TH ST NW
+  suite: 900
+  city: WASHINGTON
+  state: DC
+  zip_code: 20005
+  data_year: 2024
+
+捐款数据: **1条记录**
+  transaction_id: SA18.1721859
+  amount: $9,904.00 (990400 cents)
+  transaction_date: 2024-10-29
+  entity_type: IND (Individual)
+  donor_name: KABZA MEDIA
+
+候选人信息:
+  candidate_id: H6CO03124
+  candidate_name: BOEBERT, LAUREN
+  party: REP
+  office: H (House)
+  state: CO
+  district: 003
+```
+
+#### 示例 7: THE BERGMAN VICTORY COMMITTEE (C00696088)
+```
+委员会信息:
+  committee_id: C00696088
+  committee_name: THE BERGMAN VICTORY COMMITTEE
+  committee_type: N (Joint Fundraising)
+  connected_org_name: NONE
+  treasurer_name: HALL, RANDY, , ,
+  street_1: PO BOX 77
+  city: WATERSMEET
+  state: MI
+  zip_code: 49969
+  data_year: 2024
+
+捐款数据: 无任何捐款记录
+
+候选人关联: 无
+```
+
+#### 示例 8: BATTLE BORN CITIZENS TO ELECT LEVY SHULTZ (C00863886)
+```
+委员会信息:
+  committee_id: C00863886
+  committee_name: BATTLE BORN CITIZENS TO ELECT LEVY SHULTZ
+  committee_type: H (House)
+  connected_org_name: NONE
+  treasurer_name: SHULTZ, LEVY, , ,
+  street_1: 8985 S EASTERN AVE
+  suite: 230
+  city: LAS VEGAS
+  state: NV
+  zip_code: 89123
+  data_year: 2024
+
+捐款数据: 无任何捐款记录
+
+候选人关联: 无
+```
+
+#### 示例 9: NATIONAL EDUCATIVE SCIENCE ASSOCIATION,INC (C00892083)
+```
+委员会信息:
+  committee_id: C00892083
+  committee_name: NATIONAL EDUCATIVE SCIENCE ASSOCIATION,INC
+  committee_type: N (Joint Fundraising)
+  connected_org_name: NONE
+  treasurer_name: WILLIAMS, MARGE, , ,
+  street_1: PO BOX 9040
+  city: SHREVEPORT
+  state: LA
+  zip_code: 71139
+  data_year: 2024
+
+捐款数据: 无任何捐款记录
+
+候选人关联: 无
+```
+
+#### 示例 10: CRIMSON GOES BLUE, INC. (C00794404)
+```
+委员会信息:
+  committee_id: C00794404
+  committee_name: CRIMSON GOES BLUE, INC.
+  committee_type: V (Super PAC)
+  connected_org_name: NONE
+  treasurer_name: SCHOENHOFF, JONATHAN, , ,
+  street_1: 3 E UNIVERSITY PKWY
+  suite: 100
+  city: BALTIMORE
+  state: MD
+  zip_code: 21218
+  data_year: 2024
+
+捐款数据: 无任何捐款记录
+
+候选人关联: 无
+```
+
+**代码位置分析**:
+
+在 `06-build-indexes.py` 的 Lines 176-184:
+```python
+for doc in docs:
+    data = doc.to_dict()
+    connected_org = data.get('connected_org_name', '').strip()
+    committee_id = data.get('committee_id')
+    year = data.get('data_year')
+
+    if connected_org and committee_id:  # ← 问题在这里:包含了"NONE"值
+        normalized = normalize_company_name(connected_org)
+
+        if normalized not in companies:
+            companies[normalized] = {
+                'company_name': connected_org,
+                'normalized_name': normalized,
+                'committee_ids': [],
+                'search_keywords': set()
+            }
+```
+
+**解决方案**:
+
+**选项 1: 过滤"NONE"值** (推荐)
+修改 Line 176-178:
+```python
+if connected_org and committee_id and connected_org.upper() != 'NONE':
+    normalized = normalize_company_name(connected_org)
+    # ... 继续处理
+```
+
+**选项 2: 在party_summary阶段跳过**
+修改 Line 302 附近的party_summary构建:
+```python
+for idx, company_doc in enumerate(companies, 1):
+    if idx <= start_idx:
+        continue
+
+    company_data = company_doc.to_dict()
+    normalized_name = company_data['normalized_name']
+
+    # 跳过 NONE 公司
+    if normalized_name == 'none':
+        print(f'\n  [{idx}/{len(companies)}] 跳过 NONE 公司 (6577 PACs)')
+        continue
+```
+
+**选项 3: 保留但记录**
+在处理"NONE"时添加特殊标记,以便前端可以过滤它。
+
+**后续清理步骤**:
+1. 从 Firestore `fec_company_index` 删除 `normalized_name = 'none'` 的文档
+2. 从 Firestore `fec_company_party_summary` 删除相关文档
+3. 更新 `06-index-build-progress.json` 以反映已跳过"NONE"
+
+**优先级**: 中
+**建议行动**: 实施选项1或选项2,删除现有"NONE"数据,重新运行索引构建
+
+**影响范围**:
+- 索引构建时间从数小时减少到约1-2小时
+- Firestore读取次数减少约数万次
+- 数据质量提升,更符合应用目标
+
+**附加说明**:
+这不是一个严重的bug,因为系统仍然正常工作。但它浪费了大量处理时间和资源,处理的数据对应用没有实际价值。
+
+---
+
+### 问题 2: 重复的API路由
 **严重程度**: 🟡 轻微
 **位置**: `backend/polis-protocol/src/api_server.rs:129-130`
 

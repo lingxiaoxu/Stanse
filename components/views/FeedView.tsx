@@ -464,8 +464,24 @@ export const FeedView: React.FC = () => {
                   <div className="absolute -left-[24px] top-6 w-3 h-3 bg-black border-2 border-white box-content"></div>
 
                   <PixelCard className="hover:translate-x-1 transition-transform duration-200 mb-0">
-                  <div className="relative h-32 w-full border-b-2 border-black mb-3 overflow-hidden group">
-                      <img src={newsItem.imageUrl} alt={newsItem.title} className="w-full h-full object-cover filter grayscale contrast-125 group-hover:scale-105 transition-transform duration-700" />
+                  <div className="relative h-32 w-full border-b-2 border-black mb-3 overflow-hidden group bg-gray-200">
+                      <img
+                        src={newsItem.imageUrl}
+                        alt={newsItem.title}
+                        className="w-full h-full object-cover filter grayscale contrast-125 group-hover:scale-105 transition-transform duration-700"
+                        onError={(e) => {
+                          // Fallback when image fails to load: show a geometric pattern
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent && !parent.querySelector('.fallback-pattern')) {
+                            const fallback = document.createElement('div');
+                            fallback.className = 'fallback-pattern w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center';
+                            fallback.innerHTML = '<div class="text-6xl opacity-20">📰</div>';
+                            parent.insertBefore(fallback, parent.firstChild);
+                          }
+                        }}
+                      />
                       <div className="absolute top-2 right-2 bg-white px-2 py-1 text-xs font-bold border-2 border-black">
                       {newsItem.date}
                       </div>
