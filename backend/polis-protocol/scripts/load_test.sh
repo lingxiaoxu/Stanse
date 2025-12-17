@@ -61,7 +61,7 @@ test_endpoint() {
 
     for ((i=1; i<=$requests; i++)); do
         local req_start=$(date +%s%N)
-        if curl -sf "$url" > /dev/null 2>&1; then
+        if curl -sf --max-time 30 "$url" > /dev/null 2>&1; then
             ((success++))
             local req_end=$(date +%s%N)
             local elapsed=$(( (req_end - req_start) / 1000000 ))
@@ -96,16 +96,52 @@ test_endpoint() {
     echo "$name,$rps,$avg_time,$failed,$success_rate" >> "$RESULTS_DIR/summary.csv"
 }
 
+# 动态获取真实在线用户
+echo -e "${YELLOW}准备测试数据...${NC}"
+REAL_USER_DID=""
+
+# 尝试从/api/v1/users/online端点获取在线用户
+ONLINE_RESPONSE=$(curl -sf "$API_URL/api/v1/users/online" 2>/dev/null || echo "")
+if [ -n "$ONLINE_RESPONSE" ]; then
+    # 从JSON响应中提取第一个用户的polis_did
+    # 响应格式: {"success":true,"data":[{"firebase_uid":"...","polis_did":"did:polis:firebase:...","is_online":true}],...}
+    REAL_USER_DID=$(echo "$ONLINE_RESPONSE" | grep -o '"polis_did":"[^"]*"' | head -1 | sed 's/"polis_did":"//;s/"$//')
+fi
+
+if [ -z "$REAL_USER_DID" ]; then
+    echo -e "${YELLOW}⚠️  未找到在线用户，将跳过用户影响力测试${NC}"
+else
+    echo -e "${GREEN}✓ 找到真实在线用户: $REAL_USER_DID${NC}"
+fi
+echo ""
+
 # 运行所有测试
 echo -e "${GREEN}开始测试...${NC}\n"
 
+# 核心健康检查
 test_endpoint "Health Check" "/api/v1/health" 200
-test_endpoint "Global Stats" "/api/v1/stats/global" 150
+
+# 统计和区块链端点（读取Firestore真实数据）
+test_endpoint "Global Stats (Firestore)" "/api/v1/stats/global" 150
 test_endpoint "Blockchain Stats" "/api/v1/blockchain/stats" 150
 test_endpoint "Shards Info" "/api/v1/shards" 100
-test_endpoint "Campaigns List" "/api/v1/campaigns" 100
-test_endpoint "User Impact (Firebase)" "/api/v1/user/did:polis:firebase:lx82_yahoo_com/impact" 100
+
+# 活动数据（Firestore查询）
+test_endpoint "Campaigns List (Firestore)" "/api/v1/campaigns" 100
+
+# 用户影响力（仅当有真实用户时测试）
+if [ -n "$REAL_USER_DID" ]; then
+    test_endpoint "User Impact (Firebase Real User)" "/api/v1/user/$REAL_USER_DID/impact" 100
+fi
+
+# 系统监控
 test_endpoint "Metrics (Prometheus)" "/metrics" 50
+
+# TODO: 添加FEC数据端点测试（当实现后）
+# 这些端点尚未在backend实现，需要在api_server.rs中添加：
+# test_endpoint "Company FEC Politics" "/api/v1/company/hallmark/fec-politics" 50
+# test_endpoint "Company Party Donations" "/api/v1/company/walmart/party-donations" 50
+# test_endpoint "FEC Company Search" "/api/v1/fec/companies?search=microsoft" 50
 
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}测试完成!${NC}"

@@ -6,14 +6,14 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 
-// Firebase config from environment or hardcoded for script
+// Firebase config - matches main project (stanseproject)
 const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyDd6bWFLJfVp0k9vFJTlMKxkNyPyPLsKCE",
-  authDomain: "stanse-9c151.firebaseapp.com",
-  projectId: "stanse-9c151",
-  storageBucket: "stanse-9c151.firebasestorage.app",
-  messagingSenderId: "837715360412",
-  appId: "1:837715360412:web:b0e3ccb09c8c07ed56ad90"
+  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyD1Hdjo17l2YrgakNzZW-lpx78vVE77keE",
+  authDomain: "stanseproject.firebaseapp.com",
+  projectId: "stanseproject",
+  storageBucket: "stanseproject.firebasestorage.app",
+  messagingSenderId: "626045766180",
+  appId: "1:626045766180:web:3a8d3967343cc3264ca6b1"
 };
 
 const app = initializeApp(firebaseConfig);

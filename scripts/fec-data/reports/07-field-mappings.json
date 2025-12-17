@@ -1,0 +1,642 @@
+{
+  "metadata": {
+    "last_updated": "2025-12-15",
+    "source_script": "scripts/fec-data/production/02-upload-incremental.py",
+    "total_uploaded": {
+      "committees": 20934,
+      "candidates": 9809,
+      "contributions": 701709
+    },
+    "description": "FEC CSV字段到Firestore字段的完整映射（基于实际上传代码）"
+  },
+  "committees": {
+    "collection": "fec_raw_committees",
+    "document_id_pattern": "{committee_id}_{year}",
+    "source_file_pattern": "cm{year_suffix}.zip",
+    "csv_fields": [
+      {
+        "index": 0,
+        "fec_name": "CMTE_ID",
+        "firestore_field": "committee_id",
+        "type": "String",
+        "description": "委员会ID",
+        "sample": "C00000059",
+        "nullable": false
+      },
+      {
+        "index": 1,
+        "fec_name": "CMTE_NM",
+        "firestore_field": "committee_name",
+        "type": "String",
+        "description": "委员会名称",
+        "sample": "HALLMARK CARDS, INC. PAC (HALLPAC)",
+        "nullable": false
+      },
+      {
+        "index": 2,
+        "fec_name": "TRES_NM",
+        "firestore_field": "treasurer_name",
+        "type": "String",
+        "description": "财务主管姓名",
+        "sample": "KLEIN, CASSIE MS.",
+        "nullable": false
+      },
+      {
+        "index": 3,
+        "fec_name": "CMTE_ST1",
+        "firestore_field": "street_1",
+        "type": "String",
+        "description": "街道地址1",
+        "sample": "2501 MCGEE, MD853",
+        "nullable": false
+      },
+      {
+        "index": 4,
+        "fec_name": "CMTE_ST2",
+        "firestore_field": "street_2",
+        "type": "String",
+        "description": "街道地址2",
+        "sample": "",
+        "nullable": true
+      },
+      {
+        "index": 5,
+        "fec_name": "CMTE_CITY",
+        "firestore_field": "city",
+        "type": "String",
+        "description": "城市",
+        "sample": "KANSAS CITY",
+        "nullable": false
+      },
+      {
+        "index": 6,
+        "fec_name": "CMTE_ST",
+        "firestore_field": "state",
+        "type": "String",
+        "description": "州代码",
+        "sample": "MO",
+        "nullable": false
+      },
+      {
+        "index": 7,
+        "fec_name": "CMTE_ZIP",
+        "firestore_field": "zip",
+        "type": "String",
+        "description": "邮编",
+        "sample": "64108",
+        "nullable": false
+      },
+      {
+        "index": 8,
+        "fec_name": "CMTE_DSGN",
+        "firestore_field": "designation",
+        "type": "String",
+        "description": "委员会类别",
+        "sample": "B",
+        "nullable": false
+      },
+      {
+        "index": 9,
+        "fec_name": "CMTE_TP",
+        "firestore_field": "committee_type",
+        "type": "String",
+        "description": "委员会类型",
+        "sample": "Q",
+        "nullable": false
+      },
+      {
+        "index": 10,
+        "fec_name": "CMTE_PTY_AFFILIATION",
+        "firestore_field": "party",
+        "type": "String",
+        "description": "政党倾向",
+        "sample": "UNK",
+        "nullable": false
+      },
+      {
+        "index": 11,
+        "fec_name": "CMTE_FILING_FREQ",
+        "firestore_field": "filing_frequency",
+        "type": "String",
+        "description": "申报频率",
+        "sample": "M",
+        "nullable": false
+      },
+      {
+        "index": 12,
+        "fec_name": "ORG_TP",
+        "firestore_field": "interest_group_category",
+        "type": "String",
+        "description": "组织类型",
+        "sample": "C",
+        "nullable": false
+      },
+      {
+        "index": 13,
+        "fec_name": "CONNECTED_ORG_NM",
+        "firestore_field": "connected_org_name",
+        "type": "String",
+        "description": "关联组织名称（公司名）",
+        "sample": "HALLMARK CARDS, INC.",
+        "nullable": false
+      },
+      {
+        "index": 14,
+        "fec_name": "CAND_ID",
+        "firestore_field": "candidate_id",
+        "type": "String",
+        "description": "关联候选人ID",
+        "sample": "",
+        "nullable": true
+      }
+    ],
+    "metadata_fields": [
+      {
+        "firestore_field": "data_year",
+        "type": "Integer",
+        "description": "数据年份",
+        "sample": 2024
+      },
+      {
+        "firestore_field": "election_cycle",
+        "type": "String",
+        "description": "选举周期",
+        "sample": "2023-2024"
+      },
+      {
+        "firestore_field": "source_file",
+        "type": "String",
+        "description": "源文件名",
+        "sample": "cm24.zip"
+      },
+      {
+        "firestore_field": "uploaded_at",
+        "type": "Timestamp",
+        "description": "上传时间"
+      },
+      {
+        "firestore_field": "last_updated",
+        "type": "Timestamp",
+        "description": "最后更新时间"
+      }
+    ]
+  },
+  "candidates": {
+    "collection": "fec_raw_candidates",
+    "document_id_pattern": "{candidate_id}_{year}",
+    "source_file_pattern": "cn{year_suffix}.zip",
+    "csv_fields": [
+      {
+        "index": 0,
+        "fec_name": "CAND_ID",
+        "firestore_field": "candidate_id",
+        "type": "String",
+        "description": "候选人ID",
+        "sample": "H0AK00105",
+        "nullable": false
+      },
+      {
+        "index": 1,
+        "fec_name": "CAND_NAME",
+        "firestore_field": "candidate_name",
+        "type": "String",
+        "description": "候选人姓名",
+        "sample": "LAMB, THOMAS",
+        "nullable": false
+      },
+      {
+        "index": 2,
+        "fec_name": "CAND_PTY_AFFILIATION",
+        "firestore_field": "party_affiliation",
+        "type": "String",
+        "description": "政党倾向",
+        "sample": "DEM",
+        "nullable": false
+      },
+      {
+        "index": 3,
+        "fec_name": "CAND_ELECTION_YR",
+        "firestore_field": "election_year",
+        "type": "Integer",
+        "description": "竞选年份",
+        "sample": 2024,
+        "nullable": false,
+        "note": "如果为空则使用data_year"
+      },
+      {
+        "index": 4,
+        "fec_name": "CAND_OFFICE",
+        "firestore_field": "office_sought",
+        "type": "String",
+        "description": "竞选职位 (H=众议院, S=参议院, P=总统)",
+        "sample": "H",
+        "nullable": false
+      },
+      {
+        "index": 5,
+        "fec_name": "CAND_OFFICE_ST",
+        "firestore_field": "state",
+        "type": "String",
+        "description": "竞选州",
+        "sample": "AK",
+        "nullable": false
+      },
+      {
+        "index": 6,
+        "fec_name": "CAND_OFFICE_DISTRICT",
+        "firestore_field": "district",
+        "type": "String",
+        "description": "选区号",
+        "sample": "00",
+        "nullable": false
+      },
+      {
+        "index": 7,
+        "fec_name": "CAND_ICI",
+        "firestore_field": "incumbent_challenger_status",
+        "type": "String",
+        "description": "在任/挑战者状态 (I=在任, C=挑战者, O=开放席位)",
+        "sample": "C",
+        "nullable": false
+      },
+      {
+        "index": 8,
+        "fec_name": "CAND_STATUS",
+        "firestore_field": "candidate_status",
+        "type": "String",
+        "description": "候选人状态",
+        "sample": "N",
+        "nullable": false
+      },
+      {
+        "index": 9,
+        "fec_name": "CAND_PCC",
+        "firestore_field": "principal_committee_id",
+        "type": "String",
+        "description": "主要委员会ID",
+        "sample": "C00607515",
+        "nullable": false
+      },
+      {
+        "index": 10,
+        "fec_name": "CAND_ST1",
+        "firestore_field": "street_1",
+        "type": "String",
+        "description": "街道地址1",
+        "sample": "1861 W LAKE LUCILLE DR",
+        "nullable": false
+      },
+      {
+        "index": 11,
+        "fec_name": "CAND_ST2",
+        "firestore_field": "street_2",
+        "type": "String",
+        "description": "街道地址2",
+        "sample": "",
+        "nullable": true
+      },
+      {
+        "index": 12,
+        "fec_name": "CAND_CITY",
+        "firestore_field": "city",
+        "type": "String",
+        "description": "城市",
+        "sample": "WASILLA",
+        "nullable": false
+      },
+      {
+        "index": 13,
+        "fec_name": "CAND_ST",
+        "firestore_field": "state_full",
+        "type": "String",
+        "description": "州全称",
+        "sample": "AK",
+        "nullable": false
+      },
+      {
+        "index": 14,
+        "fec_name": "CAND_ZIP",
+        "firestore_field": "zip",
+        "type": "String",
+        "description": "邮编",
+        "sample": "99654",
+        "nullable": false
+      }
+    ],
+    "metadata_fields": [
+      {
+        "firestore_field": "data_year",
+        "type": "Integer",
+        "description": "数据年份",
+        "sample": 2024
+      },
+      {
+        "firestore_field": "election_cycle",
+        "type": "String",
+        "description": "选举周期",
+        "sample": "2023-2024"
+      },
+      {
+        "firestore_field": "source_file",
+        "type": "String",
+        "description": "源文件名",
+        "sample": "cn24.zip"
+      },
+      {
+        "firestore_field": "uploaded_at",
+        "type": "Timestamp",
+        "description": "上传时间"
+      },
+      {
+        "firestore_field": "last_updated",
+        "type": "Timestamp",
+        "description": "最后更新时间"
+      }
+    ]
+  },
+  "contributions": {
+    "collection": "fec_raw_contributions_pac_to_candidate",
+    "document_id_pattern": "{committee_id}_{candidate_id}_{line_number}",
+    "source_file_pattern": "pas2{year_suffix}.zip",
+    "csv_total_fields": 22,
+    "csv_fields_stored": 17,
+    "csv_fields_not_stored": [17, 18, 19, 20, 21],
+    "csv_fields": [
+      {
+        "index": 0,
+        "fec_name": "CMTE_ID",
+        "firestore_field": "committee_id",
+        "type": "String",
+        "description": "委员会ID",
+        "sample": "C00777706",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 1,
+        "fec_name": "AMNDT_IND",
+        "firestore_field": "amendment_indicator",
+        "type": "String",
+        "description": "修正指示符",
+        "sample": "N",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 2,
+        "fec_name": "RPT_TP",
+        "firestore_field": "report_type",
+        "type": "String",
+        "description": "报告类型",
+        "sample": "M10",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 3,
+        "fec_name": "TRANSACTION_PGI",
+        "firestore_field": "election_type",
+        "type": "String",
+        "description": "选举类型",
+        "sample": "P2024",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 4,
+        "fec_name": "IMAGE_NUM",
+        "firestore_field": "fec_record_number",
+        "type": "String",
+        "description": "FEC记录号",
+        "sample": "202401159649270829",
+        "nullable": false,
+        "stored": true,
+        "note": "同时存储为image_number字段"
+      },
+      {
+        "index": 4,
+        "fec_name": "IMAGE_NUM",
+        "firestore_field": "image_number",
+        "type": "String",
+        "description": "图像编号（与fec_record_number相同）",
+        "sample": "202401159649270829",
+        "nullable": false,
+        "stored": true,
+        "note": "字段4的副本"
+      },
+      {
+        "index": 5,
+        "fec_name": "TRANSACTION_TP",
+        "firestore_field": "transaction_type",
+        "type": "String",
+        "description": "交易类型",
+        "sample": "24K",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 6,
+        "fec_name": "ENTITY_TP",
+        "firestore_field": "entity_type",
+        "type": "String",
+        "description": "实体类型",
+        "sample": "CCM",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 7,
+        "fec_name": "NAME",
+        "firestore_field": "name",
+        "type": "String",
+        "description": "捐款者/接收者名称",
+        "sample": "CAPITO FOR WEST VIRGINIA",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 8,
+        "fec_name": "CITY",
+        "firestore_field": "city",
+        "type": "String",
+        "description": "城市",
+        "sample": "CHARLESTON",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 9,
+        "fec_name": "STATE",
+        "firestore_field": "state",
+        "type": "String",
+        "description": "州代码",
+        "sample": "WV",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 10,
+        "fec_name": "ZIP_CODE",
+        "firestore_field": "zip",
+        "type": "String",
+        "description": "邮编",
+        "sample": "25339",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 11,
+        "fec_name": "EMPLOYER",
+        "firestore_field": "employer",
+        "type": "String",
+        "description": "雇主",
+        "sample": "",
+        "nullable": true,
+        "stored": true
+      },
+      {
+        "index": 12,
+        "fec_name": "OCCUPATION",
+        "firestore_field": "occupation",
+        "type": "String",
+        "description": "职业",
+        "sample": "",
+        "nullable": true,
+        "stored": true
+      },
+      {
+        "index": 13,
+        "fec_name": "TRANSACTION_DT",
+        "firestore_field": "transaction_date",
+        "type": "String",
+        "description": "交易日期 (MMDDYYYY格式)",
+        "sample": "01152024",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 14,
+        "fec_name": "TRANSACTION_AMT",
+        "firestore_field": "transaction_amount",
+        "type": "Integer",
+        "description": "交易金额（以分为单位，CSV中的美元*100）",
+        "sample": 500000,
+        "nullable": false,
+        "stored": true,
+        "note": "原始CSV值乘以100转换为分"
+      },
+      {
+        "index": 15,
+        "fec_name": "OTHER_ID",
+        "firestore_field": "other_id",
+        "type": "String",
+        "description": "其他ID",
+        "sample": "C00539825",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 16,
+        "fec_name": "CAND_ID",
+        "firestore_field": "candidate_id",
+        "type": "String",
+        "description": "候选人ID",
+        "sample": "S4WV00159",
+        "nullable": false,
+        "stored": true
+      },
+      {
+        "index": 17,
+        "fec_name": "TRAN_ID",
+        "firestore_field": null,
+        "type": "String",
+        "description": "交易ID",
+        "sample": "SB23.4774",
+        "nullable": false,
+        "stored": false,
+        "note": "CSV中存在但未存储到Firestore"
+      },
+      {
+        "index": 18,
+        "fec_name": "FILE_NUM",
+        "firestore_field": null,
+        "type": "String",
+        "description": "文件号",
+        "sample": "1675104",
+        "nullable": false,
+        "stored": false,
+        "note": "CSV中存在但未存储到Firestore"
+      },
+      {
+        "index": 19,
+        "fec_name": "MEMO_CD",
+        "firestore_field": null,
+        "type": "String",
+        "description": "备忘代码",
+        "sample": "",
+        "nullable": true,
+        "stored": false,
+        "note": "CSV中存在但未存储到Firestore"
+      },
+      {
+        "index": 20,
+        "fec_name": "MEMO_TEXT",
+        "firestore_field": null,
+        "type": "String",
+        "description": "备忘文本",
+        "sample": "",
+        "nullable": true,
+        "stored": false,
+        "note": "CSV中存在但未存储到Firestore"
+      },
+      {
+        "index": 21,
+        "fec_name": "SUB_ID",
+        "firestore_field": null,
+        "type": "String",
+        "description": "提交ID",
+        "sample": "4011820231709508198",
+        "nullable": false,
+        "stored": false,
+        "note": "CSV中存在但未存储到Firestore"
+      }
+    ],
+    "metadata_fields": [
+      {
+        "firestore_field": "transaction_pgi",
+        "type": "String",
+        "description": "交易PGI（与election_type相同）",
+        "sample": "P2024",
+        "note": "字段3的副本"
+      },
+      {
+        "firestore_field": "data_year",
+        "type": "Integer",
+        "description": "数据年份",
+        "sample": 2024
+      },
+      {
+        "firestore_field": "election_cycle",
+        "type": "String",
+        "description": "选举周期",
+        "sample": "2023-2024"
+      },
+      {
+        "firestore_field": "source_file",
+        "type": "String",
+        "description": "源文件名",
+        "sample": "pas224.zip"
+      },
+      {
+        "firestore_field": "uploaded_at",
+        "type": "Timestamp",
+        "description": "上传时间"
+      },
+      {
+        "firestore_field": "last_updated",
+        "type": "Timestamp",
+        "description": "最后更新时间"
+      }
+    ]
+  }
+}

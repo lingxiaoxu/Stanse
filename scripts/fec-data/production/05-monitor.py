@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from datetime import datetime
 
-PROGRESS_FILE = Path(__file__).parent / 'upload_progress.json'
+PROGRESS_FILE = Path(__file__).parent.parent / 'reports' / '01-upload-progress.json'
 TOTAL_CONTRIBUTIONS = 703789
 
 def load_progress():
