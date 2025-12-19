@@ -15,6 +15,7 @@ except ImportError:
     sys.exit(1)
 
 PROJECT_ID = 'stanseproject'
+DATA_YEAR = '24'  # 可选: '16', '18', '20', '22', '24'
 db = None
 
 def init_firestore():
@@ -85,7 +86,7 @@ def main():
     collections_to_check = [
         ('fec_raw_committees', '委员会原始数据'),
         ('fec_raw_candidates', '候选人原始数据'),
-        ('fec_raw_contributions_pac_to_candidate', 'PAC捐款原始数据'),
+        (f'fec_raw_contributions_pac_to_candidate_{DATA_YEAR}', 'PAC捐款原始数据'),
         ('fec_company_index', '公司索引'),
         ('fec_company_party_summary', '公司政党汇总'),
         ('fec_data_metadata', '数据元信息'),

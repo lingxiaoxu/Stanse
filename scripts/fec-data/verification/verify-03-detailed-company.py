@@ -23,6 +23,7 @@ except ImportError:
     sys.exit(1)
 
 PROJECT_ID = 'stanseproject'
+DATA_YEAR = '24'  # 可选: '16', '18', '20', '22', '24'
 db = None
 
 def init_firestore():
@@ -96,7 +97,7 @@ def verify_company_data(company_name, max_contributions_to_show=20):
     print('\n\n💰 Step 2: 验证捐款记录')
     print('-'*100)
 
-    contributions_ref = db.collection('fec_raw_contributions_pac_to_candidate')
+    contributions_ref = db.collection(f'fec_raw_contributions_pac_to_candidate_{DATA_YEAR}')
 
     all_contributions = []
     doc_ids_seen = set()

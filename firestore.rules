@@ -20,26 +20,61 @@ service cloud.firestore {
     }
     
     // FEC 公开数据 - 所有人可读，禁止写入
+
+    // Multi-year collections (包含所有年份的数据)
     match /fec_raw_committees/{docId} {
       allow read: if true;
       allow write: if false;
     }
-    
+
     match /fec_raw_candidates/{docId} {
       allow read: if true;
       allow write: if false;
     }
-    
-    match /fec_raw_contributions_pac_to_candidate/{docId} {
+
+    match /fec_raw_linkages/{docId} {
       allow read: if true;
       allow write: if false;
     }
-    
+
+    match /fec_raw_transfers/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Year-specific contribution collections (每个年份一个独立集合)
+    // Collection names use short year format: _24, _22, _20, _18, _16
+    match /fec_raw_contributions_pac_to_candidate_24/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /fec_raw_contributions_pac_to_candidate_22/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /fec_raw_contributions_pac_to_candidate_20/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /fec_raw_contributions_pac_to_candidate_18/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /fec_raw_contributions_pac_to_candidate_16/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Company indexes and summaries
     match /fec_company_index/{docId} {
       allow read: if true;
       allow write: if false;
     }
-    
+
     match /fec_company_party_summary/{docId} {
       allow read: if true;
       allow write: if false;

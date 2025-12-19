@@ -41,9 +41,12 @@ DATA_DIR = Path(__file__).parent.parent / 'raw_data'
 PROJECT_ID = 'stanseproject'
 PROGRESS_FILE = Path(__file__).parent.parent / 'reports' / '01-upload-progress.json'
 
+# 数据年份配置 (默认使用2024年数据，可修改为16/18/20/22/24)
+DATA_YEAR = '24'  # 可选: '16', '18', '20', '22', '24'
+
 # 批次配置
-BATCH_SIZE = 50  # 更小的批次以避免超时
-MIN_DELAY = 3.0  # 最小延迟（秒）
+BATCH_SIZE = 500  # Firestore最大批次限制
+MIN_DELAY = 0.1  # 最小延迟（秒）
 MAX_DELAY = 300.0  # 最大延迟（秒）
 INITIAL_RETRY_DELAY = 30.0  # 初始重试延迟
 
@@ -65,6 +68,12 @@ def load_progress():
         'committees_skipped': 0,
         'candidates_last_line': 0,
         'candidates_uploaded': 0,
+        'linkages_last_line': 0,
+        'linkages_uploaded': 0,
+        'linkages_completed': False,
+        'transfers_last_line': 0,
+        'transfers_uploaded': 0,
+        'transfers_completed': False,
         'last_updated': None
     }
 
@@ -197,7 +206,7 @@ def commit_with_retry(batch, retry_count=0, max_retries=10, batch_docs=None, col
 def upload_committees_incremental(year, year_suffix, progress):
     """增量上传委员会数据"""
     collection_name = 'fec_raw_committees'
-    file_path = DATA_DIR / 'committees' / 'cm.txt'
+    file_path = DATA_DIR / 'committees' / f'cm{DATA_YEAR}.txt'
 
     if not file_path.exists():
         print(f'⚠️  文件不存在: {file_path}')
@@ -310,7 +319,7 @@ def upload_committees_incremental(year, year_suffix, progress):
 def upload_candidates_incremental(year, year_suffix, progress):
     """增量上传候选人数据"""
     collection_name = 'fec_raw_candidates'
-    file_path = DATA_DIR / 'candidates' / 'cn.txt'
+    file_path = DATA_DIR / 'candidates' / f'cn{DATA_YEAR}.txt'
 
     if not file_path.exists():
         print(f'⚠️  文件不存在: {file_path}')
@@ -412,15 +421,12 @@ def upload_contributions_incremental(year, year_suffix, progress, limit=None):
         progress: 进度字典
         limit: 限制上传数量（None表示不限制，用于测试）
     """
-    collection_name = 'fec_raw_contributions_pac_to_candidate'
-    file_path = DATA_DIR / 'contributions' / 'itpas2.txt'
+    collection_name = f'fec_raw_contributions_pac_to_candidate_{DATA_YEAR}'
+    file_path = DATA_DIR / 'contributions' / f'itpas2{DATA_YEAR}.txt'
 
     if not file_path.exists():
-        # 尝试pas2.txt
-        file_path = DATA_DIR / 'contributions' / 'pas2.txt'
-        if not file_path.exists():
-            print(f'⚠️  文件不存在: contributions/itpas2.txt 或 pas2.txt')
-            return 0
+        print(f'⚠️  文件不存在: contributions/itpas2{DATA_YEAR}.txt')
+        return 0
 
     print(f'\n📤 增量上传捐款数据 ({year})...')
 
@@ -545,12 +551,255 @@ def upload_contributions_incremental(year, year_suffix, progress, limit=None):
     print(f'✅ 成功上传 {uploaded} 条捐款记录')
     return uploaded
 
+def upload_linkages_incremental(year, year_suffix, progress):
+    """增量上传linkages数据"""
+    collection_name = 'fec_raw_linkages'
+    file_path = DATA_DIR / 'linkages' / f'ccl{year_suffix}.txt'
+
+    if not file_path.exists():
+        print(f'❌ 文件不存在: {file_path}')
+        return 0
+
+    print(f'\n📤 上传 Linkages...')
+    print(f'  文件: {file_path}')
+
+    collection_ref = db.collection(collection_name)
+    uploaded = 0
+    skipped = 0
+    batch = db.batch()
+    batch_docs = []  # Store (doc_ref, doc_data) for token refresh
+    batch_count = 0
+    current_line = progress.get('linkages_last_line', 0)
+    start_line = current_line
+
+    with open(file_path, 'r', encoding='latin-1') as f:
+        # 跳过已处理的行
+        for _ in range(start_line):
+            next(f, None)
+
+        for line in f:
+            current_line += 1
+            fields = line.strip().split('|')
+
+            if len(fields) < 7:
+                continue
+
+            candidate_id = fields[0]
+            committee_id = fields[3]
+
+            if not candidate_id or not committee_id:
+                continue
+
+            doc_id = f'{candidate_id}_{committee_id}_{year}'
+            doc_ref = db.collection(collection_name).document(doc_id)
+
+            # 检查是否已存在
+            if doc_ref.get().exists:
+                skipped += 1
+                continue
+
+            doc_data = {
+                'candidate_id': candidate_id,
+                'candidate_election_year': int(fields[1]) if fields[1] else year,
+                'fec_election_year': int(fields[2]) if fields[2] else year,
+                'committee_id': committee_id,
+                'committee_type': fields[4] if len(fields) > 4 else '',
+                'committee_designation': fields[5] if len(fields) > 5 else '',
+                'linkage_id': fields[6] if len(fields) > 6 else '',
+                'data_year': year,
+                'source_file': f'ccl{year_suffix}.txt',
+                'uploaded_at': datetime.utcnow(),
+                'last_updated': datetime.utcnow()
+            }
+
+            batch.set(doc_ref, doc_data)
+            batch_docs.append((doc_ref, doc_data))
+            batch_count += 1
+
+            if batch_count >= BATCH_SIZE:
+                if commit_with_retry(batch, batch_docs=batch_docs, collection_ref=collection_ref):
+                    uploaded += batch_count
+                    print(f'  ✓ 第 {current_line} 行 | 已上传 {uploaded} 条 | 跳过 {skipped} 条')
+
+                    progress['linkages_last_line'] = current_line
+                    progress['linkages_uploaded'] = uploaded
+                    progress['last_updated'] = datetime.utcnow().isoformat()
+                    save_progress(progress)
+
+                    time.sleep(MIN_DELAY + random.uniform(0, 2))
+                    batch = db.batch()
+                    batch_docs = []
+                    batch_count = 0
+                else:
+                    progress['linkages_last_line'] = current_line
+                    progress['linkages_uploaded'] = uploaded
+                    save_progress(progress)
+                    return uploaded
+
+    if batch_count > 0:
+        if commit_with_retry(batch, batch_docs=batch_docs, collection_ref=collection_ref):
+            uploaded += batch_count
+
+    progress['linkages_last_line'] = current_line
+    progress['linkages_uploaded'] = uploaded
+    progress['linkages_completed'] = True
+    progress['last_updated'] = datetime.utcnow().isoformat()
+    save_progress(progress)
+
+    print(f'✅ Linkages上传完成: {uploaded} 条 (跳过 {skipped} 条)')
+    return uploaded
+
+def upload_transfers_incremental(year, year_suffix, progress):
+    """增量上传transfers数据"""
+    collection_name = 'fec_raw_transfers'
+    file_path = DATA_DIR / 'transfers' / f'itoth{year_suffix}.txt'
+
+    if not file_path.exists():
+        print(f'❌ 文件不存在: {file_path}')
+        return 0
+
+    print(f'\n📤 上传 Transfers...')
+    print(f'  文件: {file_path}')
+    print(f'  ⚠️  注意: 这个文件有 1800+ 万行，需要很长时间!')
+
+    collection_ref = db.collection(collection_name)
+    uploaded = 0
+    skipped = 0
+    batch = db.batch()
+    batch_docs = []  # Store (doc_ref, doc_data) for token refresh
+    batch_count = 0
+    current_line = progress.get('transfers_last_line', 0)
+    start_line = current_line
+    start_time = time.time()
+
+    if start_line > 0:
+        print(f'  📍 从第 {start_line:,} 行继续，跳过已处理的行...')
+
+    with open(file_path, 'r', encoding='latin-1') as f:
+        # 跳过已处理的行
+        for _ in range(start_line):
+            next(f, None)
+
+        if start_line > 0:
+            print(f'  ✓ 已跳过 {start_line:,} 行，继续上传...')
+
+        for line in f:
+            current_line += 1
+            fields = line.strip().split('|')
+
+            if len(fields) < 20:
+                continue
+
+            committee_id = fields[0]
+            transaction_id = fields[16] if len(fields) > 16 else ''
+            other_id = fields[15] if len(fields) > 15 else ''
+
+            if not committee_id or not transaction_id:
+                continue
+
+            try:
+                amount_str = fields[14] if len(fields) > 14 else '0'
+                amount = float(amount_str) if amount_str else 0
+                amount_cents = int(amount * 100)
+            except (ValueError, TypeError):
+                amount_cents = 0
+
+            if other_id:
+                doc_id = f'{committee_id}_{other_id}_{transaction_id}'
+            else:
+                doc_id = f'{committee_id}_{transaction_id}_{current_line}'
+
+            doc_ref = db.collection(collection_name).document(doc_id)
+
+            doc_data = {
+                'committee_id': committee_id,
+                'sender_committee_id': committee_id,
+                'receiver_committee_id': other_id if other_id else '',
+                'amendment_indicator': fields[1] if len(fields) > 1 else '',
+                'report_type': fields[2] if len(fields) > 2 else '',
+                'transaction_pgi': fields[3] if len(fields) > 3 else '',
+                'image_number': fields[4] if len(fields) > 4 else '',
+                'transaction_type': fields[5] if len(fields) > 5 else '',
+                'entity_type': fields[6] if len(fields) > 6 else '',
+                'name': fields[7] if len(fields) > 7 else '',
+                'city': fields[8] if len(fields) > 8 else '',
+                'state': fields[9] if len(fields) > 9 else '',
+                'zip': fields[10] if len(fields) > 10 else '',
+                'employer': fields[11] if len(fields) > 11 else '',
+                'occupation': fields[12] if len(fields) > 12 else '',
+                'transaction_date': fields[13] if len(fields) > 13 else '',
+                'transaction_amount': amount_cents,
+                'other_id': other_id,
+                'transaction_id': transaction_id,
+                'file_number': fields[17] if len(fields) > 17 else '',
+                'memo_code': fields[18] if len(fields) > 18 else '',
+                'memo_text': fields[19] if len(fields) > 19 else '',
+                'sub_id': fields[20] if len(fields) > 20 else '',
+                'data_year': year,
+                'source_file': f'itoth{year_suffix}.txt',
+                'uploaded_at': datetime.utcnow(),
+                'last_updated': datetime.utcnow()
+            }
+
+            batch.set(doc_ref, doc_data)
+            batch_docs.append((doc_ref, doc_data))
+            batch_count += 1
+
+            if batch_count >= BATCH_SIZE:
+                if commit_with_retry(batch, batch_docs=batch_docs, collection_ref=collection_ref):
+                    uploaded += batch_count
+
+                    if (uploaded // BATCH_SIZE) % 10 == 0:
+                        elapsed = time.time() - start_time
+                        rate = uploaded / elapsed if elapsed > 0 else 0
+                        remaining_lines = 18667266 - current_line
+                        eta = remaining_lines / rate if rate > 0 else 0
+
+                        print(f'  ✓ 第 {current_line:,} 行 | 已上传 {uploaded:,} 条 | 跳过 {skipped} 条 | '
+                              f'{rate:.0f} 行/秒 | ETA: {eta/3600:.1f} 小时')
+
+                    progress['transfers_last_line'] = current_line
+                    progress['transfers_uploaded'] = uploaded
+                    progress['last_updated'] = datetime.utcnow().isoformat()
+                    save_progress(progress)
+
+                    time.sleep(MIN_DELAY + random.uniform(0, 2))
+                    batch = db.batch()
+                    batch_docs = []
+                    batch_count = 0
+                else:
+                    progress['transfers_last_line'] = current_line
+                    progress['transfers_uploaded'] = uploaded
+                    save_progress(progress)
+                    return uploaded
+
+    if batch_count > 0:
+        if commit_with_retry(batch, batch_docs=batch_docs, collection_ref=collection_ref):
+            uploaded += batch_count
+
+    elapsed_total = time.time() - start_time
+    progress['transfers_last_line'] = current_line
+    progress['transfers_uploaded'] = uploaded
+    progress['transfers_completed'] = True
+    progress['last_updated'] = datetime.utcnow().isoformat()
+    save_progress(progress)
+
+    print(f'✅ Transfers上传完成: {uploaded:,} 条 (跳过 {skipped} 条)')
+    print(f'   总耗时: {elapsed_total/3600:.2f} 小时')
+    return uploaded
+
 def main():
     """主函数"""
     # 解析命令行参数
     parser = argparse.ArgumentParser(description='增量上传FEC数据到Firestore')
     parser.add_argument('--limit', type=int, help='限制上传数量（用于测试，仅对contributions生效）')
+    parser.add_argument('--only', type=str, help='只上传指定的表（用逗号分隔）: committees,candidates,contributions,linkages,transfers')
     args = parser.parse_args()
+
+    # 解析 --only 参数
+    only_tables = None
+    if args.only:
+        only_tables = set(args.only.split(','))
 
     print('\n' + '='*70)
     print('🚀 FEC数据增量上传（带自动重试）')
@@ -559,6 +808,9 @@ def main():
     if args.limit:
         print(f'\n⚠️  测试模式：仅上传 {args.limit} 条contribution记录')
 
+    if only_tables:
+        print(f'\n📋 只上传指定的表: {", ".join(only_tables)}')
+
     # 加载进度
     progress = load_progress()
     if progress.get('last_updated'):
@@ -566,6 +818,8 @@ def main():
         print(f'   Committees: {progress.get("committees_uploaded", 0)} 条已上传')
         print(f'   Candidates: {progress.get("candidates_uploaded", 0)} 条已上传')
         print(f'   Contributions: {progress.get("contributions_uploaded", 0)} 条已上传')
+        print(f'   Linkages: {progress.get("linkages_uploaded", 0)} 条已上传')
+        print(f'   Transfers: {progress.get("transfers_uploaded", 0)} 条已上传')
 
     init_firestore()
 
@@ -579,27 +833,56 @@ def main():
     print('='*70)
 
     # 上传委员会数据
-    if not progress.get('committees_completed'):
-        committees_count = upload_committees_incremental(year, year_suffix, progress)
-        print(f'\n✓ 委员会数据: 已上传 {committees_count} 条')
+    if not only_tables or 'committees' in only_tables:
+        if not progress.get('committees_completed'):
+            committees_count = upload_committees_incremental(year, year_suffix, progress)
+            print(f'\n✓ 委员会数据: 已上传 {committees_count} 条')
+        else:
+            print(f'\n✓ 委员会数据已完成（{progress.get("committees_uploaded", 0)} 条）')
     else:
-        print(f'\n✓ 委员会数据已完成（{progress.get("committees_uploaded", 0)} 条）')
+        print(f'\n⏭️  跳过委员会数据（使用 --only 参数）')
 
     # 上传候选人数据
-    if not progress.get('candidates_completed'):
-        candidates_count = upload_candidates_incremental(year, year_suffix, progress)
-        print(f'\n✓ 候选人数据: 已上传 {candidates_count} 条')
+    if not only_tables or 'candidates' in only_tables:
+        if not progress.get('candidates_completed'):
+            candidates_count = upload_candidates_incremental(year, year_suffix, progress)
+            print(f'\n✓ 候选人数据: 已上传 {candidates_count} 条')
+        else:
+            print(f'\n✓ 候选人数据已完成（{progress.get("candidates_uploaded", 0)} 条）')
     else:
-        print(f'\n✓ 候选人数据已完成（{progress.get("candidates_uploaded", 0)} 条）')
+        print(f'\n⏭️  跳过候选人数据（使用 --only 参数）')
 
     # 上传捐款数据
-    if not progress.get('contributions_completed'):
-        contributions_count = upload_contributions_incremental(year, year_suffix, progress, limit=args.limit)
-        print(f'\n✓ 捐款数据: 已上传 {contributions_count} 条')
-        if args.limit and contributions_count >= args.limit:
-            print(f'   ⚠️  已达到测试限制，未标记为完成')
+    if not only_tables or 'contributions' in only_tables:
+        if not progress.get('contributions_completed'):
+            contributions_count = upload_contributions_incremental(year, year_suffix, progress, limit=args.limit)
+            print(f'\n✓ 捐款数据: 已上传 {contributions_count} 条')
+            if args.limit and contributions_count >= args.limit:
+                print(f'   ⚠️  已达到测试限制，未标记为完成')
+        else:
+            print(f'\n✓ 捐款数据已完成（{progress.get("contributions_uploaded", 0)} 条）')
     else:
-        print(f'\n✓ 捐款数据已完成（{progress.get("contributions_uploaded", 0)} 条）')
+        print(f'\n⏭️  跳过捐款数据（使用 --only 参数）')
+
+    # 上传linkages数据
+    if not only_tables or 'linkages' in only_tables:
+        if not progress.get('linkages_completed'):
+            linkages_count = upload_linkages_incremental(year, year_suffix, progress)
+            print(f'\n✓ Linkages数据: 已上传 {linkages_count} 条')
+        else:
+            print(f'\n✓ Linkages数据已完成（{progress.get("linkages_uploaded", 0)} 条）')
+    else:
+        print(f'\n⏭️  跳过Linkages数据（使用 --only 参数）')
+
+    # 上传transfers数据
+    if not only_tables or 'transfers' in only_tables:
+        if not progress.get('transfers_completed'):
+            transfers_count = upload_transfers_incremental(year, year_suffix, progress)
+            print(f'\n✓ Transfers数据: 已上传 {transfers_count} 条')
+        else:
+            print(f'\n✓ Transfers数据已完成（{progress.get("transfers_uploaded", 0)} 条）')
+    else:
+        print(f'\n⏭️  跳过Transfers数据（使用 --only 参数）')
 
     print('\n' + '='*70)
     print('✅ 上传完成！')
@@ -608,6 +891,8 @@ def main():
     print(f'  Committees: {progress.get("committees_uploaded", 0)} 条')
     print(f'  Candidates: {progress.get("candidates_uploaded", 0)} 条')
     print(f'  Contributions: {progress.get("contributions_uploaded", 0)} 条')
+    print(f'  Linkages: {progress.get("linkages_uploaded", 0)} 条')
+    print(f'  Transfers: {progress.get("transfers_uploaded", 0)} 条')
     print(f'\n💡 进度文件: {PROGRESS_FILE}')
     print()
 
