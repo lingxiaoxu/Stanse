@@ -20,6 +20,7 @@ except ImportError:
     sys.exit(1)
 
 PROJECT_ID = 'stanseproject'
+DATA_YEAR = '24'  # 可选: '16', '18', '20', '22', '24'
 db = None
 
 # 9家已验证的公司（使用与深度验证相同的名称）
@@ -130,7 +131,7 @@ def create_company_index(company_name):
             committee_ids_set.add(committee_id)
 
             # 从contributions查找该委员会的活跃年份
-            contribs_ref = db.collection('fec_raw_contributions_pac_to_candidate')
+            contribs_ref = db.collection(f'fec_raw_contributions_pac_to_candidate_{DATA_YEAR}')
             contribs = list(contribs_ref.where('committee_id', '==', committee_id).limit(1).stream())
 
             year = 2024  # 默认年份
@@ -190,7 +191,7 @@ def create_company_party_summary(company_name):
 
     for committee_id in committee_ids:
         # 获取该委员会的所有捐款
-        contribs_ref = db.collection('fec_raw_contributions_pac_to_candidate')
+        contribs_ref = db.collection(f'fec_raw_contributions_pac_to_candidate_{DATA_YEAR}')
         contribs = list(contribs_ref.where('committee_id', '==', committee_id).stream())
 
         for contrib in contribs:

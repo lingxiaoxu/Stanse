@@ -30,8 +30,9 @@ except ImportError:
     sys.exit(1)
 
 # 配置
-DATA_DIR = Path(__file__).parent / 'raw_data'
+DATA_DIR = Path(__file__).parent.parent / 'raw_data'
 PROJECT_ID = 'stanseproject'
+DATA_YEAR = '24'  # 可选: '16', '18', '20', '22', '24'
 PROGRESS_FILE = Path(__file__).parent.parent / 'reports' / '01-upload-progress.json'
 BASE_URL = 'https://www.fec.gov/files/bulk-downloads'
 
@@ -330,7 +331,7 @@ def build_company_summaries():
 
         # 获取该公司的所有捐款
         print(f'    查找捐款记录...')
-        contributions_ref = db.collection('fec_raw_contributions_pac_to_candidate')
+        contributions_ref = db.collection(f'fec_raw_contributions_pac_to_candidate_{DATA_YEAR}')
 
         for committee_id in committee_ids:
             query = contributions_ref.where('committee_id', '==', committee_id)

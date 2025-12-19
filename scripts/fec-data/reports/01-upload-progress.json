@@ -2,12 +2,17 @@
   "committees_last_line": 20934,
   "committees_uploaded": 20934,
   "committees_skipped": 0,
-  "last_updated": "2025-12-15T14:00:02.340335",
+  "last_updated": "2025-12-19T08:38:52.299119",
   "committees_completed": true,
   "candidates_last_line": 9809,
   "candidates_uploaded": 9809,
   "candidates_completed": true,
   "contributions_last_line": 703789,
   "contributions_uploaded": 701709,
-  "contributions_completed": true
+  "contributions_completed": true,
+  "linkages_last_line": 8629,
+  "linkages_uploaded": 8629,
+  "linkages_completed": true,
+  "transfers_last_line": 2589350,
+  "transfers_uploaded": 1949000
 }

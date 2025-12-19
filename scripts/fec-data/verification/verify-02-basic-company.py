@@ -14,6 +14,7 @@ from collections import defaultdict
 from datetime import datetime
 
 PROJECT_ID = 'stanseproject'
+DATA_YEAR = '24'  # 可选: '16', '18', '20', '22', '24'
 
 # 测试公司列表（知名美国公司）
 TEST_COMPANIES = [
@@ -75,7 +76,7 @@ def get_contributions_for_committee(db, committee_id):
     """
     print(f'\n  📊 查询委员会 {committee_id} 的捐款记录...')
 
-    contributions_ref = db.collection('fec_raw_contributions_pac_to_candidate')
+    contributions_ref = db.collection(f'fec_raw_contributions_pac_to_candidate_{DATA_YEAR}')
 
     # 查询以committee_id开头的文档
     query = contributions_ref.where('committee_id', '==', committee_id)

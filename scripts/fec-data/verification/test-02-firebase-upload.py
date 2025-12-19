@@ -27,6 +27,9 @@ except ImportError:
 DATA_DIR = Path(__file__).parent / 'raw_data'
 PROJECT_ID = 'stanseproject'
 
+# 数据年份配置 (默认使用2024年数据，可修改为16/18/20/22/24)
+DATA_YEAR = '24'  # 可选: '16', '18', '20', '22', '24'
+
 def init_firestore():
     """初始化Firestore使用gcloud认证"""
     print('🔧 初始化Firestore连接...')
@@ -87,7 +90,7 @@ def test_upload_committees(db, limit=10):
     """
     print(f'\n📤 测试上传委员会数据（前{limit}条）...')
 
-    cm_file = DATA_DIR / 'committees' / 'cm.txt'
+    cm_file = DATA_DIR / 'committees' / f'cm{DATA_YEAR}.txt'
     if not cm_file.exists():
         print(f'❌ 文件不存在: {cm_file}')
         return
