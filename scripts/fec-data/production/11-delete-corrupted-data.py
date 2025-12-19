@@ -20,6 +20,7 @@ except ImportError:
     sys.exit(1)
 
 PROJECT_ID = 'stanseproject'
+DATA_YEAR = '24'  # 可选: '16', '18', '20', '22', '24'
 db = None
 
 def init_firestore():
@@ -72,7 +73,7 @@ def main():
     print('='*80 + '\n')
 
     print('⚠️  此脚本将删除：')
-    print('   1. fec_raw_contributions_pac_to_candidate (~701,559条)')
+    print(f'   1. fec_raw_contributions_pac_to_candidate_{DATA_YEAR} (~701,559条)')
     print('   2. fec_company_party_summary (所有年度汇总)')
     print('   3. fec_company_index (所有公司索引)')
     print('\n原因：transaction_date字段包含金额而非日期，导致所有数据不可用\n')
@@ -88,7 +89,7 @@ def main():
     print('\n' + '='*80)
     print('步骤1/3: 删除错误的contributions')
     print('='*80)
-    delete_collection('fec_raw_contributions_pac_to_candidate')
+    delete_collection(f'fec_raw_contributions_pac_to_candidate_{DATA_YEAR}')
 
     # 删除错误的party summary
     print('\n' + '='*80)

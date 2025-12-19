@@ -18,6 +18,7 @@ except ImportError:
     sys.exit(1)
 
 PROJECT_ID = 'stanseproject'
+DATA_YEAR = '24'  # 可选: '16', '18', '20', '22', '24'
 PROGRESS_FILE = Path(__file__).parent.parent / 'reports' / '01-upload-progress.json'
 db = None
 
@@ -141,7 +142,7 @@ def main():
             'status': '✅ 完成' if progress.get('candidates_completed') else '⏳ 进行中'
         },
         {
-            'name': 'fec_raw_contributions_pac_to_candidate',
+            'name': f'fec_raw_contributions_pac_to_candidate_{DATA_YEAR}',
             'description': 'PAC捐款原始数据',
             'expected': progress.get('contributions_uploaded', 0),
             'status': '✅ 完成' if progress.get('contributions_completed') else '⏳ 进行中'

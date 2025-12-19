@@ -1,6 +1,6 @@
 # Stanse Project Documentation
 
-**Last Updated**: 2025-12-11
+**Last Updated**: 2025-12-17
 
 This folder contains all project documentation organized into two main categories: **Backend** and **Frontend**.
 
@@ -11,11 +11,11 @@ This folder contains all project documentation organized into two main categorie
 ```
 documentation/
 ├── 00_documentation_index.md (this file)
-├── backend/     (22 files - Polis Protocol & FEC data documentation)
+├── backend/     (27 files - Polis Protocol & FEC data documentation)
 └── frontend/    (4 files - React frontend documentation)
 ```
 
-**Total**: 26 markdown files
+**Total**: 31 markdown files
 
 ---
 
@@ -56,6 +56,10 @@ documentation/
 20. [20_fec_data_system.md](backend/20_fec_data_system.md) - FEC data system design and workflow
 21. [21_fec_firebase_architecture.md](backend/21_fec_firebase_architecture.md) - FEC Firebase database architecture
 22. [22_fec_firebase_implementation_status.md](backend/22_fec_firebase_implementation_status.md) - **STATUS** - FEC implementation status and progress
+23. [23_fec_field_verification.md](backend/23_fec_field_verification.md) - FEC field verification and data quality analysis
+24. [24_fec_data_scripts_guide.md](backend/24_fec_data_scripts_guide.md) - FEC data processing scripts documentation
+25. [25_fec_validated_companies_report.md](backend/25_fec_validated_companies_report.md) - FEC validated companies analysis report
+26. [26_fec_data_enhancement_plan.md](backend/26_fec_data_enhancement_plan.md) - **ROADMAP** - FEC data enhancement implementation plan
 
 ---
 
@@ -163,6 +167,10 @@ documentation/
 - [FEC System Design](backend/20_fec_data_system.md)
 - [FEC Firebase Architecture](backend/21_fec_firebase_architecture.md)
 - [FEC Implementation Status](backend/22_fec_firebase_implementation_status.md) ⏳ **IN PROGRESS**
+- [FEC Field Verification](backend/23_fec_field_verification.md)
+- [FEC Scripts Guide](backend/24_fec_data_scripts_guide.md)
+- [FEC Validated Companies](backend/25_fec_validated_companies_report.md)
+- [FEC Data Enhancement Plan](backend/26_fec_data_enhancement_plan.md) 🔮 **ROADMAP**
 
 ---
 

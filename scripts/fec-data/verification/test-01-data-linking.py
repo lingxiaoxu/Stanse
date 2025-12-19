@@ -12,6 +12,9 @@ from pathlib import Path
 # 数据文件路径
 DATA_DIR = Path(__file__).parent / 'raw_data'
 
+# 数据年份配置 (默认使用2024年数据，可修改为16/18/20/22/24)
+DATA_YEAR = '24'  # 可选: '16', '18', '20', '22', '24'
+
 def normalize_company_name(name):
     """标准化公司名称用于匹配"""
     if not name:
@@ -144,12 +147,9 @@ def query_company_politics(company_name):
     print(f'{"="*70}')
 
     # 检查必需的文件
-    cm_file = DATA_DIR / 'committees' / 'cm.txt'
-    cn_file = DATA_DIR / 'candidates' / 'cn.txt'
-    # FEC uses either itpas2.txt or pas2.txt
-    pas2_file = DATA_DIR / 'contributions' / 'itpas2.txt'
-    if not pas2_file.exists():
-        pas2_file = DATA_DIR / 'contributions' / 'pas2.txt'
+    cm_file = DATA_DIR / 'committees' / f'cm{DATA_YEAR}.txt'
+    cn_file = DATA_DIR / 'candidates' / f'cn{DATA_YEAR}.txt'
+    pas2_file = DATA_DIR / 'contributions' / f'itpas2{DATA_YEAR}.txt'
 
     missing_files = []
     if not cm_file.exists():
@@ -213,7 +213,7 @@ def main():
 
 if __name__ == '__main__':
     # 如果数据文件不存在，给出提示
-    if not (DATA_DIR / 'committees' / 'cm.txt').exists():
+    if not (DATA_DIR / 'committees' / f'cm{DATA_YEAR}.txt').exists():
         print('\n⚠️  需要先下载FEC数据文件')
         print('\n运行以下命令下载数据（只下载2024年测试）:')
         print('  python3 -c "import test_data_linking; test_data_linking.download_test_data()"')

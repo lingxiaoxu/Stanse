@@ -29,12 +29,15 @@ except ImportError:
     sys.exit(1)
 
 # 配置
-DATA_DIR = Path(__file__).parent / 'raw_data'
+DATA_DIR = Path(__file__).parent.parent / 'raw_data'
 PROJECT_ID = 'stanseproject'
 BATCH_SIZE = 200  # Firestore批次大小（降低以避免配额问题）
 DELETE_LOCAL_AFTER_UPLOAD = False  # 上传后是否删除本地文件
 DELAY_BETWEEN_BATCHES = 0.5  # 批次之间延迟（秒）
 SKIP_IF_EXISTS = True  # 如果文档已存在则跳过
+
+# 数据年份配置 (默认使用2024年数据，可修改为16/18/20/22/24)
+DATA_YEAR = '24'  # 可选: '16', '18', '20', '22', '24'
 
 # 全局变量
 db = None
@@ -98,7 +101,7 @@ def normalize_company_name(name):
 def upload_committees(year, year_suffix):
     """上传委员会数据到 fec_raw_committees"""
     collection_name = 'fec_raw_committees'
-    file_path = DATA_DIR / 'committees' / 'cm.txt'
+    file_path = DATA_DIR / 'committees' / f'cm{DATA_YEAR}.txt'
 
     if not file_path.exists():
         print(f'⚠️  文件不存在: {file_path}')
@@ -172,7 +175,7 @@ def upload_committees(year, year_suffix):
 def upload_candidates(year, year_suffix):
     """上传候选人数据到 fec_raw_candidates"""
     collection_name = 'fec_raw_candidates'
-    file_path = DATA_DIR / 'candidates' / 'cn.txt'
+    file_path = DATA_DIR / 'candidates' / f'cn{DATA_YEAR}.txt'
 
     if not file_path.exists():
         print(f'⚠️  文件不存在: {file_path}')
@@ -240,13 +243,11 @@ def upload_candidates(year, year_suffix):
 
 
 def upload_contributions_pac_to_candidate(year, year_suffix):
-    """上传PAC对候选人捐款数据到 fec_raw_contributions_pac_to_candidate"""
-    collection_name = 'fec_raw_contributions_pac_to_candidate'
+    """上传PAC对候选人捐款数据到 fec_raw_contributions_pac_to_candidate_{DATA_YEAR}"""
+    collection_name = f'fec_raw_contributions_pac_to_candidate_{DATA_YEAR}'
 
     # FEC使用不同的文件名
-    file_path = DATA_DIR / 'contributions' / 'itpas2.txt'
-    if not file_path.exists():
-        file_path = DATA_DIR / 'contributions' / 'pas2.txt'
+    file_path = DATA_DIR / 'contributions' / f'itpas2{DATA_YEAR}.txt'
 
     if not file_path.exists():
         print(f'⚠️  文件不存在: {file_path}')
@@ -443,10 +444,9 @@ def calculate_company_summaries(year):
         if not committee_ids:
             continue
 
-        # 查询这些PAC的所有捐款
-        contributions_ref = db.collection('fec_raw_contributions_pac_to_candidate') \
-            .where('committee_id', 'in', committee_ids[:10]) \
-            .where('data_year', '==', year)
+        # 查询这些PAC的所有捐款（使用year-specific collection）
+        contributions_ref = db.collection(f'fec_raw_contributions_pac_to_candidate_{DATA_YEAR}') \
+            .where('committee_id', 'in', committee_ids[:10])
 
         party_totals = defaultdict(lambda: {
             'total_amount': 0,

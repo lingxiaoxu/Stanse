@@ -7,15 +7,29 @@ The data flow is: **Company Name → PAC/Committee → Contributions → Candida
 
 ## Firestore Collections
 
-### 1. `fec_committees`
-Stores PAC and committee information including connected organizations (companies).
+### Collection Naming Strategy
 
-**Document ID**: Committee ID (e.g., "C00401224")
+**Multi-year collections** (aggregate data across all years):
+- `fec_raw_committees` - Document ID: `{committee_id}_{year}`
+- `fec_raw_candidates` - Document ID: `{candidate_id}_{year}`
+- `fec_raw_linkages` - Document ID: `{candidate_id}_{committee_id}_{year}`
+- `fec_raw_transfers` - Document ID: `{sender_committee_id}_{receiver_committee_id}_{transaction_id}`
+
+**Year-specific collections** (separate collection per year to manage size):
+- `fec_raw_contributions_pac_to_candidate_2024` - Document ID: `{committee_id}_{candidate_id}_{line_num}`
+- `fec_raw_contributions_pac_to_candidate_2022` - Document ID: `{committee_id}_{candidate_id}_{line_num}`
+- ... (one collection per election cycle year)
+
+### 1. `fec_raw_committees`
+Stores PAC and committee information including connected organizations (companies). **Multi-year table** containing records from all years.
+
+**Document ID**: `{committee_id}_{year}` (e.g., "C00401224_2024")
 
 **Fields**:
 ```javascript
 {
-  committee_id: string,          // Primary key
+  committee_id: string,          // Part of composite primary key
+  data_year: number,             // Part of composite primary key (e.g., 2024)
   committee_name: string,        // e.g., "EXXONMOBIL POLITICAL ACTION COMMITTEE"
   committee_type: string,        // e.g., "Q" (qualified PAC)
   connected_org_name: string,    // Company name (if applicable)
@@ -36,21 +50,24 @@ Stores PAC and committee information including connected organizations (companie
 ```
 
 **Indexes**:
-- `committee_id` (auto-indexed as doc ID)
+- Document ID: `{committee_id}_{year}` (auto-indexed)
+- `committee_id` (for lookups across years)
+- `data_year` (for filtering by year)
 - `connected_org_name` (for company lookup)
 - `sponsor_name` (for company lookup)
 
 ---
 
-### 2. `fec_candidates`
-Stores candidate information including party affiliation.
+### 2. `fec_raw_candidates`
+Stores candidate information including party affiliation. **Multi-year table** containing records from all years.
 
-**Document ID**: Candidate ID (e.g., "H0NY15049")
+**Document ID**: `{candidate_id}_{year}` (e.g., "H0NY15049_2024")
 
 **Fields**:
 ```javascript
 {
-  candidate_id: string,          // Primary key
+  candidate_id: string,          // Part of composite primary key
+  data_year: number,             // Part of composite primary key (e.g., 2024)
   candidate_name: string,        // e.g., "OCASIO-CORTEZ, ALEXANDRIA"
   party_affiliation: string,     // DEM, REP, IND, LIB, GRE, etc.
   office_sought: string,         // H (House), S (Senate), P (President)
@@ -70,21 +87,31 @@ Stores candidate information including party affiliation.
 ```
 
 **Indexes**:
-- `candidate_id` (auto-indexed as doc ID)
+- Document ID: `{candidate_id}_{year}` (auto-indexed)
+- `candidate_id` (for lookups across years)
+- `data_year` (for filtering by year)
 - `party_affiliation` (for aggregation)
 - `election_year` (for time-based queries)
 
 ---
 
-### 3. `fec_contributions`
-Stores PAC-to-candidate contribution records.
+### 3. `fec_raw_contributions_pac_to_candidate_{year}`
+Stores PAC-to-candidate contribution records. **Year-specific collections** - one collection per election cycle year.
 
-**Document ID**: Auto-generated (contributions don't have natural keys)
+Available years: `2016`, `2018`, `2020`, `2022`, `2024`
+
+**Collection naming examples:**
+- `fec_raw_contributions_pac_to_candidate_2024`
+- `fec_raw_contributions_pac_to_candidate_2022`
+- `fec_raw_contributions_pac_to_candidate_2020`
+
+**Document ID**: `{committee_id}_{candidate_id}_{line_num}` (e.g., "C00401224_H0NY15049_12345")
 
 **Fields**:
 ```javascript
 {
-  committee_id: string,          // References fec_committees
+  committee_id: string,          // References fec_raw_committees (match with data_year)
+  data_year: number,             // Year of this contribution (e.g., 2024)
   amendment_indicator: string,   // N=New, A=Amendment, T=Termination
   report_type: string,
   primary_general_indicator: string, // P, G, etc.
@@ -111,14 +138,82 @@ Stores PAC-to-candidate contribution records.
 ```
 
 **Indexes**:
+- Document ID: `{committee_id}_{candidate_id}_{line_num}` (auto-indexed, unique within year)
 - `committee_id` (for PAC → contributions lookup)
 - `candidate_id` (for candidate → contributions lookup)
 - `transaction_date` (for time-based queries)
 - Composite: `committee_id + transaction_date` (for efficient queries)
 
+**Why year-specific collections?**
+- Prevents Firestore collection size limits (contributions are the largest dataset ~500k+ docs per year)
+- Improves query performance by reducing collection size
+- Allows efficient year-specific queries without filtering
+- Each collection remains under optimal size for indexing
+
+**Querying:**
+- **Single year**: Query the specific year collection directly (e.g., `fec_raw_contributions_pac_to_candidate_2024`)
+- **Multiple years**: Iterate through year-specific collections sequentially or in parallel
+- **Python scripts**: Use `DATA_YEAR = '24'` variable to specify which collection to query
+
 ---
 
-### 4. `fec_company_index`
+### 4. `fec_raw_linkages`
+Stores candidate-committee linkages. **Multi-year table** containing records from all years.
+
+**Document ID**: `{candidate_id}_{committee_id}_{year}` (e.g., "H0NY15049_C00639591_2024")
+
+**Fields**:
+```javascript
+{
+  candidate_id: string,          // Part of composite primary key
+  committee_id: string,          // Part of composite primary key
+  data_year: number,             // Part of composite primary key (e.g., 2024)
+  committee_type: string,        // P=Principal, A=Authorized, etc.
+  committee_designation: string,
+  linkage_id: string,
+  created_at: timestamp,
+  updated_at: timestamp
+}
+```
+
+**Indexes**:
+- Document ID: `{candidate_id}_{committee_id}_{year}` (auto-indexed)
+- `candidate_id` (for candidate → committees lookup)
+- `committee_id` (for committee → candidates lookup)
+- `data_year` (for filtering by year)
+
+---
+
+### 5. `fec_raw_transfers`
+Stores committee-to-committee transfers. **Multi-year table** containing records from all years.
+
+**Document ID**: `{sender_committee_id}_{receiver_committee_id}_{transaction_id}` (e.g., "C00401224_C00639591_TX123456")
+
+**Fields**:
+```javascript
+{
+  sender_committee_id: string,
+  receiver_committee_id: string,
+  transaction_id: string,
+  data_year: number,             // Year of this transfer (e.g., 2024)
+  transaction_date: string,      // YYYYMMDD format
+  transaction_amount: number,    // In cents for precision
+  transaction_type: string,
+  created_at: timestamp,
+  updated_at: timestamp
+}
+```
+
+**Indexes**:
+- Document ID: `{sender_committee_id}_{receiver_committee_id}_{transaction_id}` (auto-indexed)
+- `sender_committee_id` (for transfers from a committee)
+- `receiver_committee_id` (for transfers to a committee)
+- `data_year` (for filtering by year)
+- `transaction_date` (for time-based queries)
+
+---
+
+### 6. `fec_company_index`
 Optimized index for fuzzy company name matching. This is the entry point for queries.
 
 **Document ID**: Normalized company name (lowercase, no punctuation)
@@ -162,9 +257,10 @@ const results = await db.collection('fec_company_index')
 const committeeIds = companyDoc.data().committee_ids;
 ```
 
-**Step 3**: Get all contributions from these committees
+**Step 3**: Get all contributions from these committees (for a specific year)
 ```javascript
-const contributions = await db.collection('fec_contributions')
+const year = '2024';  // or '2022', '2020', etc.
+const contributions = await db.collection(`fec_raw_contributions_pac_to_candidate_${year}`)
   .where('committee_id', 'in', committeeIds.slice(0, 10)) // Firestore limits 'in' to 10
   .get();
 ```
@@ -172,7 +268,9 @@ const contributions = await db.collection('fec_contributions')
 **Step 4**: Get candidate info and aggregate by party
 ```javascript
 const candidateIds = [...new Set(contributions.map(c => c.candidate_id))];
-const candidates = await db.collection('fec_candidates')
+const year = '2024';
+const candidates = await db.collection('fec_raw_candidates')
+  .where('data_year', '==', parseInt(year))
   .where('candidate_id', 'in', candidateIds.slice(0, 10))
   .get();
 
@@ -203,12 +301,24 @@ contributions.forEach(contribution => {
 
 ## Estimated Storage
 
-- Committees: ~20,000 records × 2KB = 40 MB
-- Candidates: ~5,000 records × 1KB = 5 MB
-- Contributions: ~500,000 records × 1KB = 500 MB
+### Per Year
+- Committees: ~20,000 records × 2KB = 40 MB (multi-year table with data_year field)
+- Candidates: ~5,000 records × 1KB = 5 MB (multi-year table with data_year field)
+- Linkages: ~10,000 records × 500B = 5 MB (multi-year table with data_year field)
+- Transfers: ~50,000 records × 500B = 25 MB (multi-year table with data_year field)
+- Contributions (per year): ~500,000 records × 1KB = 500 MB (separate collection per year)
+
+### Across 5 Years (2016, 2018, 2020, 2022, 2024)
+- Committees (all years): ~100,000 records = 200 MB
+- Candidates (all years): ~25,000 records = 25 MB
+- Linkages (all years): ~50,000 records = 25 MB
+- Transfers (all years): ~250,000 records = 125 MB
+- Contributions (5 separate collections): 5 × 500 MB = 2,500 MB
 - Company Index: ~10,000 records × 500B = 5 MB
 
-**Total**: ~550 MB (well within Firestore limits)
+**Total (5 years)**: ~2,880 MB (~2.9 GB)
+
+**Note**: Multi-year collections (committees, candidates, linkages, transfers) store all years in a single collection with a `data_year` field. Year-specific collections (contributions) have separate collections per year to manage size and improve query performance.
 
 ---
 
@@ -219,8 +329,9 @@ contributions.forEach(contribution => {
    - Document ID: `{company_id}_{party}`
    - Fields: `total_amount`, `contribution_count`, `last_updated`
 
-2. **Time-based Partitioning**: Separate collections by election cycle
-   - `fec_contributions_2024`, `fec_contributions_2022`, etc.
+2. **Time-based Partitioning**: ✅ **Already implemented** for contributions
+   - `fec_raw_contributions_pac_to_candidate_2024`, `fec_raw_contributions_pac_to_candidate_2022`, etc.
+   - This prevents single-collection size limits and improves query performance
 
 3. **Full-text Search**: Integrate with Algolia or Elasticsearch for advanced company name matching
 

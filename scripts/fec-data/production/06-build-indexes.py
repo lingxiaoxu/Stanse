@@ -26,6 +26,7 @@ except ImportError:
 
 # 配置
 PROJECT_ID = 'stanseproject'
+DATA_YEAR = '24'  # 可选: '16', '18', '20', '22', '24'
 BATCH_SIZE = 50
 MIN_DELAY = 3.0
 MAX_DELAY = 300.0
@@ -321,7 +322,7 @@ def build_company_summaries():
         years_data = defaultdict(lambda: defaultdict(lambda: {'total_amount': 0, 'contribution_count': 0}))
 
         # 获取该公司所有PAC的捐款
-        contributions_ref = db.collection('fec_raw_contributions_pac_to_candidate')
+        contributions_ref = db.collection(f'fec_raw_contributions_pac_to_candidate_{DATA_YEAR}')
 
         for committee_id in committee_ids:
             query = contributions_ref.where('committee_id', '==', committee_id)

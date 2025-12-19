@@ -27,7 +27,7 @@ from firebase_admin import credentials, firestore
 from google.cloud.firestore_v1.batch import WriteBatch
 
 # Configuration
-DATA_DIR = Path(__file__).parent / 'raw_data'
+DATA_DIR = Path(__file__).parent.parent / 'raw_data'
 
 # Firestore batch size limit
 BATCH_SIZE = 500

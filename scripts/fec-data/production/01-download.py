@@ -9,6 +9,8 @@ This script downloads:
 - Committee Master files (cm) - PAC information and company connections
 - Candidate Master files (cn) - candidate party affiliations
 - Committee-to-Candidate contributions (pas2) - PAC contributions to candidates
+- Candidate-Committee Linkages (ccl) - Maps candidates to ALL their committees
+- Committee-to-Committee transactions (oth) - Indirect donation paths
 - Header/description files for each category
 """
 
@@ -21,7 +23,7 @@ from typing import List, Dict
 
 # Configuration
 BASE_URL = 'https://www.fec.gov/files/bulk-downloads'
-DATA_DIR = Path(__file__).parent / 'raw_data'
+DATA_DIR = Path(__file__).parent.parent / 'raw_data'
 
 # Years to download (FEC uses even year of cycle)
 # Format: (folder_year, file_suffix, description)
@@ -72,6 +74,24 @@ def get_files_to_download() -> List[DataFile]:
             description=f'Committee-to-Candidate contributions for {desc}'
         ))
 
+    # Candidate-Committee Linkages - Maps candidates to ALL their committees
+    for folder, suffix, desc in YEARS_TO_DOWNLOAD:
+        files.append(DataFile(
+            category='linkages',
+            filename=f'ccl{suffix}.zip',
+            url=f'{BASE_URL}/{folder}/ccl{suffix}.zip',
+            description=f'Candidate-Committee linkages for {desc}'
+        ))
+
+    # Committee-to-Committee transactions - Indirect donation paths
+    for folder, suffix, desc in YEARS_TO_DOWNLOAD:
+        files.append(DataFile(
+            category='transfers',
+            filename=f'oth{suffix}.zip',
+            url=f'{BASE_URL}/{folder}/oth{suffix}.zip',
+            description=f'Committee-to-Committee transactions for {desc}'
+        ))
+
     # Description/header files (located in data_dictionaries subdirectory)
     dict_base_url = f'{BASE_URL}/data_dictionaries'
     files.extend([
@@ -93,13 +113,25 @@ def get_files_to_download() -> List[DataFile]:
             url=f'{dict_base_url}/pas2_header_file.csv',
             description='Contributions data dictionary'
         ),
+        DataFile(
+            category='descriptions',
+            filename='ccl_header_file.csv',
+            url=f'{dict_base_url}/ccl_header_file.csv',
+            description='Candidate-Committee linkages data dictionary'
+        ),
+        DataFile(
+            category='descriptions',
+            filename='oth_header_file.csv',
+            url=f'{dict_base_url}/oth_header_file.csv',
+            description='Committee-to-Committee transactions data dictionary'
+        ),
     ])
 
     return files
 
 def create_directories():
     """Create necessary directories for data storage"""
-    categories = ['committees', 'candidates', 'contributions', 'descriptions']
+    categories = ['committees', 'candidates', 'contributions', 'linkages', 'transfers', 'descriptions']
 
     # Create main data directory
     DATA_DIR.mkdir(parents=True, exist_ok=True)

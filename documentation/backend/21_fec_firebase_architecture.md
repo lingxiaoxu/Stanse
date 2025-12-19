@@ -14,9 +14,31 @@
 
 ## Firestore Collections架构
 
+### Collection命名策略
+
+**多年份集合** (所有年份的数据存储在单个集合中，使用`data_year`字段过滤):
+- `fec_raw_committees` - Document ID: `{committee_id}_{year}`，包含`data_year`字段
+- `fec_raw_candidates` - Document ID: `{candidate_id}_{year}`，包含`data_year`字段
+- `fec_raw_linkages` - Document ID: `{candidate_id}_{committee_id}_{year}`
+- `fec_raw_transfers` - Document ID: `{sender_committee_id}_{receiver_committee_id}_{transaction_id}`
+
+**年份特定集合** (每个选举周期年份一个独立集合):
+- `fec_raw_contributions_pac_to_candidate_2024` - Document ID: `{committee_id}_{candidate_id}_{line_num}`
+- `fec_raw_contributions_pac_to_candidate_2022` - Document ID: `{committee_id}_{candidate_id}_{line_num}`
+- `fec_raw_contributions_pac_to_candidate_2020` - Document ID: `{committee_id}_{candidate_id}_{line_num}`
+- `fec_raw_contributions_pac_to_candidate_2018` - Document ID: `{committee_id}_{candidate_id}_{line_num}`
+- `fec_raw_contributions_pac_to_candidate_2016` - Document ID: `{committee_id}_{candidate_id}_{line_num}`
+
+**设计原因**:
+1. **为什么捐款使用年份特定集合**: 捐款数据量最大（每年~50万条记录），独立集合防止单个集合大小限制，提升查询性能
+2. **为什么委员会/候选人使用多年份集合**: 这些数据集较小，在单个集合中更容易通过`data_year`字段过滤
+3. **Python脚本配置**: 所有脚本使用`DATA_YEAR = '24'`配置变量（可以是'16', '18', '20', '22', '24'）
+
 ### 1. 原始数据表 (Raw Data Tables)
 
 #### 1.1 `fec_raw_committees` - 委员会/PAC主数据
+**多年份集合** - 包含所有年份的记录
+
 ```javascript
 {
   // Document ID: {committee_id}_{year}
@@ -47,13 +69,16 @@
 ```
 
 **索引**:
-- `committee_id` + `data_year` (复合索引)
-- `connected_org_name` (全文搜索)
-- `data_year`
+- Document ID: `{committee_id}_{year}` (自动索引)
+- `committee_id` (用于跨年份查找)
+- `data_year` (用于按年份过滤)
+- `connected_org_name` (用于公司查找)
 
 ---
 
 #### 1.2 `fec_raw_candidates` - 候选人主数据
+**多年份集合** - 包含所有年份的记录
+
 ```javascript
 {
   // Document ID: {candidate_id}_{year}
@@ -83,17 +108,24 @@
 ```
 
 **索引**:
-- `candidate_id` + `data_year`
-- `party_affiliation` + `data_year`
-- `state` + `data_year`
+- Document ID: `{candidate_id}_{year}` (自动索引)
+- `candidate_id` (用于跨年份查找)
+- `data_year` (用于按年份过滤)
+- `party_affiliation` + `data_year` (复合索引)
+- `state` + `data_year` (复合索引)
 
 ---
 
-#### 1.3 `fec_raw_contributions_pac_to_candidate` - PAC对候选人捐款
+#### 1.3 `fec_raw_contributions_pac_to_candidate_{year}` - PAC对候选人捐款
+**年份特定集合** - 每个选举周期年份一个独立集合
+
+可用年份: 2016, 2018, 2020, 2022, 2024
+
 ```javascript
 {
-  // Document ID: auto-generated (因为没有自然主键)
-  "auto_id_12345": {
+  // Collection: fec_raw_contributions_pac_to_candidate_2024
+  // Document ID: {committee_id}_{candidate_id}_{line_num}
+  "C00000059_H0NY15049_12345": {
     committee_id: "C00000059",  // 捐款方PAC
     candidate_id: "H0NY15049",  // 接收方候选人
     transaction_id: "...",
@@ -120,9 +152,15 @@
 ```
 
 **索引**:
-- `committee_id` + `data_year` (复合索引)
-- `candidate_id` + `data_year`
-- `transaction_date`
+- Document ID: `{committee_id}_{candidate_id}_{line_num}` (自动索引)
+- `committee_id` (用于PAC→捐款查找)
+- `candidate_id` (用于候选人→捐款查找)
+- `transaction_date` (用于时间查询)
+
+**查询方式**:
+- **查询单年**: 直接查询特定年份集合 (例如: `fec_raw_contributions_pac_to_candidate_2024`)
+- **查询多年**: 依次或并行迭代多个年份特定集合
+- **Python脚本**: 使用`DATA_YEAR = '24'`变量指定要查询的集合
 
 ---
 
@@ -160,11 +198,13 @@
 
 ---
 
-#### 1.5 `fec_raw_committee_linkages` - 委员会关联
+#### 1.5 `fec_raw_linkages` - 委员会关联
+**多年份集合** - 包含所有年份的记录
+
 ```javascript
 {
-  // Document ID: {linkage_id}_{year}
-  "linkage_12345_2024": {
+  // Document ID: {candidate_id}_{committee_id}_{year}
+  "H0NY15049_C00639591_2024": {
     candidate_id: "H0NY15049",
     committee_id: "C00639591",
     committee_type: "P",  // P=Principal
@@ -181,30 +221,44 @@
 }
 ```
 
+**索引**:
+- Document ID: `{candidate_id}_{committee_id}_{year}` (自动索引)
+- `candidate_id` (用于候选人→委员会查找)
+- `committee_id` (用于委员会→候选人查找)
+- `data_year` (用于按年份过滤)
+
 ---
 
-#### 1.6 `fec_raw_operating_expenditures` - 运营支出
+#### 1.6 `fec_raw_transfers` - 委员会间转账
+**多年份集合** - 包含所有年份的记录
+
 ```javascript
 {
-  // Document ID: auto-generated
-  "auto_id_abc": {
-    committee_id: "C00000059",
-    transaction_date: "20240120",
-    expenditure_amount: 150000,  // $1,500.00
-    expenditure_purpose: "OFFICE RENT",
-    payee_name: "LANDLORD COMPANY",
-    city: "KANSAS CITY",
-    state: "MO",
+  // Document ID: {sender_committee_id}_{receiver_committee_id}_{transaction_id}
+  "C00000059_C00639591_TX123456": {
+    sender_committee_id: "C00000059",
+    receiver_committee_id: "C00639591",
+    transaction_id: "TX123456",
+    transaction_date: "20240120",  // YYYYMMDD
+    transaction_amount: 150000,  // 以美分为单位 ($1,500.00)
+    transaction_type: "24T",
 
     // 元数据
     data_year: 2024,
     election_cycle: "2023-2024",
-    source_file: "oppexp24.zip",
+    source_file: "oth24.zip",
     uploaded_at: timestamp,
     last_updated: timestamp
   }
 }
 ```
+
+**索引**:
+- Document ID: `{sender_committee_id}_{receiver_committee_id}_{transaction_id}` (自动索引)
+- `sender_committee_id` (用于发送方查找)
+- `receiver_committee_id` (用于接收方查找)
+- `data_year` (用于按年份过滤)
+- `transaction_date` (用于时间查询)
 
 ---
 
@@ -435,6 +489,9 @@ if is_new_data_available(year=2024, month=current_month):
 ### 查询1: 公司的政党捐款分布（单年）
 
 ```javascript
+// 配置：指定查询年份
+const DATA_YEAR = 2024;
+
 // 1. 查找公司（支持模糊匹配）
 const companyDoc = await db.collection('fec_company_index')
   .where('search_keywords', 'array-contains', 'hallmark')
@@ -442,59 +499,127 @@ const companyDoc = await db.collection('fec_company_index')
   .get();
 
 const normalizedName = companyDoc.docs[0].data().normalized_name;
+const committeeIds = companyDoc.docs[0].data().committee_ids;
 
-// 2. 直接获取汇总数据
-const summary = await db.collection('fec_company_party_summary')
-  .doc(`${normalizedName}_2024`)
+// 2. 从年份特定集合获取捐款（必须在集合名中指定年份）
+const contributions = await db.collection(`fec_raw_contributions_pac_to_candidate_${DATA_YEAR}`)
+  .where('committee_id', 'in', committeeIds.slice(0, 10))
   .get();
+
+// 3. 获取候选人信息（使用data_year过滤）
+const candidateIds = [...new Set(contributions.docs.map(d => d.data().candidate_id))];
+const candidates = await db.collection('fec_raw_candidates')
+  .where('data_year', '==', DATA_YEAR)
+  .where('candidate_id', 'in', candidateIds.slice(0, 10))
+  .get();
+
+// 4. 按政党汇总
+const partyTotals = {};
+contributions.forEach(contribDoc => {
+  const contrib = contribDoc.data();
+  const candidate = candidates.docs.find(c => c.data().candidate_id === contrib.candidate_id);
+  if (candidate) {
+    const party = candidate.data().party_affiliation;
+    partyTotals[party] = (partyTotals[party] || 0) + contrib.transaction_amount;
+  }
+});
 
 // 结果
-console.log(summary.data().party_totals);
-// {DEM: {...}, REP: {...}}
+console.log(partyTotals);
+// {DEM: 4350000, REP: 3650000}
 ```
 
-### 查询2: 公司的历史捐款趋势
+### 查询2: 公司的历史捐款趋势（多年）
 
 ```javascript
-const allYears = await db.collection('fec_company_all_years_summary')
-  .doc(normalizedName)
+// 配置：要查询的年份列表
+const YEARS = [2024, 2022, 2020];
+
+// 1. 查找公司
+const companyDoc = await db.collection('fec_company_index')
+  .where('search_keywords', 'array-contains', 'hallmark')
+  .limit(1)
   .get();
 
-console.log(allYears.data().by_year);
-// {2024: {...}, 2022: {...}, 2020: {...}}
+const committeeIds = companyDoc.docs[0].data().committee_ids;
+
+// 2. 并行查询多个年份的捐款
+const yearlyResults = await Promise.all(YEARS.map(async (year) => {
+  // 从年份特定集合获取捐款
+  const contributions = await db.collection(`fec_raw_contributions_pac_to_candidate_${year}`)
+    .where('committee_id', 'in', committeeIds.slice(0, 10))
+    .get();
+
+  // 获取该年候选人信息
+  const candidateIds = [...new Set(contributions.docs.map(d => d.data().candidate_id))];
+  const candidates = await db.collection('fec_raw_candidates')
+    .where('data_year', '==', year)
+    .where('candidate_id', 'in', candidateIds.slice(0, 10))
+    .get();
+
+  // 按政党汇总
+  const partyTotals = {};
+  contributions.forEach(contribDoc => {
+    const contrib = contribDoc.data();
+    const candidate = candidates.docs.find(c => c.data().candidate_id === contrib.candidate_id);
+    if (candidate) {
+      const party = candidate.data().party_affiliation;
+      partyTotals[party] = (partyTotals[party] || 0) + contrib.transaction_amount;
+    }
+  });
+
+  return { year, partyTotals };
+}));
+
+console.log(yearlyResults);
+// [{year: 2024, partyTotals: {DEM: ..., REP: ...}}, {year: 2022, ...}, {year: 2020, ...}]
 ```
 
 ### 查询3: 查看原始捐款记录
 
 ```javascript
-// 查看某公司PAC的所有捐款明细
-const contributions = await db.collection('fec_raw_contributions_pac_to_candidate')
+// 配置：指定查询年份
+const DATA_YEAR = 2024;
+
+// 查看某公司PAC的所有捐款明细（从年份特定集合查询）
+const contributions = await db.collection(`fec_raw_contributions_pac_to_candidate_${DATA_YEAR}`)
   .where('committee_id', '==', 'C00000059')
-  .where('data_year', '==', 2024)
   .orderBy('transaction_date', 'desc')
   .limit(100)
   .get();
+
+// 注意：data_year字段仍然存在于文档中，但不需要用于过滤，因为集合本身已经是年份特定的
 ```
 
 ---
 
 ## 存储估算
 
-### 原始数据（每年）
-- Committees: ~20,000 docs × 2KB = 40 MB
-- Candidates: ~5,000 docs × 1KB = 5 MB
-- Contributions: ~500,000 docs × 1KB = 500 MB
-- Individual contributions: ~2,000,000 docs × 1KB = 2 GB
+### 每年数据量
+- Committees: ~20,000 docs × 2KB = 40 MB (多年份集合，包含data_year字段)
+- Candidates: ~5,000 docs × 1KB = 5 MB (多年份集合，包含data_year字段)
+- Linkages: ~10,000 docs × 500B = 5 MB (多年份集合，包含data_year字段)
+- Transfers: ~50,000 docs × 500B = 25 MB (多年份集合，包含data_year字段)
+- Contributions: ~500,000 docs × 1KB = 500 MB (年份特定集合，每年一个独立集合)
 
-### 处理后数据
-- Company index: ~10,000 docs × 1KB = 10 MB
-- Company summaries (per year): ~10,000 docs × 5KB = 50 MB
-- All years summaries: ~10,000 docs × 10KB = 100 MB
+### 5年总计 (2016, 2018, 2020, 2022, 2024)
+**多年份集合** (所有年份在单个集合中):
+- Committees (所有年份): ~100,000 docs = 200 MB
+- Candidates (所有年份): ~25,000 docs = 25 MB
+- Linkages (所有年份): ~50,000 docs = 25 MB
+- Transfers (所有年份): ~250,000 docs = 125 MB
 
-### 5年总计
-- 原始数据: (40 + 5 + 500) MB × 5 = 2.7 GB
-- 处理数据: 160 MB
-- **总计**: ~2.9 GB
+**年份特定集合** (每年一个独立集合):
+- Contributions (5个独立集合): 5 × 500 MB = 2,500 MB
+
+**索引集合**:
+- Company index: ~10,000 docs × 500B = 5 MB
+
+**总计 (5年)**: ~2,880 MB (~2.9 GB)
+
+**架构说明**:
+- 多年份集合 (committees, candidates, linkages, transfers) 将所有年份存储在单个集合中，使用`data_year`字段过滤
+- 年份特定集合 (contributions) 每年一个独立集合，以管理规模和提升查询性能
 
 **注意**: Firestore免费层是1GB存储。如果需要存储所有年份的数据，需要升级到付费计划（约$0.18/GB/月）。
 
@@ -515,8 +640,32 @@ const contributions = await db.collection('fec_raw_contributions_pac_to_candidat
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // FEC原始数据 - 只读（公开数据）
-    match /fec_raw_{type}/{doc} {
+    // FEC多年份原始数据 - 只读（公开数据）
+    match /fec_raw_committees/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+    match /fec_raw_candidates/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+    match /fec_raw_linkages/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+    match /fec_raw_transfers/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // FEC年份特定捐款集合 - 只读（公开数据）
+    match /fec_raw_contributions_pac_to_candidate_{year}/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // FEC公司索引 - 只读
+    match /fec_company_index/{doc} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.token.admin == true;
     }
@@ -535,6 +684,8 @@ service cloud.firestore {
   }
 }
 ```
+
+**注意**: 年份特定集合的通配符规则 `fec_raw_contributions_pac_to_candidate_{year}` 可能需要在实际使用时展开为具体的年份，例如 `fec_raw_contributions_pac_to_candidate_2024`, `fec_raw_contributions_pac_to_candidate_2022` 等。
 
 ---
 

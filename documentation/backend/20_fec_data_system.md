@@ -92,10 +92,22 @@ This will:
 **Expected time**: ~30-60 minutes depending on data size
 
 **Firestore collections created**:
-- `fec_committees` (~20,000 documents)
-- `fec_candidates` (~5,000 documents)
-- `fec_contributions` (~500,000 documents)
+
+**Multi-year collections** (contain records from all years with `data_year` field):
+- `fec_raw_committees` (~100,000 documents across 5 years)
+- `fec_raw_candidates` (~25,000 documents across 5 years)
+- `fec_raw_linkages` (~50,000 documents across 5 years)
+- `fec_raw_transfers` (~250,000 documents across 5 years)
 - `fec_company_index` (~10,000 documents)
+
+**Year-specific collections** (separate collection per election cycle year):
+- `fec_raw_contributions_pac_to_candidate_2024` (~500,000 documents)
+- `fec_raw_contributions_pac_to_candidate_2022` (~500,000 documents)
+- `fec_raw_contributions_pac_to_candidate_2020` (~500,000 documents)
+- `fec_raw_contributions_pac_to_candidate_2018` (~500,000 documents)
+- `fec_raw_contributions_pac_to_candidate_2016` (~500,000 documents)
+
+**Configuration**: Python scripts use `DATA_YEAR = '24'` variable (can be '16', '18', '20', '22', '24') to specify which year to process.
 
 ### Step 3: Query Data
 
@@ -106,18 +118,23 @@ from google.cloud import firestore
 
 db = firestore.Client()
 
+# Configuration: Specify which year to query
+DATA_YEAR = '24'  # Can be '16', '18', '20', '22', '24'
+year_int = 2000 + int(DATA_YEAR)  # Convert to full year (e.g., 2024)
+
 # 1. Find company
 company_doc = db.collection('fec_company_index').document('exxonmobil').get()
 committee_ids = company_doc.get('committee_ids')
 
-# 2. Get contributions from these PACs
-contributions = db.collection('fec_contributions') \
+# 2. Get contributions from these PACs (MUST specify year in collection name)
+contributions = db.collection(f'fec_raw_contributions_pac_to_candidate_{year_int}') \
     .where('committee_id', 'in', committee_ids[:10]) \
     .get()
 
-# 3. Get candidate party affiliations
+# 3. Get candidate party affiliations (filter by data_year)
 candidate_ids = [c.get('candidate_id') for c in contributions]
-candidates = db.collection('fec_candidates') \
+candidates = db.collection('fec_raw_candidates') \
+    .where('data_year', '==', year_int) \
     .where('candidate_id', 'in', candidate_ids[:10]) \
     .get()
 
@@ -134,27 +151,55 @@ print(party_totals)
 # Output: {'DEM': 125000, 'REP': 250000}
 ```
 
+**Key Architecture Points:**
+1. **Year-specific contributions**: Collection name includes year (e.g., `fec_raw_contributions_pac_to_candidate_2024`)
+2. **Multi-year committees/candidates**: Use `data_year` field to filter by year
+3. **Why this design?**
+   - Contributions are the largest dataset (~500k+ docs per year)
+   - Separate collections prevent Firestore size limits and improve performance
+   - Committees/candidates are smaller datasets, easier to manage in one collection with filtering
+
 ## Data Schema
 
 See [19_fec_data_schema.md](./19_fec_data_schema.md) for detailed schema design.
 
 ### Quick Reference
 
-**Collections**:
+**Multi-year Collections** (contain records from all years, filter by `data_year`):
 
-1. **fec_committees** - PAC/Committee master data
-   - Key fields: `committee_id`, `committee_name`, `connected_org_name`
+1. **fec_raw_committees** - PAC/Committee master data
+   - Document ID: `{committee_id}_{year}` (e.g., "C00401224_2024")
+   - Key fields: `committee_id`, `data_year`, `committee_name`, `connected_org_name`
    - Purpose: Link companies to PACs
 
-2. **fec_candidates** - Candidate master data
-   - Key fields: `candidate_id`, `candidate_name`, `party_affiliation`
+2. **fec_raw_candidates** - Candidate master data
+   - Document ID: `{candidate_id}_{year}` (e.g., "H0NY15049_2024")
+   - Key fields: `candidate_id`, `data_year`, `candidate_name`, `party_affiliation`
    - Purpose: Link candidates to political parties
 
-3. **fec_contributions** - PAC-to-candidate contributions
-   - Key fields: `committee_id`, `candidate_id`, `transaction_amount`
-   - Purpose: Track donation amounts
+3. **fec_raw_linkages** - Candidate-committee linkages
+   - Document ID: `{candidate_id}_{committee_id}_{year}`
+   - Key fields: `candidate_id`, `committee_id`, `data_year`
+   - Purpose: Link candidates to their committees
 
-4. **fec_company_index** - Optimized company name lookup
+4. **fec_raw_transfers** - Committee-to-committee transfers
+   - Document ID: `{sender_committee_id}_{receiver_committee_id}_{transaction_id}`
+   - Key fields: `sender_committee_id`, `receiver_committee_id`, `data_year`
+   - Purpose: Track transfers between committees
+
+**Year-specific Collections** (separate collection per year):
+
+5. **fec_raw_contributions_pac_to_candidate_{year}** - PAC-to-candidate contributions
+   - Available years: 2016, 2018, 2020, 2022, 2024
+   - Document ID: `{committee_id}_{candidate_id}_{line_num}`
+   - Key fields: `committee_id`, `candidate_id`, `transaction_amount`, `data_year`
+   - Purpose: Track donation amounts
+   - **Important**: Must specify year in collection name when querying
+
+**Index Collection**:
+
+6. **fec_company_index** - Optimized company name lookup
+   - Document ID: `{normalized_company_name}` (e.g., "exxonmobil")
    - Key fields: `normalized_name`, `committee_ids`, `search_keywords`
    - Purpose: Fast fuzzy company name matching
 
@@ -252,7 +297,7 @@ python parse_and_upload.py
 Create a new service file: `services/fecService.ts`
 
 ```typescript
-export async function queryCompanyPolitics(companyName: string) {
+export async function queryCompanyPolitics(companyName: string, year: number = 2024) {
   // 1. Normalize company name
   const normalized = normalizeCompanyName(companyName);
 
@@ -260,18 +305,51 @@ export async function queryCompanyPolitics(companyName: string) {
   const companyDoc = await db.collection('fec_company_index')
     .doc(normalized).get();
 
-  // 3. Get contributions and aggregate by party
-  // ... (implementation details)
+  if (!companyDoc.exists) {
+    throw new Error('Company not found');
+  }
+
+  const committeeIds = companyDoc.data().committee_ids;
+
+  // 3. Get contributions from year-specific collection
+  const contributionsRef = db.collection(`fec_raw_contributions_pac_to_candidate_${year}`);
+  const contributionsSnap = await contributionsRef
+    .where('committee_id', 'in', committeeIds.slice(0, 10))  // Firestore limit
+    .get();
+
+  // 4. Get candidate info (filter by data_year)
+  const candidateIds = [...new Set(contributionsSnap.docs.map(d => d.data().candidate_id))];
+  const candidatesSnap = await db.collection('fec_raw_candidates')
+    .where('data_year', '==', year)
+    .where('candidate_id', 'in', candidateIds.slice(0, 10))
+    .get();
+
+  // 5. Aggregate by party
+  const partyTotals: Record<string, number> = {};
+  contributionsSnap.forEach(contribDoc => {
+    const contrib = contribDoc.data();
+    const candidate = candidatesSnap.docs.find(c => c.data().candidate_id === contrib.candidate_id);
+    if (candidate) {
+      const party = candidate.data().party_affiliation;
+      partyTotals[party] = (partyTotals[party] || 0) + contrib.transaction_amount;
+    }
+  });
 
   return {
     company: companyName,
-    partyContributions: {
-      'DEM': 125000,
-      'REP': 250000,
-      'IND': 5000
-    },
-    totalAmount: 380000
+    year: year,
+    partyContributions: partyTotals,
+    totalAmount: Object.values(partyTotals).reduce((a, b) => a + b, 0)
   };
+}
+
+// Query multiple years
+export async function queryCompanyPoliticsMultiYear(companyName: string, years: number[] = [2024, 2022, 2020]) {
+  const results = await Promise.all(
+    years.map(year => queryCompanyPolitics(companyName, year))
+  );
+
+  return results;
 }
 ```
 

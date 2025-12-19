@@ -45,6 +45,7 @@ export interface FECCompanyData {
   years: number[];
   data_source: string;         // 'firestore'
   variants_found?: string[];   // List of all company variants that were aggregated
+  queried_year?: number;       // If filtered by year, which year was queried
 }
 
 /**
@@ -313,14 +314,15 @@ Examples:
  * Query FEC data for a single normalized company name
  * @param normalized - The normalized company name to search for
  * @param originalSearch - The original user search query (for AI relevance validation)
+ * @param year - Optional year filter (e.g., 2024, 2022, 2020)
  */
-async function querySingleCompany(normalized: string, originalSearch?: string): Promise<{
+async function querySingleCompany(normalized: string, originalSearch?: string, year?: number): Promise<{
   normalized: string;
   display_name: string;
   data: any[];
 } | null> {
   try {
-    console.log(`[FEC] Querying fec_company_index for normalized name: "${normalized}"`);
+    console.log(`[FEC] Querying fec_company_index for normalized name: "${normalized}"${year ? ` (year: ${year})` : ' (all years)'}`);
 
     // Check company index
     const companyIndexRef = doc(db, 'fec_company_index', normalized);
@@ -397,7 +399,7 @@ async function querySingleCompany(normalized: string, originalSearch?: string): 
         }
 
         // Recursively query with the matched normalized name
-        return querySingleCompany(bestMatch, originalSearch);
+        return querySingleCompany(bestMatch, originalSearch, year);
       }
 
       console.log(`[FEC] No fuzzy match found for "${normalized}"`);
@@ -409,10 +411,14 @@ async function querySingleCompany(normalized: string, originalSearch?: string): 
     const companyData = companyIndexSnap.data();
     const displayName = companyData.company_name;
 
-    // Query party summaries for all years
-    console.log(`[FEC] Querying fec_company_party_summary for normalized name: "${normalized}"`);
+    // Query party summaries - filter by year if specified
+    console.log(`[FEC] Querying fec_company_party_summary for normalized name: "${normalized}"${year ? ` (year: ${year})` : ''}`);
     const summariesRef = collection(db, 'fec_company_party_summary');
-    const q = query(summariesRef, where('normalized_name', '==', normalized));
+    const q = year
+      ? query(summariesRef,
+          where('normalized_name', '==', normalized),
+          where('data_year', '==', year))
+      : query(summariesRef, where('normalized_name', '==', normalized));
     const summariesSnap = await getDocs(q);
 
     if (summariesSnap.empty) {
@@ -441,7 +447,7 @@ function aggregateVariantData(variantResults: Array<{
   normalized: string;
   display_name: string;
   data: any[];
-}>): FECCompanyData {
+}>, queriedYear?: number): FECCompanyData {
   // Use the first variant's display name as the primary name
   const primaryDisplayName = variantResults[0].display_name;
 
@@ -491,7 +497,8 @@ function aggregateVariantData(variantResults: Array<{
       : 0;
   }
 
-  console.log(`[FEC] Aggregated data for "${primaryDisplayName}" from ${variantsFound.length} variants: $${totalUsd.toLocaleString()}`);
+  const yearInfo = queriedYear ? ` (${queriedYear})` : ` (${years.length} years)`;
+  console.log(`[FEC] Aggregated data for "${primaryDisplayName}"${yearInfo} from ${variantsFound.length} variants: $${totalUsd.toLocaleString()}`);
 
   return {
     display_name: primaryDisplayName,
@@ -502,6 +509,7 @@ function aggregateVariantData(variantResults: Array<{
     years: years.sort(),
     data_source: 'firestore',
     variants_found: variantsFound,
+    queried_year: queriedYear,
   };
 }
 
@@ -509,24 +517,32 @@ function aggregateVariantData(variantResults: Array<{
  * Query FEC political donation data for a company with AI-powered variant detection
  *
  * @param companyName - Company name (e.g., "JPMorgan", "Google", "Microsoft")
+ * @param year - Optional year filter (e.g., 2024, 2022, 2020). Defaults to 2024 if not specified.
  * @returns Aggregated FEC donation data from all company variants
  *
  * Example usage:
  * ```typescript
- * const data = await queryCompanyFECData("JPMorgan");
- * if (data) {
- *   console.log(`${data.display_name} donated $${data.total_usd.toLocaleString()}`);
- *   console.log(`Found data from ${data.variants_found.length} variants`);
- *   console.log(`DEM: ${data.party_totals['DEM']?.percentage}%`);
- *   console.log(`REP: ${data.party_totals['REP']?.percentage}%`);
+ * // Query all years (aggregated)
+ * const allData = await queryCompanyFECData("JPMorgan");
+ *
+ * // Query specific year
+ * const data2024 = await queryCompanyFECData("JPMorgan", 2024);
+ * const data2022 = await queryCompanyFECData("JPMorgan", 2022);
+ *
+ * if (data2024) {
+ *   console.log(`${data2024.display_name} donated $${data2024.total_usd.toLocaleString()} in 2024`);
+ *   console.log(`Found data from ${data2024.variants_found.length} variants`);
+ *   console.log(`DEM: ${data2024.party_totals['DEM']?.percentage}%`);
+ *   console.log(`REP: ${data2024.party_totals['REP']?.percentage}%`);
  * }
  * ```
  */
 export async function queryCompanyFECData(
-  companyName: string
+  companyName: string,
+  year: number = 2024  // Default to 2024
 ): Promise<FECCompanyData | null> {
   try {
-    console.log(`[FEC] Querying company: "${companyName}"`);
+    console.log(`[FEC] Querying company: "${companyName}"${year ? ` (year: ${year})` : ' (all years)'}`);
 
     // Step 1: Use AI to generate possible company name variants
     const aiVariants = await generateCompanyVariants(companyName);
@@ -541,7 +557,7 @@ export async function queryCompanyFECData(
 
     // Step 3: Query Firestore for each variant in parallel
     const queryPromises = uniqueNormalized.map(normalized =>
-      querySingleCompany(normalized, companyName).then(result =>
+      querySingleCompany(normalized, companyName, year).then(result =>
         // Use the normalized name from the result (after fuzzy matching),
         // not the input parameter, to ensure deduplication works correctly
         result ? result : null
@@ -556,7 +572,7 @@ export async function queryCompanyFECData(
     }>;
 
     if (validResults.length === 0) {
-      console.log(`[FEC] No data found for any variant of "${companyName}"`);
+      console.log(`[FEC] No data found for any variant of "${companyName}"${year ? ` in ${year}` : ''}`);
       return null;
     }
 
@@ -580,7 +596,7 @@ export async function queryCompanyFECData(
     console.log(`[FEC] After deduplication: ${deduplicatedResults.length} unique companies`);
 
     // Step 5: Aggregate data from all unique companies
-    const aggregatedData = aggregateVariantData(deduplicatedResults);
+    const aggregatedData = aggregateVariantData(deduplicatedResults, year);
 
     return aggregatedData;
 
