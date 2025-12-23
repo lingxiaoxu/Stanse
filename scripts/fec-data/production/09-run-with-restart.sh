@@ -3,13 +3,34 @@
 # 自动重启的 FEC 数据上传脚本
 # 每次运行限制在 45 分钟内，之后自动重启以避免 token 过期
 #
+# 用法:
+#   ./09-run-with-restart.sh              # 上传所有表
+#   ./09-run-with-restart.sh transfers    # 只上传transfers表
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# 确定要上传的表
+if [ -z "$1" ]; then
+    TABLE_ARG=""
+    TABLE_NAME="all"
+else
+    TABLE_ARG="--only $1"
+    TABLE_NAME=$(echo "$1" | tr ',' '-')
+fi
+
+# 生成日志文件名（格式：02-upload-{表名}-yyyymmdd-hhmmss.log）
+LOG_FILE="/Users/xuling/code/Stanse/logs/fec-data/02-upload-${TABLE_NAME}-$(date +%Y%m%d-%H%M%S).log"
+
+# 重定向所有输出到日志文件和终端
+exec > >(tee -a "$LOG_FILE")
+exec 2>&1
+
 echo "========================================"
 echo "🔄 FEC 数据自动上传（带自动重启）"
 echo "========================================"
+echo "📊 上传表: ${1:-所有表}"
+echo "📁 日志文件: $LOG_FILE"
 echo ""
 
 # 检查进度
@@ -28,7 +49,7 @@ while true; do
     echo ""
 
     # 运行上传脚本，限时 45 分钟 (2700 秒)
-    timeout 2700 python3 upload_incremental.py
+    timeout 2700 python3 -u 02-upload-incremental.py $TABLE_ARG
     EXIT_CODE=$?
 
     echo ""
