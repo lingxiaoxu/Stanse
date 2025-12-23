@@ -27,16 +27,41 @@ Core data pipeline scripts for production use:
 ### 02-upload-incremental.py
 - **Purpose**: Primary upload script with resume capability
 - **Features**:
-  - Progress tracking via `upload_progress.json`
+  - Progress tracking via `01-upload-progress.json`
   - Can resume from interruption
   - Incremental upload support
-- **Collections**: `fec_raw_committees`, `fec_raw_candidates`, `fec_raw_contributions_pac_to_candidate`
-- **Usage**: `cd production && python3 02-upload-incremental.py`
+  - Selective table upload with `--only` parameter
+  - ADC token auto-refresh for long uploads
+- **Collections**:
+  - `fec_raw_committees` - Committee information
+  - `fec_raw_candidates` - Candidate information
+  - `fec_raw_contributions_pac_to_candidate_24` - 2024 PAC to candidate contributions
+  - `fec_raw_linkages` - Candidate-committee linkages
+  - `fec_raw_transfers` - Committee-to-committee transfers (13.8M records)
+- **Usage**:
+  - **Recommended**: Use wrapper script `./09-run-with-restart.sh [tables]` for automatic logging
+  - Direct: `cd production && python3 02-upload-incremental.py` - Upload all tables
+  - Direct: `cd production && python3 02-upload-incremental.py --only transfers,linkages` - Upload specific tables
+- **Performance**: ~100-120 rows/sec with automatic rate limit handling
+- **Note**: Transfers upload completed successfully (74 hours for 13.8M records)
 
 ### 03-upload-all.py
 - **Purpose**: Full upload without resume functionality
 - **Use case**: Clean upload from scratch
 - **Usage**: `cd production && python3 03-upload-all.py`
+
+### 09-run-with-restart.sh
+- **Purpose**: Shell wrapper for automated uploads with logging
+- **Features**:
+  - Auto-generates timestamped log files (format: `02-upload-{tables}-YYYYMMDD-HHMMSS.log`)
+  - Outputs to both terminal and log file
+  - Supports table selection via command-line argument
+  - Automatic restart every 45 minutes to avoid token expiration
+- **Usage**:
+  - `cd production && ./09-run-with-restart.sh` - Upload all tables with logging
+  - `cd production && ./09-run-with-restart.sh transfers` - Upload only transfers with logging
+- **Log Location**: `/Users/xuling/code/Stanse/logs/fec-data/`
+- **Note**: This is the recommended way to run uploads for automatic logging
 
 ### 04-parse-and-upload.py
 - **Purpose**: Combined parsing and upload in one step
@@ -220,11 +245,46 @@ Core data pipeline scripts for production use:
 
 ## Reports (`reports/`)
 
+### Analysis Scripts
+Located in `scripts/fec-data/reports/`:
+
+#### analyze_speed.py
+- **Purpose**: Analyzes upload speed and estimates completion time
+- **Features**:
+  - Reads from `01-upload-progress.json`
+  - Calculates current upload rate
+  - Provides ETA estimates (best, average, worst case)
+- **Usage**: `cd reports && python3 analyze_speed.py`
+
+#### progress_report.py
+- **Purpose**: Generates detailed progress reports during upload
+- **Features**:
+  - Session duration tracking
+  - Average speed calculation
+  - Progress milestones
+- **Usage**: `cd reports && python3 progress_report.py`
+
+#### final_progress.py
+- **Purpose**: Final progress summary with visual progress bars
+- **Features**:
+  - Complete session statistics
+  - Visual milestone chart
+  - Performance metrics
+- **Usage**: `cd reports && python3 final_progress.py`
+
 ### Output Files
+- **01-upload-progress.json**: Real-time upload progress tracking (updated by upload scripts)
 - **deep_verification_full_report.txt**: Comprehensive 6-layer verification output
 - **company_verification_results.txt**: Company verification summary
 - **verification_result.json**: Machine-readable verification results
 - **company_verification_report.json**: Detailed company verification data
+- **07-field-mappings.json**: FEC CSV field mappings to Firestore
+
+### Upload Logs
+Located in `/Users/xuling/code/Stanse/logs/fec-data/`:
+- **02-upload-transfers-20241222-171600.log**: Transfers data upload log (completed)
+- **02-upload-contributions-20241215-060000.log**: Contributions data upload log
+- **06-build-indexes-*.log**: Index building logs (timestamped)
 
 ## Verified Test Companies
 
@@ -301,16 +361,22 @@ python3 verify-01-deep-all-companies.py > ../reports/deep_verification_full_repo
 ## Firestore Collections
 
 ### Raw Data Collections (public read-only)
-- **fec_raw_committees**: PAC/committee information
+- **fec_raw_committees**: PAC/committee information (20,934 records)
   - `committee_id`, `committee_name`, `connected_org_name`, `committee_type`, `party`
-- **fec_raw_candidates**: Candidate information with party affiliations
+- **fec_raw_candidates**: Candidate information with party affiliations (9,809 records)
   - `candidate_id`, `candidate_name`, `party_affiliation`, `office_sought`, `state`
-- **fec_raw_contributions_pac_to_candidate**: Individual contribution records
+- **fec_raw_contributions_pac_to_candidate_24**: Individual contribution records for 2024 (701,709 records)
   - `committee_id`, `candidate_id`, `transaction_amount` (in cents), `transaction_date`
+  - Note: Year-specific collection (2024 data only)
+- **fec_raw_linkages**: Candidate-committee linkages (8,629 records)
+  - `candidate_id`, `committee_id`, `linkage_type`, `data_year`
+- **fec_raw_transfers**: Committee-to-committee fund transfers (13,824,909 records)
+  - `committee_id`, `other_committee_id`, `transaction_amount`, `transaction_date`, `data_year`
+  - Largest collection in the system
 
 ### Indexed Collections (public read-only)
 - **fec_company_index**: Company name → committee ID mapping
-- **fec_company_party_summary**: Company → party aggregation summary
+- **fec_company_party_summary**: Company → party aggregation summary (with `data_year` field for year filtering)
 
 ## Data Integrity Notes
 
