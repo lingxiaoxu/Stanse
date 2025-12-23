@@ -12,6 +12,7 @@ import { GoogleGenAI } from "@google/genai";
 import { RawNewsItem, ProcessedNewsItem, AgentResponse } from './types';
 import { saveNewsToCache, createTitleHash, getNewsFromCache } from '../newsCache';
 import { newsLogger } from './logger';
+import { generateNewsImage } from '../geminiService';
 
 // Initialize Gemini
 const getBaseUrl = () => {
@@ -414,10 +415,20 @@ export const processNewsItems = async (
         newsLogger.debug('processNews', `Translated from ${item.language}: ${englishTitle.slice(0, 40)}...`);
       }
 
-      // Generate seed for image selection
-      const seed = englishTitle.split('').reduce((acc, char) => {
-        return ((acc << 5) - acc + char.charCodeAt(0)) | 0;
-      }, 0);
+      // Generate AI image using Imagen API
+      let imageUrl: string;
+      try {
+        newsLogger.debug('processNews', `Generating AI image for: ${englishTitle.slice(0, 40)}...`);
+        imageUrl = await generateNewsImage(englishTitle, item.category || 'WORLD');
+        newsLogger.debug('processNews', `Successfully generated AI image for: ${englishTitle.slice(0, 40)}...`);
+      } catch (error: any) {
+        // Fallback to SVG geometric pattern if Imagen fails
+        newsLogger.warn('processNews', `Imagen failed for "${englishTitle.slice(0, 40)}...", using fallback: ${error.message}`);
+        const seed = englishTitle.split('').reduce((acc, char) => {
+          return ((acc << 5) - acc + char.charCodeAt(0)) | 0;
+        }, 0);
+        imageUrl = getImageForCategory(item.category || 'WORLD', seed);
+      }
 
       const processedItem: ProcessedNewsItem = {
         id: `news-${titleHash}`,
@@ -425,7 +436,7 @@ export const processNewsItems = async (
         title: englishTitle,
         summary: englishSummary,
         date: getRelativeDate(item.publishedAt),
-        imageUrl: getImageForCategory(item.category || 'WORLD', seed),
+        imageUrl,
         category: item.category?.toUpperCase() || 'WORLD',
         originalLanguage: item.language,
         sources: [item.source],

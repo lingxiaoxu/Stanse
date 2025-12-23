@@ -86,44 +86,61 @@ const DEFAULT_IMAGES = [
 /**
  * Generate a news image using Gemini Imagen or fallback to curated Unsplash images
  */
-const generateNewsImage = async (title: string, category: string): Promise<string | null> => {
+export const generateNewsImage = async (title: string, category: string): Promise<string> => {
   // Create a deterministic seed from the title for consistent image selection
   const titleHash = title.split('').reduce((acc, char) => {
     return ((acc << 5) - acc + char.charCodeAt(0)) | 0;
   }, 0);
   const seed = Math.abs(titleHash);
 
-  // Try Gemini Imagen first (if available)
-  try {
-    const imagePrompt = `Professional news photograph for article: "${title}".
-    Style: Editorial, photojournalistic, high contrast, cinematic lighting.
-    Mood: Serious, informative, documentary style.
-    Technical: 16:9 aspect ratio, high resolution, sharp focus.
-    Do NOT include any text, watermarks, or logos.`;
+  // Note: Imagen API is not available in browser environments
+  // It requires server-side implementation with proper authentication and Vertex AI
+  // For now, we use curated Unsplash images as the primary solution
 
-    const response = await ai.models.generateImages({
-      model: 'imagen-3.0-generate-002',
-      prompt: imagePrompt,
-      config: {
-        numberOfImages: 1,
-        aspectRatio: '16:9',
-      },
-    });
+  // TODO: To enable AI-generated images, implement a server-side endpoint:
+  // POST /api/generate-news-image { title, category }
+  // This endpoint should use Vertex AI or the Gemini API with proper credentials
 
-    // Check if we got a valid image back
-    if (response.generatedImages && response.generatedImages.length > 0) {
-      const image = response.generatedImages[0];
-      if (image.image?.imageBytes) {
-        // Convert to data URL for immediate use
-        const base64 = image.image.imageBytes;
-        const dataUrl = `data:image/jpeg;base64,${base64}`;
-        console.log(`Generated AI image for "${title.slice(0, 30)}..."`);
-        return dataUrl;
+  const ENABLE_IMAGEN = false;  // Disabled: Not available in browser
+
+  if (ENABLE_IMAGEN) {
+    try {
+      const imagePrompt = `Professional news photograph for article: "${title}".
+      Style: Editorial, photojournalistic, high contrast, cinematic lighting.
+      Mood: Serious, informative, documentary style.
+      Technical: 16:9 aspect ratio, high resolution, sharp focus.
+      Do NOT include any text, watermarks, or logos.`;
+
+      console.log(`[Imagen] Attempting to generate image for: "${title.slice(0, 50)}..."`);
+
+      const response = await ai.models.generateImages({
+        model: 'imagen-4.0-generate-001',  // Updated to latest model
+        prompt: imagePrompt,
+        config: {
+          numberOfImages: 1,
+          aspectRatio: '16:9',
+        }
+      });
+
+      // Check if we got a valid image back
+      if (response?.generatedImages && response.generatedImages.length > 0) {
+        const imageData = response.generatedImages[0];
+
+        // The image data is in imageData.image.imageBytes (base64 encoded)
+        if (imageData.image?.imageBytes) {
+          const base64 = imageData.image.imageBytes;
+          const dataUrl = `data:image/jpeg;base64,${base64}`;
+          console.log(`[Imagen] ✓ Successfully generated AI image for "${title.slice(0, 30)}..."`);
+          return dataUrl;
+        }
       }
+
+      console.log(`[Imagen] ✗ No valid image data returned`);
+    } catch (error: any) {
+      // Imagen not available or failed, fall back to Unsplash
+      console.log(`[Imagen] ✗ Error: ${error.message || 'Unknown error'}`);
+      console.log(`[Imagen] Falling back to Unsplash for "${title.slice(0, 30)}..."`);
     }
-  } catch (error: any) {
-    // Imagen not available or failed, fall back to Unsplash
-    console.log(`Imagen unavailable for "${title.slice(0, 30)}...", using Unsplash fallback`);
   }
 
   // Fallback: Use curated Unsplash images
@@ -131,7 +148,7 @@ const generateNewsImage = async (title: string, category: string): Promise<strin
   const imageIndex = seed % categoryImages.length;
   const imageUrl = categoryImages[imageIndex];
 
-  console.log(`Using Unsplash image for "${title.slice(0, 30)}..." category: ${category}`);
+  console.log(`[Unsplash] Using category image for "${title.slice(0, 30)}..." category: ${category}`);
   return imageUrl;
 };
 
