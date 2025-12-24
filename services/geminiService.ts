@@ -36,7 +36,7 @@ const ai = new GoogleGenAI({
 /**
  * Curated high-quality Unsplash images by category
  * Using direct images.unsplash.com URLs (HTTP 200, not redirects)
- * Each category has multiple images for variety
+ * Each category has 10-15 images for maximum variety (60+ total)
  */
 const CATEGORY_IMAGES: Record<string, string[]> = {
   'POLITICS': [
@@ -45,6 +45,13 @@ const CATEGORY_IMAGES: Record<string, string[]> = {
     'https://images.unsplash.com/photo-1555848962-6e79363ec58f?w=800&h=450&fit=crop', // Voting
     'https://images.unsplash.com/photo-1575320181282-9afab399332c?w=800&h=450&fit=crop', // Politics
     'https://images.unsplash.com/photo-1598885159329-9377168ac375?w=800&h=450&fit=crop', // Democracy
+    'https://images.unsplash.com/photo-1591117207239-788bf8de6c3b?w=800&h=450&fit=crop', // Protest
+    'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&h=450&fit=crop', // Meeting
+    'https://images.unsplash.com/photo-1577003833154-a4d9e5a8bdd1?w=800&h=450&fit=crop', // Congress
+    'https://images.unsplash.com/photo-1591117207239-788bf8de6c3b?w=800&h=450&fit=crop', // Rally
+    'https://images.unsplash.com/photo-1569098644584-210bcd375b59?w=800&h=450&fit=crop', // Legislative
+    'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&h=450&fit=crop', // White House
+    'https://images.unsplash.com/photo-1593115057655-e2091616193a?w=800&h=450&fit=crop', // Elections
   ],
   'TECH': [
     'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&h=450&fit=crop', // Circuit board
@@ -52,6 +59,14 @@ const CATEGORY_IMAGES: Record<string, string[]> = {
     'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&h=450&fit=crop', // Cybersecurity
     'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&h=450&fit=crop', // Code matrix
     'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=450&fit=crop', // Global tech
+    'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&h=450&fit=crop', // Laptop coding
+    'https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=800&h=450&fit=crop', // Coding
+    'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&h=450&fit=crop', // AI Robot
+    'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&h=450&fit=crop', // Data center
+    'https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?w=800&h=450&fit=crop', // Server room
+    'https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?w=800&h=450&fit=crop', // Tech devices
+    'https://images.unsplash.com/photo-1535378620166-273708d44e4c?w=800&h=450&fit=crop', // Innovation
+    'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=800&h=450&fit=crop', // Tech workspace
   ],
   'MILITARY': [
     'https://images.unsplash.com/photo-1579912437766-7896df6d3cd3?w=800&h=450&fit=crop', // Military
@@ -59,6 +74,13 @@ const CATEGORY_IMAGES: Record<string, string[]> = {
     'https://images.unsplash.com/photo-1562564055-71e051d33c19?w=800&h=450&fit=crop', // Navy ship
     'https://images.unsplash.com/photo-1569242840510-9fe6f0112cee?w=800&h=450&fit=crop', // Aircraft
     'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&h=450&fit=crop', // Military tech
+    'https://images.unsplash.com/photo-1571172965836-3619c8ad7565?w=800&h=450&fit=crop', // Soldiers
+    'https://images.unsplash.com/photo-1577495508326-19a1b3cf65b7?w=800&h=450&fit=crop', // Jets
+    'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&h=450&fit=crop', // Pentagon
+    'https://images.unsplash.com/photo-1569083689865-f7e0d1d17043?w=800&h=450&fit=crop', // Naval fleet
+    'https://images.unsplash.com/photo-1551076805-e1869033e561?w=800&h=450&fit=crop', // Helicopter
+    'https://images.unsplash.com/photo-1607988795691-3d0147b43231?w=800&h=450&fit=crop', // Tank
+    'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800&h=450&fit=crop', // Drone
   ],
   'WORLD': [
     'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=450&fit=crop', // Earth from space
@@ -66,6 +88,14 @@ const CATEGORY_IMAGES: Record<string, string[]> = {
     'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800&h=450&fit=crop', // Travel
     'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=800&h=450&fit=crop', // Diplomacy
     'https://images.unsplash.com/photo-1478860409698-8707f313ee8b?w=800&h=450&fit=crop', // Globe
+    'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&h=450&fit=crop', // Flags
+    'https://images.unsplash.com/photo-1569163139394-de4798aa62b6?w=800&h=450&fit=crop', // United Nations
+    'https://images.unsplash.com/photo-1589519160732-57fc498494f8?w=800&h=450&fit=crop', // Airport
+    'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=450&fit=crop', // Conference
+    'https://images.unsplash.com/photo-1503149779833-1de50ebe5f8a?w=800&h=450&fit=crop', // International
+    'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=450&fit=crop', // Summit
+    'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=450&fit=crop', // Cooperation
+    'https://images.unsplash.com/photo-1464746133101-a2c3f88e0dd9?w=800&h=450&fit=crop', // Bridge
   ],
   'BUSINESS': [
     'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=450&fit=crop', // Business charts
@@ -73,6 +103,14 @@ const CATEGORY_IMAGES: Record<string, string[]> = {
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=450&fit=crop', // Office
     'https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=800&h=450&fit=crop', // Money
     'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&h=450&fit=crop', // Stock market
+    'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=450&fit=crop', // Analytics
+    'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&h=450&fit=crop', // City business
+    'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=800&h=450&fit=crop', // Corporate
+    'https://images.unsplash.com/photo-1559526324-593bc073d938?w=800&h=450&fit=crop', // Handshake
+    'https://images.unsplash.com/photo-1444653614773-995cb1ef9efa?w=800&h=450&fit=crop', // Wall Street
+    'https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800&h=450&fit=crop', // Finance
+    'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&h=450&fit=crop', // Investment
+    'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=450&fit=crop', // Market
   ],
 };
 
@@ -81,6 +119,11 @@ const DEFAULT_IMAGES = [
   'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&h=450&fit=crop', // Newspaper
   'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=800&h=450&fit=crop', // News desk
   'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&h=450&fit=crop', // Breaking news
+  'https://images.unsplash.com/photo-1586339949216-35c2747cc36d?w=800&h=450&fit=crop', // Reporter
+  'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&h=450&fit=crop', // Press
+  'https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?w=800&h=450&fit=crop', // Journalism
+  'https://images.unsplash.com/photo-1508921340878-ba53e1f016ec?w=800&h=450&fit=crop', // Headlines
+  'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=450&fit=crop', // Media
 ];
 
 /**
