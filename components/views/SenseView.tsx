@@ -20,6 +20,11 @@ interface SenseViewProps {
   onQueryChange?: (query: string) => void;
 }
 
+// Helper function to format FEC election cycles (e.g., 2024 → 2023-2024)
+const formatElectionCycle = (year: number): string => {
+  return `${year - 1}-${year}`;
+};
+
 export const SenseView: React.FC<SenseViewProps> = ({
   userProfile,
   userDemographics,
@@ -204,7 +209,7 @@ export const SenseView: React.FC<SenseViewProps> = ({
                       <p className="font-mono text-xs text-gray-700">
                         <strong className="uppercase">{fecData.display_name}</strong> contributed{' '}
                         <strong>${fecData.total_usd.toLocaleString()}</strong> to federal candidates{' '}
-                        ({fecData.years[0]}-{fecData.years[fecData.years.length - 1]})
+                        ({formatElectionCycle(fecData.years[0])} to {formatElectionCycle(fecData.years[fecData.years.length - 1])})
                       </p>
 
                       {/* Party Breakdown Bars */}
