@@ -209,7 +209,10 @@ export const SenseView: React.FC<SenseViewProps> = ({
                       <p className="font-mono text-xs text-gray-700">
                         <strong className="uppercase">{fecData.display_name}</strong> contributed{' '}
                         <strong>${fecData.total_usd.toLocaleString()}</strong> to federal candidates{' '}
-                        ({formatElectionCycle(fecData.years[0])} to {formatElectionCycle(fecData.years[fecData.years.length - 1])})
+                        ({fecData.years.length === 1
+                          ? formatElectionCycle(fecData.years[0])
+                          : `${formatElectionCycle(fecData.years[fecData.years.length - 1])} to ${formatElectionCycle(fecData.years[0])}`
+                        })
                       </p>
 
                       {/* Party Breakdown Bars */}
