@@ -115,9 +115,11 @@ async function findCanonicalRecord(searchName: string): Promise<{
       const variants = data.variants || [];
 
       // Check if searchName matches any variant (case-insensitive)
-      const matchFound = variants.some((v: string) =>
-        v.toUpperCase().trim() === searchUpper
-      );
+      // Variants can be strings or objects with variant_name_lower field
+      const matchFound = variants.some((v: any) => {
+        const variantStr = typeof v === 'string' ? v : v.variant_name_lower || '';
+        return variantStr.toUpperCase().trim() === searchUpper;
+      });
 
       if (matchFound) {
         const needsUpdate = !data.ai_updated || data.ai_updated === false;
@@ -158,7 +160,13 @@ async function generateCompanyVariants(companyName: string): Promise<string[]> {
         const aiVariants = await callGeminiForVariants(companyName);
 
         // Merge AI variants with existing variants (remove duplicates)
-        const existingSet = new Set(existingRecord.variants.map(v => v.toUpperCase().trim()));
+        // Variants can be strings or objects
+        const existingSet = new Set(
+          existingRecord.variants.map((v: any) => {
+            const variantStr = typeof v === 'string' ? v : v.variant_name_lower || '';
+            return variantStr.toUpperCase().trim();
+          })
+        );
         const newVariants: string[] = [];
 
         for (const variant of aiVariants) {
