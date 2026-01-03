@@ -107,7 +107,17 @@ const TRANSLATIONS = {
         auth: "AUTH",
         lib: "LIB",
         nat: "NAT",
-        global: "GLOBAL"
+        global: "GLOBAL",
+        axis_econ: "Economic Axis",
+        axis_soc: "Social Axis",
+        axis_diplo: "Diplomatic Axis",
+        explain_econ_right: "Free market capitalism, deregulation, low taxes, private enterprise",
+        explain_econ_left: "Government intervention, regulation, wealth redistribution, public services",
+        explain_soc_lib: "Progressive values, personal freedom, diversity, social change",
+        explain_soc_auth: "Traditional values, social order, cultural preservation, stability",
+        explain_diplo_global: "International cooperation, multilateralism, free trade, global engagement",
+        explain_diplo_nat: "National sovereignty, domestic priority, protectionism, independence",
+        explain_close: "Click anywhere outside to close"
     },
     settings: {
         title: "SYSTEM PREFS",
@@ -119,7 +129,13 @@ const TRANSLATIONS = {
         sub_notif: "Alerts for campaign updates",
         sub_loc: "For local store scanning only",
         sub_strict: "Warn on 'Neutral' alignment",
-        sub_demo: "Include dummy users in Union data"
+        sub_demo: "Include dummy users in Union data",
+        language: "LANGUAGE",
+        language_en: "English",
+        language_zh: "中文",
+        language_ja: "日本語",
+        language_fr: "Français",
+        language_es: "Español"
     },
     manifesto: {
         title: "MANIFESTO",
@@ -247,7 +263,17 @@ const TRANSLATIONS = {
         auth: "权威",
         lib: "自由",
         nat: "本土",
-        global: "全球"
+        global: "全球",
+        axis_econ: "经济轴",
+        axis_soc: "社会轴",
+        axis_diplo: "外交轴",
+        explain_econ_right: "自由市场资本主义，放松管制，低税收，私营企业",
+        explain_econ_left: "政府干预，监管，财富再分配，公共服务",
+        explain_soc_lib: "进步价值观，个人自由，多元化，社会变革",
+        explain_soc_auth: "传统价值观，社会秩序，文化保护，稳定性",
+        explain_diplo_global: "国际合作，多边主义，自由贸易，全球参与",
+        explain_diplo_nat: "国家主权，国内优先，保护主义，独立性",
+        explain_close: "点击外部任意位置关闭"
     },
     settings: {
         title: "系统偏好",
@@ -259,7 +285,13 @@ const TRANSLATIONS = {
         sub_notif: "战役更新提醒",
         sub_loc: "仅用于本地商店扫描",
         sub_strict: "对'中立'对齐发出警告",
-        sub_demo: "联合数据包含演示用户"
+        sub_demo: "联合数据包含演示用户",
+        language: "语言",
+        language_en: "English",
+        language_zh: "中文",
+        language_ja: "日本語",
+        language_fr: "Français",
+        language_es: "Español"
     },
     manifesto: {
         title: "宣言",
@@ -387,7 +419,17 @@ const TRANSLATIONS = {
         auth: "権威",
         lib: "自由",
         nat: "自国",
-        global: "国際"
+        global: "国際",
+        axis_econ: "経済軸",
+        axis_soc: "社会軸",
+        axis_diplo: "外交軸",
+        explain_econ_right: "自由市場資本主義、規制緩和、低税率、民間企業",
+        explain_econ_left: "政府介入、規制、富の再分配、公共サービス",
+        explain_soc_lib: "進歩的価値観、個人の自由、多様性、社会変革",
+        explain_soc_auth: "伝統的価値観、社会秩序、文化保護、安定性",
+        explain_diplo_global: "国際協力、多国間主義、自由貿易、グローバル関与",
+        explain_diplo_nat: "国家主権、国内優先、保護主義、独立性",
+        explain_close: "外側をクリックして閉じる"
     },
     settings: {
         title: "システム設定",
@@ -399,7 +441,13 @@ const TRANSLATIONS = {
         sub_notif: "キャンペーン更新のアラート",
         sub_loc: "ローカル店舗スキャン用",
         sub_strict: "「中立」アライメントに警告",
-        sub_demo: "ユニオンデータにダミーユーザーを含む"
+        sub_demo: "ユニオンデータにダミーユーザーを含む",
+        language: "言語",
+        language_en: "English",
+        language_zh: "中文",
+        language_ja: "日本語",
+        language_fr: "Français",
+        language_es: "Español"
     },
     manifesto: {
         title: "マニフェスト",
@@ -527,7 +575,17 @@ const TRANSLATIONS = {
         auth: "AUTH",
         lib: "LIB",
         nat: "NAT",
-        global: "MONDE"
+        global: "MONDE",
+        axis_econ: "Axe Économique",
+        axis_soc: "Axe Social",
+        axis_diplo: "Axe Diplomatique",
+        explain_econ_right: "Capitalisme de libre marché, déréglementation, faibles taxes, entreprise privée",
+        explain_econ_left: "Intervention gouvernementale, régulation, redistribution des richesses, services publics",
+        explain_soc_lib: "Valeurs progressistes, liberté personnelle, diversité, changement social",
+        explain_soc_auth: "Valeurs traditionnelles, ordre social, préservation culturelle, stabilité",
+        explain_diplo_global: "Coopération internationale, multilatéralisme, libre-échange, engagement mondial",
+        explain_diplo_nat: "Souveraineté nationale, priorité domestique, protectionnisme, indépendance",
+        explain_close: "Cliquez n'importe où à l'extérieur pour fermer"
     },
     settings: {
         title: "PRÉFS SYSTÈME",
@@ -539,7 +597,13 @@ const TRANSLATIONS = {
         sub_notif: "Alertes mises à jour campagnes",
         sub_loc: "Pour scan magasins locaux",
         sub_strict: "Avertir sur alignement 'Neutre'",
-        sub_demo: "Inclure utilisateurs factices dans données Union"
+        sub_demo: "Inclure utilisateurs factices dans données Union",
+        language: "LANGUE",
+        language_en: "English",
+        language_zh: "中文",
+        language_ja: "日本語",
+        language_fr: "Français",
+        language_es: "Español"
     },
     manifesto: {
         title: "MANIFESTE",
@@ -667,7 +731,17 @@ const TRANSLATIONS = {
         auth: "AUT",
         lib: "LIB",
         nat: "NAC",
-        global: "GLOBAL"
+        global: "GLOBAL",
+        axis_econ: "Eje Económico",
+        axis_soc: "Eje Social",
+        axis_diplo: "Eje Diplomático",
+        explain_econ_right: "Capitalismo de libre mercado, desregulación, impuestos bajos, empresa privada",
+        explain_econ_left: "Intervención gubernamental, regulación, redistribución de riqueza, servicios públicos",
+        explain_soc_lib: "Valores progresistas, libertad personal, diversidad, cambio social",
+        explain_soc_auth: "Valores tradicionales, orden social, preservación cultural, estabilidad",
+        explain_diplo_global: "Cooperación internacional, multilateralismo, libre comercio, compromiso global",
+        explain_diplo_nat: "Soberanía nacional, prioridad doméstica, proteccionismo, independencia",
+        explain_close: "Haz clic en cualquier lugar fuera para cerrar"
     },
     settings: {
         title: "PREFS SISTEMA",
@@ -679,7 +753,13 @@ const TRANSLATIONS = {
         sub_notif: "Alertas actualizaciones campañas",
         sub_loc: "Para escaneo tiendas locales",
         sub_strict: "Advertir en alineación 'Neutra'",
-        sub_demo: "Incluir usuarios ficticios en datos de Unión"
+        sub_demo: "Incluir usuarios ficticios en datos de Unión",
+        language: "IDIOMA",
+        language_en: "English",
+        language_zh: "中文",
+        language_ja: "日本語",
+        language_fr: "Français",
+        language_es: "Español"
     },
     manifesto: {
         title: "MANIFIESTO",
