@@ -20,6 +20,9 @@ COPY requirements.txt .
 # 安装 Python 依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 复制 data/ 目录（SP500 unified data source）
+COPY data/ /app/data/
+
 # 复制 company-ranking 脚本
 COPY scripts/company-ranking/*.py ./
 COPY scripts/company-ranking/verification/ ./verification/
