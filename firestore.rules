@@ -85,6 +85,11 @@ service cloud.firestore {
       allow write: if request.auth != null;  // Authenticated users can update variants with AI
     }
 
+    match /fec_company_consolidated/{docId} {
+      allow read: if true;
+      allow write: if false;  // Read-only for clients
+    }
+
     // Polis Protocol 数据 - 需要认证
     match /polis_transactions/{txId} {
       allow read: if request.auth != null;
