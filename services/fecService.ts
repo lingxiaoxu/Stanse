@@ -88,20 +88,25 @@ async function findCanonicalRecord(searchName: string): Promise<{
 } | null> {
   try {
     const searchUpper = searchName.toUpperCase().trim();
+    const searchLower = searchName.toLowerCase().trim();
 
-    // First, try direct lookup by canonical name
-    const directRef = doc(db, 'fec_company_name_variants', searchUpper);
-    const directSnap = await getDoc(directRef);
+    // Try multiple case variations for direct lookup
+    const casesToTry = [searchName.trim(), searchUpper, searchLower];
 
-    if (directSnap.exists()) {
-      const data = directSnap.data();
-      const needsUpdate = !data.ai_updated || data.ai_updated === false;
-      console.log(`[FEC] Found canonical record "${directSnap.id}" by direct lookup (needs AI update: ${needsUpdate})`);
-      return {
-        canonical: directSnap.id,
-        variants: data.variants || [],
-        needsAIUpdate: needsUpdate
-      };
+    for (const caseVariant of casesToTry) {
+      const directRef = doc(db, 'fec_company_name_variants', caseVariant);
+      const directSnap = await getDoc(directRef);
+
+      if (directSnap.exists()) {
+        const data = directSnap.data();
+        const needsUpdate = !data.ai_updated || data.ai_updated === false;
+        console.log(`[FEC] Found canonical record "${directSnap.id}" by direct lookup (case: ${caseVariant}, needs AI update: ${needsUpdate})`);
+        return {
+          canonical: directSnap.id,
+          variants: data.variants || [],
+          needsAIUpdate: needsUpdate
+        };
+      }
     }
 
     // If not found, search through all records (fallback for variants)
