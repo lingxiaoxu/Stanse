@@ -23,10 +23,10 @@ export const PrivacyView: React.FC = () => {
 
       <div className="grid grid-cols-1 gap-4">
         <PixelCard className="p-6 flex items-start gap-4">
-            <div className="bg-black text-white p-3">
+            <div className="bg-black text-white p-3 flex-shrink-0">
                 <Lock size={24} />
             </div>
-            <div>
+            <div className="flex-1">
                 <h4 className="font-bold font-mono text-lg uppercase">{t('privacy', 'local_title')}</h4>
                 <p className="font-mono text-sm text-gray-600 mt-1">
                     {t('privacy', 'local_body')}
@@ -35,10 +35,10 @@ export const PrivacyView: React.FC = () => {
         </PixelCard>
 
         <PixelCard className="p-6 flex items-start gap-4">
-            <div className="bg-black text-white p-3">
+            <div className="bg-black text-white p-3 flex-shrink-0">
                 <EyeOff size={24} />
             </div>
-            <div>
+            <div className="flex-1">
                 <h4 className="font-bold font-mono text-lg uppercase">{t('privacy', 'diff_title')}</h4>
                 <p className="font-mono text-sm text-gray-600 mt-1">
                     {t('privacy', 'diff_body')}
