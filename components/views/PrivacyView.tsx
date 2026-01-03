@@ -23,7 +23,7 @@ export const PrivacyView: React.FC = () => {
 
       <div className="grid grid-cols-1 gap-4">
         <PixelCard className="p-6 flex items-start gap-4">
-            <div className="bg-black text-white p-3 flex-shrink-0">
+            <div className="bg-black text-white p-3 w-[60px] h-[60px] flex items-center justify-center flex-shrink-0">
                 <Lock size={24} />
             </div>
             <div className="flex-1">
@@ -35,7 +35,7 @@ export const PrivacyView: React.FC = () => {
         </PixelCard>
 
         <PixelCard className="p-6 flex items-start gap-4">
-            <div className="bg-black text-white p-3 flex-shrink-0">
+            <div className="bg-black text-white p-3 w-[60px] h-[60px] flex items-center justify-center flex-shrink-0">
                 <EyeOff size={24} />
             </div>
             <div className="flex-1">

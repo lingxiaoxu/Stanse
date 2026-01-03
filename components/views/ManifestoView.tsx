@@ -14,7 +14,7 @@ export const ManifestoView: React.FC = () => {
         </p>
       </div>
 
-      <PixelCard className="p-8 space-y-10 leading-relaxed font-mono text-sm promax:text-base">
+      <PixelCard className="p-8 space-y-16 leading-relaxed font-mono text-sm promax:text-base">
         <p>
           <strong className="text-xl block mb-2 uppercase">{t('manifesto', 'p1_title')}</strong>
           {t('manifesto', 'p1_body')}
