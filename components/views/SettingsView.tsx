@@ -25,7 +25,7 @@ export const SettingsView: React.FC = () => {
             <div className="flex items-center justify-between p-6 bg-gray-50">
                 <div className="flex items-center gap-3">
                     <Globe size={20} />
-                    <div className="font-bold font-mono text-lg">LANGUAGE</div>
+                    <div className="font-bold font-mono text-lg">{t('settings', 'language')}</div>
                 </div>
                 <div className="flex gap-1 flex-wrap justify-end max-w-[60%]">
                     {Object.values(Language).map((lang) => (
@@ -36,7 +36,7 @@ export const SettingsView: React.FC = () => {
                                 language === lang ? 'bg-black text-white' : 'bg-white text-black hover:bg-gray-200'
                             }`}
                         >
-                            {lang}
+                            {t('settings', `language_${lang.toLowerCase()}`)}
                         </button>
                     ))}
                 </div>
