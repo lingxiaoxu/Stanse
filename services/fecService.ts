@@ -508,6 +508,22 @@ function aggregateVariantData(variantResults: Array<{
       : 0;
   }
 
+  // Merge UNK and OTH into "Other" category for display
+  if (partyTotals['UNK'] || partyTotals['OTH']) {
+    const unkData = partyTotals['UNK'] || { total_amount: 0, total_amount_usd: 0, contribution_count: 0, percentage: 0 };
+    const othData = partyTotals['OTH'] || { total_amount: 0, total_amount_usd: 0, contribution_count: 0, percentage: 0 };
+
+    partyTotals['OTH'] = {
+      total_amount: unkData.total_amount + othData.total_amount,
+      total_amount_usd: unkData.total_amount_usd + othData.total_amount_usd,
+      contribution_count: unkData.contribution_count + othData.contribution_count,
+      percentage: unkData.percentage + othData.percentage
+    };
+
+    // Remove UNK after merging
+    delete partyTotals['UNK'];
+  }
+
   const yearInfo = queriedYear ? ` (${queriedYear})` : ` (${years.length} years)`;
   console.log(`[FEC] Aggregated data for "${primaryDisplayName}"${yearInfo} from ${variantsFound.length} variants: $${totalUsd.toLocaleString()}`);
 
@@ -627,8 +643,10 @@ export function formatPartyName(party: string): string {
     'IND': 'Independent',
     'LIB': 'Libertarian',
     'GRE': 'Green',
+    'UNK': 'Other',
+    'OTH': 'Other',
   };
-  return names[party] || party;
+  return names[party] || 'Other';
 }
 
 /**
