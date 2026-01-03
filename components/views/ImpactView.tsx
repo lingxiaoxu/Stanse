@@ -41,7 +41,7 @@ const MOCK_CAMPAIGNS: Campaign[] = [
 ];
 
 export const UnionView: React.FC = () => {
-  const [liveCount, setLiveCount] = useState(5420);
+  const [liveCount, setLiveCount] = useState<number | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>(MOCK_CAMPAIGNS);
   const [userStats, setUserStats] = useState({ campaigns: 3, streak: 12, redirected: 420 });
   const [collectiveStats, setCollectiveStats] = useState({ strength: 45201, divested: 1240000 });
@@ -310,7 +310,9 @@ export const UnionView: React.FC = () => {
         
         <div className="flex flex-col items-center justify-center py-6 space-y-2">
            <span className="font-mono text-xs font-bold tracking-widest text-gray-400 uppercase">{t('union', 'active_allies')}</span>
-           <div className="font-pixel text-7xl">{liveCount.toLocaleString()}</div>
+           <div className="font-pixel text-7xl">
+             {liveCount !== null ? liveCount.toLocaleString() : '...'}
+           </div>
            
            <div className="text-[10px] font-mono text-center text-gray-500 mt-4 max-w-xs">
               {t('union', 'active_desc')}
