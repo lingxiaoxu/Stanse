@@ -14,26 +14,28 @@ export const ManifestoView: React.FC = () => {
         </p>
       </div>
 
-      <PixelCard className="p-8 space-y-24 leading-relaxed font-mono text-sm promax:text-base">
-        <p>
-          <strong className="text-xl block mb-2 uppercase">{t('manifesto', 'p1_title')}</strong>
-          {t('manifesto', 'p1_body')}
-        </p>
-        
-        <hr className="border-black opacity-20" />
+      <div className="grid grid-cols-1 gap-6">
+        <PixelCard className="p-6">
+          <h3 className="font-bold font-mono text-xl mb-3 uppercase">{t('manifesto', 'p1_title')}</h3>
+          <p className="font-mono text-sm leading-relaxed text-gray-700">
+            {t('manifesto', 'p1_body')}
+          </p>
+        </PixelCard>
 
-        <p>
-          <strong className="text-xl block mb-2 uppercase">{t('manifesto', 'p2_title')}</strong>
-          {t('manifesto', 'p2_body')}
-        </p>
+        <PixelCard className="p-6">
+          <h3 className="font-bold font-mono text-xl mb-3 uppercase">{t('manifesto', 'p2_title')}</h3>
+          <p className="font-mono text-sm leading-relaxed text-gray-700">
+            {t('manifesto', 'p2_body')}
+          </p>
+        </PixelCard>
 
-        <hr className="border-black opacity-20" />
-
-        <p>
-          <strong className="text-xl block mb-2 uppercase">{t('manifesto', 'p3_title')}</strong>
-          {t('manifesto', 'p3_body')}
-        </p>
-      </PixelCard>
+        <PixelCard className="p-6">
+          <h3 className="font-bold font-mono text-xl mb-3 uppercase">{t('manifesto', 'p3_title')}</h3>
+          <p className="font-mono text-sm leading-relaxed text-gray-700">
+            {t('manifesto', 'p3_body')}
+          </p>
+        </PixelCard>
+      </div>
       
       <div className="text-center font-pixel text-2xl animate-pulse uppercase">
         {t('manifesto', 'footer')}
