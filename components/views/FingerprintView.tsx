@@ -294,22 +294,22 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
   // Use localCoords (from onboarding) or props coords
   const activeCoords = hasCompletedOnboarding ? localCoords : coords;
 
-  // Coordinate explanations (15 words max)
+  // Coordinate explanations - now using i18n
   const getExplanation = (axis: 'economic' | 'social' | 'diplomatic', value: number) => {
     if (axis === 'economic') {
       return value > 0
-        ? 'Right: Free market capitalism, deregulation, low taxes, private enterprise'
-        : 'Left: Government intervention, regulation, wealth redistribution, public services';
+        ? t('fingerprint', 'explain_econ_right')
+        : t('fingerprint', 'explain_econ_left');
     }
     if (axis === 'social') {
       return value > 0
-        ? 'Liberal: Progressive values, personal freedom, diversity, social change'
-        : 'Conservative: Traditional values, social order, cultural preservation, stability';
+        ? t('fingerprint', 'explain_soc_lib')
+        : t('fingerprint', 'explain_soc_auth');
     }
     // diplomatic
     return value > 0
-      ? 'Globalist: International cooperation, multilateralism, free trade, global engagement'
-      : 'Nationalist: National sovereignty, domestic priority, protectionism, independence';
+      ? t('fingerprint', 'explain_diplo_global')
+      : t('fingerprint', 'explain_diplo_nat');
   };
 
   return (
@@ -320,9 +320,9 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
           <div className="bg-white border-4 border-black shadow-pixel max-w-sm w-full p-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-mono font-bold uppercase text-sm">
-                {showExplanation === 'economic' && 'Economic Axis'}
-                {showExplanation === 'social' && 'Social Axis'}
-                {showExplanation === 'diplomatic' && 'Diplomatic Axis'}
+                {showExplanation === 'economic' && t('fingerprint', 'axis_econ')}
+                {showExplanation === 'social' && t('fingerprint', 'axis_soc')}
+                {showExplanation === 'diplomatic' && t('fingerprint', 'axis_diplo')}
               </h3>
               <button onClick={() => setShowExplanation(null)} className="hover:bg-gray-100 p-1 rounded">
                 <X size={18} />
@@ -340,7 +340,7 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
                 </p>
               </div>
               <div className="text-[10px] text-gray-500 text-center pt-1">
-                Click anywhere outside to close
+                {t('fingerprint', 'explain_close')}
               </div>
             </div>
           </div>
