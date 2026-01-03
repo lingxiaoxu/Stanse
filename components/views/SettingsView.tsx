@@ -72,8 +72,8 @@ export const SettingsView: React.FC = () => {
                 <div className="flex items-center gap-3">
                     <RotateCcw size={20} />
                     <div>
-                        <div className="font-bold font-mono text-lg">RESET STANCE</div>
-                        <div className="font-mono text-xs text-gray-500">Retake questionnaire to recalibrate</div>
+                        <div className="font-bold font-mono text-lg">{t('fingerprint', 'reset_stance')}</div>
+                        <div className="font-mono text-xs text-gray-500">{t('fingerprint', 'reset_desc')}</div>
                     </div>
                 </div>
                 <button
