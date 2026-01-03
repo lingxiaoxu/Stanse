@@ -375,16 +375,16 @@ export const FeedView: React.FC = () => {
                <div className="flex overflow-x-auto no-scrollbar snap-x horizontal-snap">
                   {marketStocks.map((stock, i) => (
                       <div key={`${stock.symbol}-${i}`} className={`
-                          flex-shrink-0 flex flex-col p-4 border-r-2 border-black w-32
+                          flex-shrink-0 flex flex-col p-2.5 border-r-2 border-black w-24
                           ${stock.alignment === 'HIGH' ? 'bg-white' : 'bg-gray-100'}
-                          first:pl-4 last:border-r-0 snap-start
+                          first:pl-2.5 last:border-r-0 snap-start
                       `}>
-                          <div className="flex justify-between items-start gap-2 mb-2">
-                              <span className="font-bold font-mono text-sm">{stock.symbol}</span>
-                              {stock.change >= 0 ? <TrendingUp size={14} className="text-black"/> : <TrendingDown size={14} className="text-gray-500"/>}
+                          <div className="flex justify-between items-start gap-1 mb-1">
+                              <span className="font-bold font-mono text-xs">{stock.symbol}</span>
+                              {stock.change >= 0 ? <TrendingUp size={12} className="text-black"/> : <TrendingDown size={12} className="text-gray-500"/>}
                           </div>
-                          <div className="font-pixel text-2xl leading-none mb-1">${stock.price}</div>
-                          <div className={`text-[10px] font-mono font-bold ${stock.change >= 0 ? 'text-black' : 'text-gray-400'}`}>
+                          <div className="font-pixel text-xl leading-none mb-0.5">${stock.price}</div>
+                          <div className={`text-[9px] font-mono font-bold ${stock.change >= 0 ? 'text-black' : 'text-gray-400'}`}>
                               {stock.change >= 0 ? '+' : ''}{stock.change}%
                           </div>
                       </div>
