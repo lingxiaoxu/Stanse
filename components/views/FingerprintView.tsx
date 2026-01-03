@@ -454,6 +454,22 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
           </div>
         </div>
 
+        {/* RESET STANCE Button */}
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={() => setShowOnboarding(true)}
+            className="border-2 border-black px-6 py-3 bg-white hover:bg-black hover:text-white transition-all shadow-pixel hover:shadow-none active:translate-y-1 flex items-center gap-3"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <div className="text-left">
+              <div className="font-mono font-bold text-sm">{t('fingerprint', 'reset_stance')}</div>
+              <div className="font-mono text-[10px] opacity-60">{t('fingerprint', 'reset_desc')}</div>
+            </div>
+          </button>
+        </div>
+
         <div className="text-center py-6 opacity-60">
           <p className="font-pixel text-xl">"{t('slogan')}"</p>
         </div>
