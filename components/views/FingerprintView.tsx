@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import { X } from 'lucide-react';
 import { PoliticalCoordinates, OnboardingAnswers } from '../../types';
 import { PixelCard } from '../ui/PixelCard';
 import { OnboardingModal } from '../ui/OnboardingModal';
@@ -45,6 +46,9 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
 
   // Determine if we're in calibrating state (use isAnimating for better control)
   const isCalibrating = isAnimating;
+
+  // State for coordinate explanation popup
+  const [showExplanation, setShowExplanation] = useState<'economic' | 'social' | 'diplomatic' | null>(null);
 
   // Show onboarding modal if user hasn't completed it
   useEffect(() => {
@@ -290,8 +294,59 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
   // Use localCoords (from onboarding) or props coords
   const activeCoords = hasCompletedOnboarding ? localCoords : coords;
 
+  // Coordinate explanations (15 words max)
+  const getExplanation = (axis: 'economic' | 'social' | 'diplomatic', value: number) => {
+    if (axis === 'economic') {
+      return value > 0
+        ? 'Right: Free market capitalism, deregulation, low taxes, private enterprise'
+        : 'Left: Government intervention, regulation, wealth redistribution, public services';
+    }
+    if (axis === 'social') {
+      return value > 0
+        ? 'Liberal: Progressive values, personal freedom, diversity, social change'
+        : 'Conservative: Traditional values, social order, cultural preservation, stability';
+    }
+    // diplomatic
+    return value > 0
+      ? 'Globalist: International cooperation, multilateralism, free trade, global engagement'
+      : 'Nationalist: National sovereignty, domestic priority, protectionism, independence';
+  };
+
   return (
     <>
+      {/* Coordinate Explanation Popup */}
+      {showExplanation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowExplanation(null)}>
+          <div className="bg-white border-4 border-black shadow-pixel max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-mono font-bold uppercase text-sm">
+                {showExplanation === 'economic' && 'Economic Axis'}
+                {showExplanation === 'social' && 'Social Axis'}
+                {showExplanation === 'diplomatic' && 'Diplomatic Axis'}
+              </h3>
+              <button onClick={() => setShowExplanation(null)} className="hover:bg-gray-100 p-1 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-3 font-mono text-xs">
+              <div className="bg-gray-50 p-3 border-2 border-black">
+                <div className="font-bold text-green-600 mb-1">
+                  {showExplanation === 'economic' && (activeCoords.economic > 0 ? '→ RIGHT' : '← LEFT')}
+                  {showExplanation === 'social' && (activeCoords.social > 0 ? '→ LIBERAL' : '← CONSERVATIVE')}
+                  {showExplanation === 'diplomatic' && (activeCoords.diplomatic > 0 ? '→ GLOBALIST' : '← NATIONALIST')}
+                </div>
+                <p className="text-gray-700">
+                  {getExplanation(showExplanation, activeCoords[showExplanation])}
+                </p>
+              </div>
+              <div className="text-[10px] text-gray-500 text-center">
+                Click anywhere outside to close
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Onboarding Modal */}
       <OnboardingModal
         isOpen={showOnboarding}
@@ -370,19 +425,28 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
         </PixelCard>
 
         <div className="grid grid-cols-3 gap-3 text-center font-mono text-xs">
-          <div className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform">
+          <div
+            className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform cursor-pointer"
+            onClick={() => setShowExplanation('economic')}
+          >
             <div className="font-bold mb-1 text-gray-400">{t('fingerprint', 'econ')}</div>
             <div className="text-base font-bold uppercase">
                {isCalibrating ? <span className="animate-pulse">--</span> : (activeCoords.economic > 0 ? t('fingerprint', 'right') : t('fingerprint', 'left'))}
             </div>
           </div>
-          <div className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform">
+          <div
+            className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform cursor-pointer"
+            onClick={() => setShowExplanation('social')}
+          >
             <div className="font-bold mb-1 text-gray-400">{t('fingerprint', 'soc')}</div>
             <div className="text-base font-bold uppercase">
               {isCalibrating ? <span className="animate-pulse">--</span> : (activeCoords.social > 0 ? t('fingerprint', 'lib') : t('fingerprint', 'auth'))}
             </div>
           </div>
-          <div className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform">
+          <div
+            className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform cursor-pointer"
+            onClick={() => setShowExplanation('diplomatic')}
+          >
             <div className="font-bold mb-1 text-gray-400">{t('fingerprint', 'diplo')}</div>
             <div className="text-base font-bold uppercase">
               {isCalibrating ? <span className="animate-pulse">--</span> : (activeCoords.diplomatic > 0 ? t('fingerprint', 'global') : t('fingerprint', 'nat'))}
