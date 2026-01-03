@@ -235,20 +235,42 @@ export const calculateCoordinates = async (
 
     const result = JSON.parse(response.text || '{}');
 
-    // Step 3: Combine nationality prefix with persona type
-    const personaType = result.personaType || "Political Observer";
+    // Step 3: Calculate actual stanceType using hardcoded logic (to ensure consistency)
+    const economic = Math.max(-100, Math.min(100, result.economic || 0));
+    const social = Math.max(-100, Math.min(100, result.social || 0));
+    const diplomatic = Math.max(-100, Math.min(100, result.diplomatic || 0));
+
+    // Import getStanceType to calculate the canonical stance type
+    const { getStanceType } = await import('../../data/sp500Companies');
+    const actualStanceType = getStanceType(economic, social, diplomatic);
+
+    // Convert stanceType to friendly label
+    const stanceTypeLabels: Record<string, string> = {
+      'progressive-globalist': 'Progressive Globalist',
+      'progressive-nationalist': 'Progressive Nationalist',
+      'socialist-libertarian': 'Socialist Libertarian',
+      'socialist-nationalist': 'Socialist Nationalist',
+      'capitalist-globalist': 'Capitalist Globalist',
+      'capitalist-nationalist': 'Capitalist Nationalist',
+      'conservative-globalist': 'Conservative Globalist',
+      'conservative-nationalist': 'Conservative Nationalist'
+    };
+
+    const personaType = stanceTypeLabels[actualStanceType] || "Political Observer";
     const fullLabel = nationalityPrefix ? `${nationalityPrefix} ${personaType}` : personaType;
 
     stanceLogger.debug('calculateCoordinates', `Combined label: ${fullLabel}`, {
       nationalityPrefix,
       personaType,
-      fullLabel
+      actualStanceType,
+      fullLabel,
+      aiSuggestedType: result.personaType // Keep AI suggestion for reference
     });
 
     const coordinates: PoliticalCoordinates = {
-      economic: Math.max(-100, Math.min(100, result.economic || 0)),
-      social: Math.max(-100, Math.min(100, result.social || 0)),
-      diplomatic: Math.max(-100, Math.min(100, result.diplomatic || 0)),
+      economic,
+      social,
+      diplomatic,
       label: fullLabel
     };
 

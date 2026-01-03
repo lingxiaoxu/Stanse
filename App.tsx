@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { ViewState, PoliticalCoordinates, BrandAlignment } from './types';
+import { FECCompanyData } from './services/fecService';
 import { Compass, Search, Newspaper, Users, Menu } from 'lucide-react';
 import { SenseView } from './components/views/SenseView';
 import { FingerprintView } from './components/views/FingerprintView';
@@ -37,6 +38,7 @@ const StanseApp: React.FC = () => {
   // Persist SENSE report across tab switches
   const [senseResult, setSenseResult] = useState<BrandAlignment | null>(null);
   const [senseQuery, setSenseQuery] = useState('');
+  const [senseFecData, setSenseFecData] = useState<FECCompanyData | null>(null);
 
   // Note: We intentionally do NOT clear the sense report when coordinates change.
   // The report should persist until the user manually searches again.
@@ -97,6 +99,8 @@ const StanseApp: React.FC = () => {
             onResultChange={setSenseResult}
             persistedQuery={senseQuery}
             onQueryChange={setSenseQuery}
+            persistedFecData={senseFecData}
+            onFecDataChange={setSenseFecData}
           />
         );
       case ViewState.FINGERPRINT:

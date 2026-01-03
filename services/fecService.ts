@@ -6,8 +6,10 @@
  * Aggregates data across all variants for comprehensive results.
  *
  * Data structure:
- * - fec_company_index: Company → normalized_name mapping (3000+ companies)
- * - fec_company_party_summary: Aggregated donations by company/year/party
+ * - fec_company_index: Company → normalized_name mapping (3700+ companies)
+ * - fec_company_consolidated: Unified collection merging linkage + PAC transfer data
+ * - fec_company_party_summary: (Legacy) Linkage-based donations by company/year/party
+ * - fec_company_pac_transfers_summary: (Legacy) PAC transfer donations
  */
 
 import { collection, doc, getDoc, query, where, getDocs, setDoc, updateDoc } from 'firebase/firestore';
@@ -411,9 +413,10 @@ async function querySingleCompany(normalized: string, originalSearch?: string, y
     const companyData = companyIndexSnap.data();
     const displayName = companyData.company_name;
 
-    // Query party summaries - filter by year if specified
-    console.log(`[FEC] Querying fec_company_party_summary for normalized name: "${normalized}"${year ? ` (year: ${year})` : ''}`);
-    const summariesRef = collection(db, 'fec_company_party_summary');
+    // Query consolidated summary - filter by year if specified
+    // Use fec_company_consolidated which merges linkage + PAC transfer data
+    console.log(`[FEC] Querying fec_company_consolidated for normalized name: "${normalized}"${year ? ` (year: ${year})` : ''}`);
+    const summariesRef = collection(db, 'fec_company_consolidated');
     const q = year
       ? query(summariesRef,
           where('normalized_name', '==', normalized),
@@ -422,11 +425,11 @@ async function querySingleCompany(normalized: string, originalSearch?: string, y
     const summariesSnap = await getDocs(q);
 
     if (summariesSnap.empty) {
-      console.log(`[FEC] No party summaries found in fec_company_party_summary for "${normalized}"`);
+      console.log(`[FEC] No consolidated data found for "${normalized}"`);
       return null;
     }
 
-    console.log(`[FEC] Found ${summariesSnap.size} party summary records for "${normalized}"`);
+    console.log(`[FEC] Found ${summariesSnap.size} consolidated records for "${normalized}"`);
 
     const data: any[] = [];
     summariesSnap.forEach((doc) => {

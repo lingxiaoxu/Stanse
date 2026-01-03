@@ -1,25 +1,15 @@
-# Git
 .git
 .gitignore
-
-# Node
 node_modules/
-
-# Build output (will be created during Docker build)
 dist/
-
-# IDE
 .vscode/
 .idea/
-
-# Logs
 *.log
-npm-debug.log*
-
-# OS
 .DS_Store
-Thumbs.db
-
-# Environment files with secrets (keep .env for build)
 .env.local
 .env.*.local
+backend/
+documentation/
+metadata.json
+firestore.rules
+scripts/

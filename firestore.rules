@@ -1,12 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // 用户数据 - 只有认证用户可以读写自己的数据
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    
+
     // Polis Protocol user data
     match /polis_users/{userId} {
       allow read: if request.auth != null;
@@ -18,7 +18,7 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create: if request.auth != null;
     }
-    
+
     // FEC 公开数据 - 所有人可读，禁止写入
 
     // Multi-year collections (包含所有年份的数据)
@@ -90,26 +90,93 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if request.auth != null;
     }
-    
+
     // 新闻和更新 - 公开读，管理员写，但也允许认证用户缓存
     match /news/{document=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }
-    
+
     // 新闻图片缓存 - 认证用户可以读写
     match /news_images/{document=**} {
       allow read, write: if request.auth != null;
     }
-    
+
     // 新闻向量嵌入缓存 - 认证用户可以读写
     match /news_embeddings/{document=**} {
       allow read, write: if request.auth != null;
     }
-    
-    // 公司排名缓存 - 认证用户可以读写
+
+    // 公司排名缓存 - DEPRECATED, use enhanced_company_rankings instead
+    // Allow public read/write for backward compatibility during migration
     match /company_rankings/{document=**} {
-      allow read, write: if request.auth != null;
+      allow read: if true;
+      allow write: if true;  // Allow public write for development/migration
+    }
+
+    // Enhanced company rankings with persona-aware scoring (including history subcollection)
+    // Public read and write (for development/testing - frontend can generate rankings)
+    match /enhanced_company_rankings/{persona} {
+      allow read: if true;
+      allow write: if true;  // Allow public write for development
+
+      // History subcollection
+      match /history/{historyId} {
+        allow read: if true;
+        allow write: if true;  // Allow public write for development
+      }
+    }
+
+    // Company rankings by ticker (FEC + ESG + Executive + News data)
+    // Public read and write (for development/testing - backend scripts can write)
+    match /company_rankings_by_ticker/{ticker} {
+      allow read: if true;
+      allow write: if true;  // Allow public write for development
+
+      // History subcollection
+      match /history/{historyId} {
+        allow read: if true;
+        allow write: if true;  // Allow public write for development
+      }
+    }
+
+    // Company ESG data by ticker with history tracking
+    // Public read and write (for development/testing)
+    match /company_esg_by_ticker/{ticker} {
+      allow read: if true;
+      allow write: if true;  // Allow public write for development
+
+      // History subcollection
+      match /history/{historyId} {
+        allow read: if true;
+        allow write: if true;  // Allow public write for development
+      }
+    }
+
+    // Company executive statements by ticker with history tracking
+    // Public read and write (for development/testing)
+    match /company_executive_statements_by_ticker/{ticker} {
+      allow read: if true;
+      allow write: if true;  // Allow public write for development
+
+      // History subcollection
+      match /history/{historyId} {
+        allow read: if true;
+        allow write: if true;  // Allow public write for development
+      }
+    }
+
+    // Company news by ticker with history tracking
+    // Public read and write (for development/testing)
+    match /company_news_by_ticker/{ticker} {
+      allow read: if true;
+      allow write: if true;  // Allow public write for development
+
+      // History subcollection
+      match /history/{historyId} {
+        allow read: if true;
+        allow write: if true;  // Allow public write for development
+      }
     }
 
     // Sense reports - users can read/write their own reports
@@ -122,7 +189,7 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
-    
+
     // 默认拒绝所有
     match /{document=**} {
       allow read, write: if false;

@@ -61,6 +61,11 @@ documentation/
 25. [25_fec_validated_companies_report.md](backend/25_fec_validated_companies_report.md) - FEC validated companies analysis report
 26. [26_fec_data_enhancement_plan.md](backend/26_fec_data_enhancement_plan.md) - **ROADMAP** - FEC data enhancement implementation plan
 
+### 🏗️ Backend & Data
+
+27. [Persona-Aware Scoring Solution](./backend/27_persona_aware_scoring_solution.md) - 多persona评分系统
+28. [Company Ranking Data Collection - Test Plan](./backend/28_company_ranking_data_collection_test_plan.md) - 数据收集系统测试与改进方案
+
 ---
 
 ## 🎨 Frontend Documentation (React App)

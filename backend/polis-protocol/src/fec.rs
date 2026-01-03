@@ -93,18 +93,19 @@ impl FecClient {
             return Ok(None);
         }
 
-        // Query all summaries for this company (across all years)
+        // Query all consolidated summaries for this company (across all years)
+        // Use fec_company_consolidated which merges linkage + PAC transfer data
         let summaries: Vec<HashMap<String, serde_json::Value>> = db
             .fluent()
             .select()
-            .from("fec_company_party_summary")
+            .from("fec_company_consolidated")
             .filter(|q| q.for_all([q.field("normalized_name").eq(&normalized)]))
             .obj()
             .query()
             .await?;
 
         if summaries.is_empty() {
-            println!("No donation summaries found for: {}", normalized);
+            println!("No consolidated data found for: {}", normalized);
             return Ok(None);
         }
 

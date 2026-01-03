@@ -26,6 +26,11 @@ export interface PoliticalCoordinates {
   label: string; // AI Generated Persona
 }
 
+export interface GroundingSource {
+  url: string; // Full URL (may be redirect URL)
+  domain: string; // Displayable domain name (e.g., "forbes.com")
+}
+
 export interface BrandAlignment {
   brandName: string;
   entityType?: string; // COMPANY, PERSON, COUNTRY, ORGANIZATION, POLITICAL_PARTY
@@ -37,7 +42,7 @@ export interface BrandAlignment {
   keyAlignments: string[]; // bullet points
   reasoning: string; // deprecated but kept for compatibility if needed
   alternatives?: string[];
-  sources: string[];
+  sources: string[] | GroundingSource[]; // Legacy: string[] | New: GroundingSource[]
   sourceMaterial?: string; // Political context and risk factors summary
 }
 

@@ -1,11 +1,18 @@
 # Python Dependencies for Stanse Project
-# Used for data processing scripts (e.g., FEC data downloader/parser)
+# Used for data processing scripts (FEC, ESG, News data collection, etc.)
 
-# HTTP requests for downloading files
+# HTTP requests for downloading files and API calls
 requests>=2.31.0
 
 # Firebase Admin SDK for Firestore operations
-firebase-admin>=6.2.0
+firebase-admin>=6.3.0
 
-# Google Cloud Firestore client
-google-cloud-firestore>=2.13.0
+# Google Cloud services
+google-cloud-firestore>=2.14.0
+google-cloud-secret-manager>=2.16.4
+
+# Gemini API
+# 使用官方 SDK: google-generativeai (用于 05-generate-enhanced-rankings.py)
+# 使用 REST API: requests (用于 04-analyze-executive-statements.py)
+# API Key 从 Secret Manager 获取: gemini-api-key
+google-generativeai>=0.8.0

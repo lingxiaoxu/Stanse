@@ -19,6 +19,15 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      build: {
+        rollupOptions: {
+          input: {
+            main: path.resolve(__dirname, 'index.html'),
+            test: path.resolve(__dirname, 'test-typescript-rankings.html'),
+            'test-enhanced': path.resolve(__dirname, 'test-enhanced-rankings.html')
+          }
+        }
       }
     };
 });
