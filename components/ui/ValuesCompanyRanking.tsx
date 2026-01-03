@@ -3,7 +3,7 @@ import { TrendingUp, TrendingDown, ThumbsUp, ThumbsDown, RefreshCw } from 'lucid
 import { PixelCard } from './PixelCard';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { getCompanyRankingsForUser } from '../../services/companyRankingService';
+import { getEnhancedCompanyRankingsForUser } from '../../services/enhancedCompanyRankingService';
 import { RankedCompany, CompanyRanking } from '../../services/companyRankingCache';
 import { recordUserAction } from '../../services/userActionService';
 
@@ -28,7 +28,7 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
 
       try {
         const { economic, social, diplomatic } = userProfile.coordinates;
-        const result = await getCompanyRankingsForUser(economic, social, diplomatic);
+        const result = await getEnhancedCompanyRankingsForUser(economic, social, diplomatic);
         setRankings(result);
         // Notify parent component of rankings change
         onRankingsChange?.(result);
@@ -51,11 +51,8 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
 
     try {
       const { economic, social, diplomatic } = userProfile.coordinates;
-      // Force refresh by importing and calling with forceRefresh = true
-      const { rankCompaniesForStance } = await import('../../services/companyRankingService');
-      const { getStanceType } = await import('../../data/sp500Companies');
-      const stanceType = getStanceType(economic, social, diplomatic);
-      const result = await rankCompaniesForStance(stanceType, true);
+      // Force refresh by calling with forceRefresh = true
+      const result = await getEnhancedCompanyRankingsForUser(economic, social, diplomatic, true);
       setRankings(result);
       // Notify parent component of rankings change
       onRankingsChange?.(result);

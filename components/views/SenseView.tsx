@@ -18,6 +18,8 @@ interface SenseViewProps {
   onResultChange?: (result: BrandAlignment | null) => void;
   persistedQuery?: string;
   onQueryChange?: (query: string) => void;
+  persistedFecData?: FECCompanyData | null;
+  onFecDataChange?: (data: FECCompanyData | null) => void;
 }
 
 // Helper function to format FEC election cycles (e.g., 2024 → 2023-2024)
@@ -33,13 +35,15 @@ export const SenseView: React.FC<SenseViewProps> = ({
   persistedResult,
   onResultChange,
   persistedQuery,
-  onQueryChange
+  onQueryChange,
+  persistedFecData,
+  onFecDataChange
 }) => {
   // Use persisted state if available, otherwise fall back to local state
   const [localQuery, setLocalQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [localResult, setLocalResult] = useState<BrandAlignment | null>(null);
-  const [fecData, setFecData] = useState<FECCompanyData | null>(null);
+  const [localFecData, setLocalFecData] = useState<FECCompanyData | null>(null);
   const { t } = useLanguage();
 
   // Use persisted values if provided
@@ -47,6 +51,8 @@ export const SenseView: React.FC<SenseViewProps> = ({
   const setQuery = onQueryChange || setLocalQuery;
   const result = persistedResult !== undefined ? persistedResult : localResult;
   const setResult = onResultChange || setLocalResult;
+  const fecData = persistedFecData !== undefined ? persistedFecData : localFecData;
+  const setFecData = onFecDataChange || setLocalFecData;
 
   // Recalibrate modal state
   const [showRecalModal, setShowRecalModal] = useState(false);
@@ -265,11 +271,17 @@ export const SenseView: React.FC<SenseViewProps> = ({
                         <span className="font-mono text-[10px] uppercase font-bold">{t('sense', 'source')}</span>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                        {result.sources.map((source: string, idx: number) => (
-                            <a key={idx} href={source} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] font-mono underline hover:text-gray-500">
-                                {new URL(source).hostname} <ExternalLink size={8} />
+                        {result.sources.map((source: any, idx: number) => {
+                          // Handle both old format (string) and new format (GroundingSource object)
+                          const url = typeof source === 'string' ? source : source.url;
+                          const domain = typeof source === 'string' ? new URL(source).hostname : source.domain;
+
+                          return (
+                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] font-mono underline hover:text-gray-500">
+                                {domain} <ExternalLink size={8} />
                             </a>
-                        ))}
+                          );
+                        })}
                     </div>
                 </div>
             </div>

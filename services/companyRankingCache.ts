@@ -1,6 +1,5 @@
 import { db } from './firebase';
 import {
-  collection,
   doc,
   getDoc,
   setDoc,
@@ -8,7 +7,8 @@ import {
 } from 'firebase/firestore';
 import { StanceType } from '../data/sp500Companies';
 
-const COMPANY_RANKINGS_COLLECTION = 'company_rankings';
+// MIGRATED: Now using enhanced_company_rankings instead of company_rankings
+const COMPANY_RANKINGS_COLLECTION = 'enhanced_company_rankings';
 const CACHE_DURATION_MS = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
 
 export interface RankedCompany {

@@ -2,7 +2,7 @@
   "committees_last_line": 20934,
   "committees_uploaded": 20934,
   "committees_skipped": 0,
-  "last_updated": "2025-12-19T08:38:52.299119",
+  "last_updated": "2025-12-22T22:16:34.521469",
   "committees_completed": true,
   "candidates_last_line": 9809,
   "candidates_uploaded": 9809,
@@ -13,6 +13,7 @@
   "linkages_last_line": 8629,
   "linkages_uploaded": 8629,
   "linkages_completed": true,
-  "transfers_last_line": 2589350,
-  "transfers_uploaded": 1949000
+  "transfers_last_line": 18667266,
+  "transfers_uploaded": 13824909,
+  "transfers_completed": true
 }

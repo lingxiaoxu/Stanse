@@ -206,6 +206,34 @@ export interface UserDemographicsForAnalysis {
 /**
  * Analyzes a brand OR individual against user values using Search Grounding.
  */
+/**
+ * Two-Step Hybrid Agentic AI Analysis System
+ *
+ * This function uses a two-step process to combine real-time search with structured analysis:
+ *
+ * **STEP 1: Google Search Grounding (Text Mode)**
+ * - Uses Google Search tool to gather real-time intelligence
+ * - Focuses on: recent news, CEO statements, political actions, controversies
+ * - Returns unstructured text with grounding sources
+ * - No JSON schema (incompatible with Search tool)
+ *
+ * **STEP 2: Structured Analysis (JSON Mode)**
+ * - Takes real-time intelligence from Step 1 as input
+ * - Combines with AI training data (Twitter/X, historical context)
+ * - Uses user's three-axis coordinates for intelligent scoring
+ * - Returns structured JSON output with all fields
+ *
+ * **Data Sources Combined:**
+ * 1. Google Search (Real-time 2024-2025): Recent news, CEO statements, current actions
+ * 2. AI Training Data (Pre-2025): Twitter/X analysis, historical patterns, industry context
+ * 3. User Coordinates: Economic/Social/Diplomatic axes for 0-100 alignment scoring
+ * 4. FEC Donations (Separate Firebase query): Real political contribution data
+ *
+ * @param entityName - Company, person, country, or organization name
+ * @param userProfile - User's three-axis political coordinates
+ * @param demographics - Optional geographic context (birth country, current residence)
+ * @returns BrandAlignment with score, analysis, and real-time grounding sources
+ */
 export const analyzeBrandAlignment = async (
   entityName: string,
   userProfile: PoliticalCoordinates,
@@ -309,43 +337,102 @@ export const analyzeBrandAlignment = async (
       required: ['brandName', 'score', 'status', 'reportSummary', 'socialSignal', 'keyConflicts', 'keyAlignments', 'sourceMaterial']
     };
 
+    // STEP 1: Google Search call (no JSON schema) to gather real-time intelligence
+    const searchPrompt = `Research "${entityName}" for recent political activity. Focus on:
+    - Recent news about political actions, statements, or controversies
+    - CEO/executive public statements on political issues (if company)
+    - Recent donations, lobbying, or advocacy work
+    - Current political positioning or shifts
+
+    Provide a concise summary (150-200 words) with specific facts, dates, and sources.`;
+
+    const searchResponse = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: searchPrompt,
+      config: {
+        tools: [{ googleSearch: {} }],  // ✅ Google Search enabled (text mode)
+      }
+    });
+
+    const realtimeIntelligence = searchResponse.text || '';
+
+    // Extract real-time grounding sources from Google Search
+    // Note: Vertex AI Search returns redirect URLs (vertexaisearch.cloud.google.com)
+    // The actual domain is in web.title field
+    const searchSources: Array<{ url: string; domain: string }> = [];
+    const uniqueDomains = new Set<string>();
+
+    if (searchResponse.candidates?.[0]?.groundingMetadata?.groundingChunks) {
+      searchResponse.candidates[0].groundingMetadata.groundingChunks.forEach((chunk: any) => {
+        if (chunk.web?.title && chunk.web?.uri) {
+          const domain = chunk.web.title;
+
+          // Only add unique domains (avoid duplicates like multiple Forbes or Q4CDN articles)
+          if (!uniqueDomains.has(domain)) {
+            uniqueDomains.add(domain);
+            searchSources.push({
+              url: chunk.web.uri, // Redirect URL that will go to actual article
+              domain: domain // Display-friendly domain name
+            });
+          }
+        }
+      });
+    }
+
+    // STEP 2: Structured analysis call (with JSON schema) using gathered intelligence
+    const analysisPrompt = `${prompt}
+
+    REAL-TIME INTELLIGENCE GATHERED (from Google Search):
+    ${realtimeIntelligence}
+
+    DATA SOURCE LABELS:
+    - Information from the "REAL-TIME INTELLIGENCE GATHERED" section above = Google Search (2024-2025)
+    - Information from your training data (Twitter/X, historical context) = AI Training Data (pre-2025)
+    - Combine both sources for comprehensive analysis
+    `;
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: prompt,
+      contents: analysisPrompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
-        systemInstruction: `You are an expert political intelligence analyst.
-Your job is to provide objective, factual analysis of entities (companies, people, countries, organizations)
-and their political alignment with a given user profile.
+        systemInstruction: `You are an expert political intelligence analyst combining real-time search data with historical AI training data.
+Your job is to provide objective, factual analysis of entities and their political alignment with user profiles.
 Be specific and cite real-world actions, statements, donations, policies, and controversies.
-Avoid generic statements - be concrete and informative.
-If you don't have specific information, provide analysis based on the entity's known public positioning and industry context.`
+Avoid generic statements - be concrete and informative.`
       }
     });
 
     const result = JSON.parse(response.text || '{}');
 
-    // Generate reference sources based on entity type
-    const sources: string[] = [];
+    // Combine real-time sources with static reference sources
+    const staticSources: Array<{ url: string; domain: string }> = [];
     if (entityType === 'COMPANY') {
-      sources.push(`https://www.opensecrets.org/orgs/search?q=${encodeURIComponent(entityName)}`);
-      sources.push(`https://en.wikipedia.org/wiki/${encodeURIComponent(entityName.replace(/ /g, '_'))}`);
+      staticSources.push({
+        url: `https://www.opensecrets.org/orgs/search?q=${encodeURIComponent(entityName)}`,
+        domain: 'opensecrets.org'
+      });
     } else if (entityType === 'PERSON') {
-      sources.push(`https://en.wikipedia.org/wiki/${encodeURIComponent(entityName.replace(/ /g, '_'))}`);
-      sources.push(`https://www.opensecrets.org/search?q=${encodeURIComponent(entityName)}`);
-    } else if (entityType === 'COUNTRY') {
-      sources.push(`https://en.wikipedia.org/wiki/${encodeURIComponent(entityName.replace(/ /g, '_'))}`);
-      sources.push(`https://freedomhouse.org/countries/freedom-world/scores`);
-    } else {
-      sources.push(`https://en.wikipedia.org/wiki/${encodeURIComponent(entityName.replace(/ /g, '_'))}`);
+      staticSources.push({
+        url: `https://www.opensecrets.org/search?q=${encodeURIComponent(entityName)}`,
+        domain: 'opensecrets.org'
+      });
     }
+
+    // Prioritize real-time search results (max 3), fallback to static sources
+    const sources = searchSources.length > 0
+      ? searchSources.slice(0, 3)  // Use real-time Google Search sources
+      : staticSources.concat([{
+          url: `https://en.wikipedia.org/wiki/${encodeURIComponent(entityName.replace(/ /g, '_'))}`,
+          domain: 'wikipedia.org'
+        }]).slice(0, 3);
 
     return {
       ...result,
       brandName: result.brandName || entityName,
       reasoning: result.reportSummary,
-      sources: sources.slice(0, 3)
+      sources: sources
     };
 
   } catch (error) {
