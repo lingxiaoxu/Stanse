@@ -579,8 +579,11 @@ export async function queryCompanyFECData(
     // Step 1: Use AI to generate possible company name variants
     const aiVariants = await generateCompanyVariants(companyName);
 
-    // Step 2: Normalize all variants
-    const normalizedVariants = aiVariants.map(v => normalizeCompanyName(v));
+    // Step 2: Normalize all variants (handle both string and object formats)
+    const normalizedVariants = aiVariants.map((v: any) => {
+      const variantStr = typeof v === 'string' ? v : v.variant_name_lower || '';
+      return normalizeCompanyName(variantStr);
+    });
 
     // Remove duplicates
     const uniqueNormalized = [...new Set(normalizedVariants)].filter(v => v.length > 0);
