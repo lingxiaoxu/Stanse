@@ -331,9 +331,9 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
             <div className="space-y-2 font-mono text-xs">
               <div className="bg-gray-50 p-2.5 border-2 border-black">
                 <div className="font-bold text-green-600 mb-1">
-                  {showExplanation === 'economic' && (activeCoords.economic > 0 ? '→ RIGHT' : '← LEFT')}
-                  {showExplanation === 'social' && (activeCoords.social > 0 ? '← LIBERAL' : '→ CONSERVATIVE')}
-                  {showExplanation === 'diplomatic' && (activeCoords.diplomatic > 0 ? '← GLOBALIST' : '→ NATIONALIST')}
+                  {showExplanation === 'economic' && (activeCoords.economic > 0 ? `→ ${t('fingerprint', 'label_right')}` : `← ${t('fingerprint', 'label_left')}`)}
+                  {showExplanation === 'social' && (activeCoords.social > 0 ? `← ${t('fingerprint', 'label_liberal')}` : `→ ${t('fingerprint', 'label_conservative')}`)}
+                  {showExplanation === 'diplomatic' && (activeCoords.diplomatic > 0 ? `← ${t('fingerprint', 'label_globalist')}` : `→ ${t('fingerprint', 'label_nationalist')}`)}
                 </div>
                 <p className="text-gray-700 leading-tight">
                   {getExplanation(showExplanation, activeCoords[showExplanation])}
