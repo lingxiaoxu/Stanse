@@ -317,29 +317,29 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
       {/* Coordinate Explanation Popup */}
       {showExplanation && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowExplanation(null)}>
-          <div className="bg-white border-4 border-black shadow-pixel max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
+          <div className="bg-white border-4 border-black shadow-pixel max-w-sm w-full p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-3">
               <h3 className="font-mono font-bold uppercase text-sm">
                 {showExplanation === 'economic' && 'Economic Axis'}
                 {showExplanation === 'social' && 'Social Axis'}
                 {showExplanation === 'diplomatic' && 'Diplomatic Axis'}
               </h3>
               <button onClick={() => setShowExplanation(null)} className="hover:bg-gray-100 p-1 rounded">
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
-            <div className="space-y-3 font-mono text-xs">
-              <div className="bg-gray-50 p-3 border-2 border-black">
+            <div className="space-y-2 font-mono text-xs">
+              <div className="bg-gray-50 p-2.5 border-2 border-black">
                 <div className="font-bold text-green-600 mb-1">
                   {showExplanation === 'economic' && (activeCoords.economic > 0 ? '→ RIGHT' : '← LEFT')}
-                  {showExplanation === 'social' && (activeCoords.social > 0 ? '→ LIBERAL' : '← CONSERVATIVE')}
-                  {showExplanation === 'diplomatic' && (activeCoords.diplomatic > 0 ? '→ GLOBALIST' : '← NATIONALIST')}
+                  {showExplanation === 'social' && (activeCoords.social > 0 ? '← LIBERAL' : '→ CONSERVATIVE')}
+                  {showExplanation === 'diplomatic' && (activeCoords.diplomatic > 0 ? '← GLOBALIST' : '→ NATIONALIST')}
                 </div>
-                <p className="text-gray-700">
+                <p className="text-gray-700 leading-tight">
                   {getExplanation(showExplanation, activeCoords[showExplanation])}
                 </p>
               </div>
-              <div className="text-[10px] text-gray-500 text-center">
+              <div className="text-[10px] text-gray-500 text-center pt-1">
                 Click anywhere outside to close
               </div>
             </div>
