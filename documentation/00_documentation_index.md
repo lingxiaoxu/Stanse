@@ -1,6 +1,6 @@
 # Stanse Project Documentation
 
-**Last Updated**: 2025-12-17
+**Last Updated**: 2026-01-04
 
 This folder contains all project documentation organized into two main categories: **Backend** and **Frontend**.
 
@@ -11,11 +11,11 @@ This folder contains all project documentation organized into two main categorie
 ```
 documentation/
 ├── 00_documentation_index.md (this file)
-├── backend/     (27 files - Polis Protocol & FEC data documentation)
-└── frontend/    (4 files - React frontend documentation)
+├── backend/     (41 files - Polis Protocol, FEC data & Firebase schemas)
+└── frontend/    (8 files - React frontend documentation)
 ```
 
-**Total**: 31 markdown files
+**Total**: 49 markdown files
 
 ---
 
@@ -63,8 +63,24 @@ documentation/
 
 ### 🏗️ Backend & Data
 
-27. [Persona-Aware Scoring Solution](./backend/27_persona_aware_scoring_solution.md) - 多persona评分系统
-28. [Company Ranking Data Collection - Test Plan](./backend/28_company_ranking_data_collection_test_plan.md) - 数据收集系统测试与改进方案
+27. [27_persona_aware_scoring_solution.md](backend/27_persona_aware_scoring_solution.md) - Persona-aware scoring system
+28. [28_api_key_security_guide.md](backend/28_api_key_security_guide.md) - API key security best practices
+29. [29_company_ranking_data_collection_test_plan.md](backend/29_company_ranking_data_collection_test_plan.md) - Data collection test plan
+30. [30_fec_transfer_linkage_enhancement.md](backend/30_fec_transfer_linkage_enhancement.md) - FEC transfer linkage improvements
+31. [31_fec_consolidated_architecture.md](backend/31_fec_consolidated_architecture.md) - FEC consolidated architecture
+32. [32_enhanced_company_ranking_system.md](backend/32_enhanced_company_ranking_system.md) - Enhanced company ranking system
+33. [33_sp500_data_unification.md](backend/33_sp500_data_unification.md) - S&P 500 data unification
+34. [34_final_deployment_ready.md](backend/34_final_deployment_ready.md) - Final deployment readiness
+35. [35_enhanced_rankings_summary.md](backend/35_enhanced_rankings_summary.md) - Enhanced rankings summary
+36. [36_deployment_checklist.md](backend/36_deployment_checklist.md) - Deployment checklist
+37. [37_python_sync_status.md](backend/37_python_sync_status.md) - Python sync status
+38. [38_python_typescript_sync_summary.md](backend/38_python_typescript_sync_summary.md) - Python-TypeScript sync
+39. [39_company_ranking_deployment.md](backend/39_company_ranking_deployment.md) - Company ranking deployment
+40. [40_security_checklist.md](backend/40_security_checklist.md) - Security checklist
+
+### 🔗 Firebase & Social Media Integration
+
+41. [41_social_media_firebase_schema.md](backend/41_social_media_firebase_schema.md) - **NEW** - Social media connections Firebase schema, OAuth integration, and Twitter/X API preparation
 
 ---
 
@@ -176,6 +192,9 @@ documentation/
 - [FEC Scripts Guide](backend/24_fec_data_scripts_guide.md)
 - [FEC Validated Companies](backend/25_fec_validated_companies_report.md)
 - [FEC Data Enhancement Plan](backend/26_fec_data_enhancement_plan.md) 🔮 **ROADMAP**
+
+### Firebase & Database Schemas
+- [Social Media Firebase Schema](backend/41_social_media_firebase_schema.md) ⭐ **NEW** - Social media connections, OAuth, Twitter/X API
 
 ---
 

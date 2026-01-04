@@ -187,6 +187,36 @@ export interface QuestionAnswer {
   answer: 'A' | 'B' | 'NEUTRAL';
 }
 
+// Social Media Connection types
+export enum SocialPlatform {
+  TWITTER = 'TWITTER',
+  FACEBOOK = 'FACEBOOK',
+  INSTAGRAM = 'INSTAGRAM',
+  LINKEDIN = 'LINKEDIN',
+  TIKTOK = 'TIKTOK'
+}
+
+export interface SocialMediaConnection {
+  id?: string; // Firestore document ID
+  userId: string; // Reference to the user
+  platform: SocialPlatform;
+  handle: string; // Username/handle (without @ prefix)
+  displayName?: string; // Display name from the platform
+  profileUrl?: string; // URL to the profile
+  verified?: boolean; // Whether the account is verified on the platform
+  followerCount?: number; // Number of followers (for future API integration)
+  // API Integration fields (for future use)
+  accessToken?: string; // OAuth access token (encrypted in production)
+  refreshToken?: string; // OAuth refresh token (encrypted in production)
+  tokenExpiresAt?: string; // ISO date string for token expiration
+  apiUserId?: string; // Platform-specific user ID
+  // Metadata
+  connectedAt: string; // ISO date string when connection was established
+  lastSyncedAt?: string; // ISO date string of last API sync
+  isActive: boolean; // Whether the connection is currently active
+  updatedAt: string; // ISO date string of last update
+}
+
 export const POLITICAL_QUESTIONS: PoliticalQuestion[] = [
   // Economic dimension (2 questions)
   {

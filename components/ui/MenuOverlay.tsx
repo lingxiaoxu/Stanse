@@ -1,8 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, BookOpen, Shield, Settings, LogOut, ChevronRight, Github, Twitter, Check, User } from 'lucide-react';
-import { ViewState } from '../../types';
+import { ViewState, SocialPlatform } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { connectSocialMedia, getSocialMediaConnection } from '../../services/userService';
 
 interface MenuOverlayProps {
   isOpen: boolean;
@@ -13,9 +15,37 @@ interface MenuOverlayProps {
 
 export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose, onNavigate, onLogout }) => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [twitterHandle, setTwitterHandle] = useState('');
   const [isConnectingTwitter, setIsConnectingTwitter] = useState(false);
   const [isTwitterConnected, setIsTwitterConnected] = useState(false);
+  const [isLoadingConnection, setIsLoadingConnection] = useState(true);
+
+  // Load existing Twitter connection on mount or when user changes
+  useEffect(() => {
+    const loadTwitterConnection = async () => {
+      if (!user) {
+        setIsLoadingConnection(false);
+        return;
+      }
+
+      try {
+        const connection = await getSocialMediaConnection(user.uid, SocialPlatform.TWITTER);
+        if (connection) {
+          setTwitterHandle(connection.handle);
+          setIsTwitterConnected(true);
+        }
+      } catch (error) {
+        console.error('Error loading Twitter connection:', error);
+      } finally {
+        setIsLoadingConnection(false);
+      }
+    };
+
+    if (isOpen) {
+      loadTwitterConnection();
+    }
+  }, [user, isOpen]);
 
   if (!isOpen) return null;
 
@@ -24,14 +54,22 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose, onNav
     onClose();
   };
 
-  const handleConnectTwitter = () => {
-    if (!twitterHandle.trim()) return;
+  const handleConnectTwitter = async () => {
+    if (!twitterHandle.trim() || !user) return;
     setIsConnectingTwitter(true);
-    // Mock API delay
-    setTimeout(() => {
-        setIsConnectingTwitter(false);
-        setIsTwitterConnected(true);
-    }, 1500);
+
+    try {
+      // Save to Firebase
+      await connectSocialMedia(user.uid, SocialPlatform.TWITTER, twitterHandle, {
+        profileUrl: `https://twitter.com/${twitterHandle.replace('@', '')}`
+      });
+      setIsTwitterConnected(true);
+    } catch (error) {
+      console.error('Error connecting Twitter:', error);
+      alert('Failed to connect Twitter account. Please try again.');
+    } finally {
+      setIsConnectingTwitter(false);
+    }
   };
 
   return (
