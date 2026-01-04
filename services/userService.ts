@@ -223,23 +223,26 @@ export const connectSocialMedia = async (
   // Check if connection already exists for this platform
   const existingConnection = await getSocialMediaConnection(userId, platform);
 
-  const connectionData: Omit<SocialMediaConnection, 'id'> = {
+  // Build connection data, only including defined values (Firestore doesn't accept undefined)
+  const connectionData: Record<string, any> = {
     userId,
     platform,
     handle: handle.replace('@', ''), // Remove @ prefix if present
-    displayName: additionalData?.displayName,
-    profileUrl: additionalData?.profileUrl,
     verified: additionalData?.verified || false,
-    followerCount: additionalData?.followerCount,
-    accessToken: additionalData?.accessToken,
-    refreshToken: additionalData?.refreshToken,
-    tokenExpiresAt: additionalData?.tokenExpiresAt,
-    apiUserId: additionalData?.apiUserId,
     connectedAt: existingConnection?.connectedAt || new Date().toISOString(),
-    lastSyncedAt: additionalData?.lastSyncedAt,
     isActive: true,
     updatedAt: new Date().toISOString()
   };
+
+  // Only add optional fields if they have values
+  if (additionalData?.displayName) connectionData.displayName = additionalData.displayName;
+  if (additionalData?.profileUrl) connectionData.profileUrl = additionalData.profileUrl;
+  if (additionalData?.followerCount !== undefined) connectionData.followerCount = additionalData.followerCount;
+  if (additionalData?.accessToken) connectionData.accessToken = additionalData.accessToken;
+  if (additionalData?.refreshToken) connectionData.refreshToken = additionalData.refreshToken;
+  if (additionalData?.tokenExpiresAt) connectionData.tokenExpiresAt = additionalData.tokenExpiresAt;
+  if (additionalData?.apiUserId) connectionData.apiUserId = additionalData.apiUserId;
+  if (additionalData?.lastSyncedAt) connectionData.lastSyncedAt = additionalData.lastSyncedAt;
 
   if (existingConnection?.id) {
     // Update existing connection
