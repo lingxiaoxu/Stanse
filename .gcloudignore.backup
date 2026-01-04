@@ -12,7 +12,4 @@ backend/
 documentation/
 metadata.json
 firestore.rules
-scripts/fec-data/
-scripts/test/
-scripts/*.py
-scripts/*.sh
+scripts/

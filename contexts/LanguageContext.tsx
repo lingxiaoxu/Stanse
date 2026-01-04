@@ -124,8 +124,8 @@ const TRANSLATIONS = {
         explain_diplo_global: "International cooperation, multilateralism, free trade, global engagement",
         explain_diplo_nat: "National sovereignty, domestic priority, protectionism, independence",
         explain_close: "Click anywhere outside to close",
-        reset_stance: "RESET STANCE",
-        reset_desc: "Retake questionnaire to recalibrate"
+        reset_stance: "RESET ALL STANSE SETTINGS",
+        reset_desc: "Reset all preferences and retake questionnaire"
     },
     settings: {
         title: "SYSTEM PREFS",
@@ -288,8 +288,8 @@ const TRANSLATIONS = {
         explain_diplo_global: "国际合作，多边主义，自由贸易，全球参与",
         explain_diplo_nat: "国家主权，国内优先，保护主义，独立性",
         explain_close: "点击外部任意位置关闭",
-        reset_stance: "重置立场",
-        reset_desc: "重新进行问卷以校准立场"
+        reset_stance: "重置所有 STANSE 设置",
+        reset_desc: "重置所有偏好并重新进行问卷"
     },
     settings: {
         title: "系统偏好",
@@ -452,8 +452,8 @@ const TRANSLATIONS = {
         explain_diplo_global: "国際協力、多国間主義、自由貿易、グローバル関与",
         explain_diplo_nat: "国家主権、国内優先、保護主義、独立性",
         explain_close: "外側をクリックして閉じる",
-        reset_stance: "スタンスをリセット",
-        reset_desc: "アンケートを再受験して再調整"
+        reset_stance: "すべての STANSE 設定をリセット",
+        reset_desc: "すべての設定をリセットしてアンケートを再受験"
     },
     settings: {
         title: "システム設定",
@@ -616,8 +616,8 @@ const TRANSLATIONS = {
         explain_diplo_global: "Coopération internationale, multilatéralisme, libre-échange, engagement mondial",
         explain_diplo_nat: "Souveraineté nationale, priorité domestique, protectionnisme, indépendance",
         explain_close: "Cliquez n'importe où à l'extérieur pour fermer",
-        reset_stance: "RÉINITIALISER LA POSITION",
-        reset_desc: "Reprendre le questionnaire pour recalibrer"
+        reset_stance: "RÉINITIALISER TOUS LES PARAMÈTRES STANSE",
+        reset_desc: "Réinitialiser toutes les préférences et reprendre le questionnaire"
     },
     settings: {
         title: "PRÉFS SYSTÈME",
@@ -780,8 +780,8 @@ const TRANSLATIONS = {
         explain_diplo_global: "Cooperación internacional, multilateralismo, libre comercio, compromiso global",
         explain_diplo_nat: "Soberanía nacional, prioridad doméstica, proteccionismo, independencia",
         explain_close: "Haz clic en cualquier lugar fuera para cerrar",
-        reset_stance: "RESTABLECER POSTURA",
-        reset_desc: "Volver a realizar el cuestionario para recalibrar"
+        reset_stance: "RESTABLECER TODA LA CONFIGURACIÓN DE STANSE",
+        reset_desc: "Restablecer todas las preferencias y volver a realizar el cuestionario"
     },
     settings: {
         title: "PREFS SISTEMA",

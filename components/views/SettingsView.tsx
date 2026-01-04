@@ -5,6 +5,7 @@ import { Globe, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Language } from '../../types';
+import { disconnectAllSocialMedia } from '../../services/userService';
 
 export const SettingsView: React.FC = () => {
   const [notifications, setNotifications] = useState(true);
@@ -12,7 +13,7 @@ export const SettingsView: React.FC = () => {
   const [strictMode, setStrictMode] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const { t, language, setLanguage } = useLanguage();
-  const { resetOnboarding, hasCompletedOnboarding, demoMode, setDemoMode } = useAuth();
+  const { resetOnboarding, hasCompletedOnboarding, demoMode, setDemoMode, user } = useAuth();
 
   return (
     <div className="max-w-lg mx-auto space-y-6 animate-fade-in pb-20">
@@ -78,14 +79,27 @@ export const SettingsView: React.FC = () => {
                 </div>
                 <button
                     onClick={async () => {
-                        if (!hasCompletedOnboarding) return;
-                        if (confirm('Are you sure you want to reset your stance? You will need to retake the questionnaire.')) {
+                        if (!hasCompletedOnboarding || !user) return;
+                        if (confirm('Are you sure you want to reset ALL Stanse settings? This will reset language to English, enable notifications and location, disable strict mode, enable demo mode, clear social media connections, and reset your stance. You will need to retake the questionnaire.')) {
                             setIsResetting(true);
                             try {
+                                // Reset all settings to defaults
+                                setLanguage(Language.EN);
+                                setNotifications(true);
+                                setLocation(true);
+                                setStrictMode(false);
+                                setDemoMode(true);
+
+                                // Clear social media connections from Firebase
+                                await disconnectAllSocialMedia(user.uid);
+
+                                // Reset stance/onboarding
                                 await resetOnboarding();
-                                alert('Stance reset! Go to Stance tab to recalibrate.');
+
+                                alert('All Stanse settings reset! Language set to English, notifications and location enabled, strict mode disabled, demo mode enabled, social media disconnected. Go to Stance tab to recalibrate.');
                             } catch (error) {
-                                alert('Failed to reset stance. Please try again.');
+                                console.error('Reset error:', error);
+                                alert('Failed to reset settings. Please try again.');
                             } finally {
                                 setIsResetting(false);
                             }

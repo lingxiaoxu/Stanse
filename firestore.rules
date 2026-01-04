@@ -189,6 +189,30 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Social Media Connections - users can only access their own connections
+    match /socialConnections/{connectionId} {
+      // Users can only read their own connections
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+
+      // Users can only create connections for themselves
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.platform in ['TWITTER', 'FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TIKTOK']
+                    && request.resource.data.handle is string
+                    && request.resource.data.handle.size() > 0
+                    && request.resource.data.isActive == true;
+
+      // Users can only update their own connections
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid;
+
+      // Users can only delete their own connections
+      allow delete: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+    }
+
     // Public read for certain collections
     match /public_data/{document=**} {
       allow read: if true;

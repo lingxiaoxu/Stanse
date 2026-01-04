@@ -13,7 +13,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { PoliticalCoordinates, BrandAlignment, OnboardingAnswers } from '../types';
+import { PoliticalCoordinates, BrandAlignment, OnboardingAnswers, SocialMediaConnection, SocialPlatform } from '../types';
 
 // User Profile
 export interface UserProfile {
@@ -200,5 +200,209 @@ export const resetUserOnboarding = async (userId: string): Promise<void> => {
       label: 'Uncalibrated'
     },
     updatedAt: serverTimestamp()
+  });
+};
+
+// ==================== Social Media Connections ====================
+
+/**
+ * Connect a social media account to the user's profile
+ * If a connection for the same platform already exists, it will be updated
+ * @param userId - The user's ID
+ * @param platform - The social media platform (e.g., TWITTER, FACEBOOK)
+ * @param handle - The username/handle (without @ prefix)
+ * @param additionalData - Optional additional data (display name, profile URL, etc.)
+ * @returns The connection document ID
+ */
+export const connectSocialMedia = async (
+  userId: string,
+  platform: SocialPlatform,
+  handle: string,
+  additionalData?: Partial<SocialMediaConnection>
+): Promise<string> => {
+  // Check if connection already exists for this platform
+  const existingConnection = await getSocialMediaConnection(userId, platform);
+
+  const connectionData: Omit<SocialMediaConnection, 'id'> = {
+    userId,
+    platform,
+    handle: handle.replace('@', ''), // Remove @ prefix if present
+    displayName: additionalData?.displayName,
+    profileUrl: additionalData?.profileUrl,
+    verified: additionalData?.verified || false,
+    followerCount: additionalData?.followerCount,
+    accessToken: additionalData?.accessToken,
+    refreshToken: additionalData?.refreshToken,
+    tokenExpiresAt: additionalData?.tokenExpiresAt,
+    apiUserId: additionalData?.apiUserId,
+    connectedAt: existingConnection?.connectedAt || new Date().toISOString(),
+    lastSyncedAt: additionalData?.lastSyncedAt,
+    isActive: true,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (existingConnection?.id) {
+    // Update existing connection
+    const connectionRef = doc(db, 'socialConnections', existingConnection.id);
+    await updateDoc(connectionRef, connectionData);
+    return existingConnection.id;
+  } else {
+    // Create new connection
+    const connectionsRef = collection(db, 'socialConnections');
+    const docRef = await addDoc(connectionsRef, connectionData);
+    return docRef.id;
+  }
+};
+
+/**
+ * Get a specific social media connection for a user and platform
+ * @param userId - The user's ID
+ * @param platform - The social media platform
+ * @returns The connection or null if not found
+ */
+export const getSocialMediaConnection = async (
+  userId: string,
+  platform: SocialPlatform
+): Promise<SocialMediaConnection | null> => {
+  const connectionsRef = collection(db, 'socialConnections');
+  const q = query(
+    connectionsRef,
+    where('userId', '==', userId),
+    where('platform', '==', platform),
+    where('isActive', '==', true)
+  );
+  const querySnapshot = await getDocs(q);
+
+  if (querySnapshot.empty) {
+    return null;
+  }
+
+  const doc = querySnapshot.docs[0];
+  return { id: doc.id, ...doc.data() } as SocialMediaConnection;
+};
+
+/**
+ * Get all active social media connections for a user
+ * @param userId - The user's ID
+ * @returns Array of social media connections
+ */
+export const getAllSocialMediaConnections = async (
+  userId: string
+): Promise<SocialMediaConnection[]> => {
+  const connectionsRef = collection(db, 'socialConnections');
+  const q = query(
+    connectionsRef,
+    where('userId', '==', userId),
+    where('isActive', '==', true)
+  );
+  const querySnapshot = await getDocs(q);
+
+  const connections: SocialMediaConnection[] = [];
+  querySnapshot.forEach((doc) => {
+    connections.push({ id: doc.id, ...doc.data() } as SocialMediaConnection);
+  });
+
+  // Sort by connectedAt descending (most recent first)
+  return connections.sort((a, b) => {
+    const timeA = new Date(a.connectedAt).getTime();
+    const timeB = new Date(b.connectedAt).getTime();
+    return timeB - timeA;
+  });
+};
+
+/**
+ * Disconnect a social media account (soft delete - marks as inactive)
+ * @param userId - The user's ID
+ * @param platform - The social media platform to disconnect
+ */
+export const disconnectSocialMedia = async (
+  userId: string,
+  platform: SocialPlatform
+): Promise<void> => {
+  const connection = await getSocialMediaConnection(userId, platform);
+
+  if (connection?.id) {
+    const connectionRef = doc(db, 'socialConnections', connection.id);
+    await updateDoc(connectionRef, {
+      isActive: false,
+      updatedAt: new Date().toISOString()
+    });
+  }
+};
+
+/**
+ * Permanently delete a social media connection
+ * @param userId - The user's ID
+ * @param platform - The social media platform to delete
+ */
+export const deleteSocialMediaConnection = async (
+  userId: string,
+  platform: SocialPlatform
+): Promise<void> => {
+  const connection = await getSocialMediaConnection(userId, platform);
+
+  if (connection?.id) {
+    const connectionRef = doc(db, 'socialConnections', connection.id);
+    await deleteDoc(connectionRef);
+  }
+};
+
+/**
+ * Disconnect all social media accounts for a user (used during reset)
+ * @param userId - The user's ID
+ */
+export const disconnectAllSocialMedia = async (userId: string): Promise<void> => {
+  const connections = await getAllSocialMediaConnections(userId);
+
+  const disconnectPromises = connections.map((connection) => {
+    if (connection.id) {
+      const connectionRef = doc(db, 'socialConnections', connection.id);
+      return updateDoc(connectionRef, {
+        isActive: false,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    return Promise.resolve();
+  });
+
+  await Promise.all(disconnectPromises);
+};
+
+/**
+ * Update social media connection metadata (e.g., after syncing with API)
+ * @param connectionId - The connection document ID
+ * @param updates - Partial updates to apply
+ */
+export const updateSocialMediaConnection = async (
+  connectionId: string,
+  updates: Partial<SocialMediaConnection>
+): Promise<void> => {
+  const connectionRef = doc(db, 'socialConnections', connectionId);
+  await updateDoc(connectionRef, {
+    ...updates,
+    updatedAt: new Date().toISOString()
+  });
+};
+
+/**
+ * Sync social media connection data from platform API
+ * This is a placeholder for future Twitter/X API integration
+ * @param userId - The user's ID
+ * @param platform - The social media platform
+ */
+export const syncSocialMediaData = async (
+  userId: string,
+  platform: SocialPlatform
+): Promise<void> => {
+  const connection = await getSocialMediaConnection(userId, platform);
+
+  if (!connection?.id) {
+    throw new Error('Social media connection not found');
+  }
+
+  // TODO: Implement actual API sync when Twitter/X API is integrated
+  // For now, just update the lastSyncedAt timestamp
+  await updateSocialMediaConnection(connection.id, {
+    lastSyncedAt: new Date().toISOString()
   });
 };
