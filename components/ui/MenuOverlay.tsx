@@ -26,17 +26,26 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose, onNav
     const loadTwitterConnection = async () => {
       if (!user) {
         setIsLoadingConnection(false);
+        setIsTwitterConnected(false);
+        setTwitterHandle('');
         return;
       }
 
+      setIsLoadingConnection(true);
       try {
         const connection = await getSocialMediaConnection(user.uid, SocialPlatform.TWITTER);
         if (connection) {
           setTwitterHandle(connection.handle);
           setIsTwitterConnected(true);
+        } else {
+          // No connection found - reset state
+          setTwitterHandle('');
+          setIsTwitterConnected(false);
         }
       } catch (error) {
         console.error('Error loading Twitter connection:', error);
+        setTwitterHandle('');
+        setIsTwitterConnected(false);
       } finally {
         setIsLoadingConnection(false);
       }
