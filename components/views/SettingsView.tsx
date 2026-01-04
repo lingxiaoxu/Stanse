@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PixelCard } from '../ui/PixelCard';
 import { Globe, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -7,13 +7,35 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Language } from '../../types';
 import { disconnectAllSocialMedia } from '../../services/userService';
 
+// Default settings values
+const DEFAULT_SETTINGS = {
+  language: Language.EN,
+  notifications: true,
+  location: true,
+  strictMode: false,
+  demoMode: true
+};
+
 export const SettingsView: React.FC = () => {
-  const [notifications, setNotifications] = useState(true);
-  const [location, setLocation] = useState(false);
-  const [strictMode, setStrictMode] = useState(false);
+  const [notifications, setNotifications] = useState(DEFAULT_SETTINGS.notifications);
+  const [location, setLocation] = useState(DEFAULT_SETTINGS.location);
+  const [strictMode, setStrictMode] = useState(DEFAULT_SETTINGS.strictMode);
   const [isResetting, setIsResetting] = useState(false);
+  const [settingsModified, setSettingsModified] = useState(false);
   const { t, language, setLanguage } = useLanguage();
   const { resetOnboarding, hasCompletedOnboarding, demoMode, setDemoMode, user } = useAuth();
+
+  // Track if any settings have been modified from defaults
+  useEffect(() => {
+    const isModified =
+      language !== DEFAULT_SETTINGS.language ||
+      notifications !== DEFAULT_SETTINGS.notifications ||
+      location !== DEFAULT_SETTINGS.location ||
+      strictMode !== DEFAULT_SETTINGS.strictMode ||
+      demoMode !== DEFAULT_SETTINGS.demoMode;
+
+    setSettingsModified(isModified);
+  }, [language, notifications, location, strictMode, demoMode]);
 
   return (
     <div className="max-w-lg mx-auto space-y-6 animate-fade-in pb-20">
@@ -79,16 +101,17 @@ export const SettingsView: React.FC = () => {
                 </div>
                 <button
                     onClick={async () => {
-                        if (!hasCompletedOnboarding || !user) return;
+                        if (!settingsModified && !hasCompletedOnboarding) return;
+                        if (!user) return;
                         if (confirm('Are you sure you want to reset ALL Stanse settings? This will reset language to English, enable notifications and location, disable strict mode, enable demo mode, clear social media connections, and reset your stance. You will need to retake the questionnaire.')) {
                             setIsResetting(true);
                             try {
                                 // Reset all settings to defaults
-                                setLanguage(Language.EN);
-                                setNotifications(true);
-                                setLocation(true);
-                                setStrictMode(false);
-                                setDemoMode(true);
+                                setLanguage(DEFAULT_SETTINGS.language);
+                                setNotifications(DEFAULT_SETTINGS.notifications);
+                                setLocation(DEFAULT_SETTINGS.location);
+                                setStrictMode(DEFAULT_SETTINGS.strictMode);
+                                setDemoMode(DEFAULT_SETTINGS.demoMode);
 
                                 // Clear social media connections from Firebase
                                 await disconnectAllSocialMedia(user.uid);
@@ -105,9 +128,9 @@ export const SettingsView: React.FC = () => {
                             }
                         }
                     }}
-                    disabled={!hasCompletedOnboarding || isResetting}
+                    disabled={!settingsModified && !hasCompletedOnboarding || isResetting}
                     className={`px-4 py-2 font-mono text-xs border-2 border-black transition-all ${
-                        hasCompletedOnboarding && !isResetting
+                        (settingsModified || hasCompletedOnboarding) && !isResetting
                             ? 'bg-black text-white hover:bg-gray-800'
                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
