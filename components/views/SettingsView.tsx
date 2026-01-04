@@ -90,13 +90,13 @@ export const SettingsView: React.FC = () => {
                 onChange={() => setDemoMode(!demoMode)}
             />
 
-            {/* Reset Stance Button */}
+            {/* Reset All Settings Button */}
             <div className="flex items-center justify-between p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center gap-3">
                     <RotateCcw size={20} />
                     <div>
-                        <div className="font-bold font-mono text-lg">{t('fingerprint', 'reset_stance')}</div>
-                        <div className="font-mono text-xs text-gray-500">{t('fingerprint', 'reset_desc')}</div>
+                        <div className="font-bold font-mono text-lg">{t('settings', 'reset_all_settings')}</div>
+                        <div className="font-mono text-xs text-gray-500">{t('settings', 'reset_all_desc')}</div>
                     </div>
                 </div>
                 <button

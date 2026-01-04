@@ -124,14 +124,16 @@ const TRANSLATIONS = {
         explain_diplo_global: "International cooperation, multilateralism, free trade, global engagement",
         explain_diplo_nat: "National sovereignty, domestic priority, protectionism, independence",
         explain_close: "Click anywhere outside to close",
-        reset_stance: "RESET ALL STANSE SETTINGS",
-        reset_desc: "Reset all preferences and retake questionnaire"
+        reset_stance: "RESET STANCE",
+        reset_desc: "Retake questionnaire to recalibrate"
     },
     settings: {
         title: "SYSTEM PREFS",
         notifications: "PUSH NOTIFICATIONS",
         loc: "LOCATION SERVICES",
         strict: "STRICT MODE",
+        reset_all_settings: "RESET ALL STANSE SETTINGS",
+        reset_all_desc: "Reset all preferences and retake questionnaire",
         demo: "DEMO MODE",
         delete: "Delete Account & Wipe Local Data",
         sub_notif: "Alerts for campaign updates",
@@ -288,14 +290,16 @@ const TRANSLATIONS = {
         explain_diplo_global: "国际合作，多边主义，自由贸易，全球参与",
         explain_diplo_nat: "国家主权，国内优先，保护主义，独立性",
         explain_close: "点击外部任意位置关闭",
-        reset_stance: "重置所有 STANSE 设置",
-        reset_desc: "重置所有偏好并重新进行问卷"
+        reset_stance: "重置立场",
+        reset_desc: "重新进行问卷以校准立场"
     },
     settings: {
         title: "系统偏好",
         notifications: "推送通知",
         loc: "定位服务",
         strict: "严格模式",
+        reset_all_settings: "重置所有 STANSE 设置",
+        reset_all_desc: "重置所有偏好并重新进行问卷",
         demo: "演示模式",
         delete: "删除账户并清除本地数据",
         sub_notif: "战役更新提醒",
@@ -452,14 +456,16 @@ const TRANSLATIONS = {
         explain_diplo_global: "国際協力、多国間主義、自由貿易、グローバル関与",
         explain_diplo_nat: "国家主権、国内優先、保護主義、独立性",
         explain_close: "外側をクリックして閉じる",
-        reset_stance: "すべての STANSE 設定をリセット",
-        reset_desc: "すべての設定をリセットしてアンケートを再受験"
+        reset_stance: "スタンスをリセット",
+        reset_desc: "アンケートを再受験して再調整"
     },
     settings: {
         title: "システム設定",
         notifications: "プッシュ通知",
         loc: "位置情報サービス",
         strict: "厳格モード",
+        reset_all_settings: "すべての STANSE 設定をリセット",
+        reset_all_desc: "すべての設定をリセットしてアンケートを再受験",
         demo: "デモモード",
         delete: "アカウント削除とデータ消去",
         sub_notif: "キャンペーン更新のアラート",
@@ -616,14 +622,16 @@ const TRANSLATIONS = {
         explain_diplo_global: "Coopération internationale, multilatéralisme, libre-échange, engagement mondial",
         explain_diplo_nat: "Souveraineté nationale, priorité domestique, protectionnisme, indépendance",
         explain_close: "Cliquez n'importe où à l'extérieur pour fermer",
-        reset_stance: "RÉINITIALISER TOUS LES PARAMÈTRES STANSE",
-        reset_desc: "Réinitialiser toutes les préférences et reprendre le questionnaire"
+        reset_stance: "RÉINITIALISER LA POSITION",
+        reset_desc: "Reprendre le questionnaire pour recalibrer"
     },
     settings: {
         title: "PRÉFS SYSTÈME",
         notifications: "NOTIFICATIONS PUSH",
         loc: "SERVICES LOCALISATION",
         strict: "MODE STRICT",
+        reset_all_settings: "RÉINITIALISER TOUS LES PARAMÈTRES STANSE",
+        reset_all_desc: "Réinitialiser toutes les préférences et reprendre le questionnaire",
         demo: "MODE DÉMO",
         delete: "Supprimer Compte & Données",
         sub_notif: "Alertes mises à jour campagnes",
@@ -780,14 +788,16 @@ const TRANSLATIONS = {
         explain_diplo_global: "Cooperación internacional, multilateralismo, libre comercio, compromiso global",
         explain_diplo_nat: "Soberanía nacional, prioridad doméstica, proteccionismo, independencia",
         explain_close: "Haz clic en cualquier lugar fuera para cerrar",
-        reset_stance: "RESTABLECER TODA LA CONFIGURACIÓN DE STANSE",
-        reset_desc: "Restablecer todas las preferencias y volver a realizar el cuestionario"
+        reset_stance: "RESTABLECER POSTURA",
+        reset_desc: "Volver a realizar el cuestionario para recalibrar"
     },
     settings: {
         title: "PREFS SISTEMA",
         notifications: "NOTIFICACIONES PUSH",
         loc: "SERVICIOS UBICACIÓN",
         strict: "MODO ESTRICTO",
+        reset_all_settings: "RESTABLECER TODA LA CONFIGURACIÓN DE STANSE",
+        reset_all_desc: "Restablecer todas las preferencias y volver a realizar el cuestionario",
         demo: "MODO DEMO",
         delete: "Borrar Cuenta y Datos",
         sub_notif: "Alertas actualizaciones campañas",
