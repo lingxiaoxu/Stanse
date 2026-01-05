@@ -301,7 +301,7 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
         {/* Navigation */}
         <div className="flex items-center justify-between border-t-2 border-gray-200 pt-3">
           <div className="font-mono text-xs text-gray-500">
-            {currentStep + 1}/{steps.length}
+            Step {currentStep + 1} of {steps.length}
           </div>
 
           <div className="flex gap-2">

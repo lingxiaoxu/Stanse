@@ -28,7 +28,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'feed-tab',
       target: 'feed-tab',
       title: 'Feed Tab',
-      description: 'Personalized news for your political stance.',
+      description: 'Personalized news curated for your political stance. See what matters to your values.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -52,7 +52,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'news-feed',
       target: 'news-feed',
       title: 'The Feed',
-      description: 'AI-curated news articles based on your political stance.',
+      description: 'Personalized news curated by AI based on your political stance. Stay informed about what matter to you.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -60,7 +60,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'Sense Tab',
-      description: 'Scan brands to check alignment with your values.',
+      description: 'Scan any brand, company, entity or individual to check their alignment with your political values. Make informed decisions.',
       position: 'top',
       requiredTab: 'SENSE'
     },
@@ -68,7 +68,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'stance-tab',
       target: 'stance-tab',
       title: 'Stance Tab',
-      description: 'Your political fingerprint and AI-generated persona.',
+      description: 'Your political fingerprint. View your stances on economic, social, and diplomatic axes, plus your persona.',
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
@@ -100,7 +100,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'menu',
       target: 'menu-button',
       title: 'Menu',
-      description: 'Settings, social media, manifesto, and account.',
+      description: 'Access settings, connect social media accounts, view our manifesto, and manage your account.',
       position: 'left'
     },
     {
@@ -125,7 +125,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'feed-tab',
       target: 'feed-tab',
       title: '动态标签',
-      description: '根据政治立场推荐新闻。',
+      description: '根据政治立场推荐新闻。查看对您价值观重要的内容。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -149,7 +149,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'news-feed',
       target: 'news-feed',
       title: '新闻动态',
-      description: 'AI 策划的个性化新闻文章。',
+      description: 'AI 策划的个性化新闻。了解对您重要的内容。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -157,7 +157,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'sense-tab',
       target: 'sense-tab',
       title: '感知标签',
-      description: '扫描品牌检查价值观一致性。',
+      description: '扫描品牌、公司、实体或个人检查价值观一致性。做出明智决策。',
       position: 'top',
       requiredTab: 'SENSE'
     },
@@ -165,7 +165,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'stance-tab',
       target: 'stance-tab',
       title: '立场标签',
-      description: '政治指纹和 AI 人格标签。',
+      description: '您的政治指纹。查看经济、社会、外交立场和人格。',
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
@@ -197,7 +197,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'menu',
       target: 'menu-button',
       title: '菜单',
-      description: '设置、社交媒体、宣言和账户。',
+      description: '访问设置、连接社交媒体、查看宣言和管理账户。',
       position: 'left'
     },
     {
@@ -222,7 +222,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'feed-tab',
       target: 'feed-tab',
       title: 'フィードタブ',
-      description: '政治的立場に合わせたニュース。',
+      description: '政治的立場に合わせたニュース。価値観に重要な内容を見る。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -246,7 +246,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'news-feed',
       target: 'news-feed',
       title: 'ニュースフィード',
-      description: 'AI キュレーションのニュース記事。',
+      description: 'AI がキュレーションしたパーソナライズされたニュース。重要な情報を得る。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -254,7 +254,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'センスタブ',
-      description: 'ブランドの価値観整合性スキャン。',
+      description: 'ブランド、企業、個人の価値観整合性をスキャン。情報に基づいた決定を。',
       position: 'top',
       requiredTab: 'SENSE'
     },
@@ -262,7 +262,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'stance-tab',
       target: 'stance-tab',
       title: 'スタンスタブ',
-      description: '政治的指紋と AI ペルソナ。',
+      description: 'あなたの政治的指紋。経済、社会、外交の立場とペルソナを表示。',
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
@@ -294,7 +294,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'menu',
       target: 'menu-button',
       title: 'メニュー',
-      description: '設定、SNS、マニフェスト、アカウント。',
+      description: '設定へアクセス、SNS 接続、マニフェスト閲覧、アカウント管理。',
       position: 'left'
     },
     {
@@ -319,7 +319,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'feed-tab',
       target: 'feed-tab',
       title: 'Onglet Flux',
-      description: 'Actualités personnalisées selon position.',
+      description: 'Actualités personnalisées selon position. Voyez ce qui compte pour vos valeurs.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -343,7 +343,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'news-feed',
       target: 'news-feed',
       title: 'Le Flux d\'Actualités',
-      description: 'Articles IA selon position politique.',
+      description: 'Articles personnalisés par IA selon position. Restez informé sur ce qui compte.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -351,7 +351,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'Onglet Sense',
-      description: 'Scanner alignement des marques.',
+      description: 'Scanner marques, entreprises, entités ou individus pour vérifier alignement. Décisions éclairées.',
       position: 'top',
       requiredTab: 'SENSE'
     },
@@ -359,7 +359,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'stance-tab',
       target: 'stance-tab',
       title: 'Onglet Position',
-      description: 'Empreinte politique et persona IA.',
+      description: 'Votre empreinte politique. Voyez positions économique, sociale, diplomatique et persona.',
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
@@ -391,7 +391,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'menu',
       target: 'menu-button',
       title: 'Menu',
-      description: 'Paramètres, réseaux, manifeste, compte.',
+      description: 'Accéder paramètres, connecter réseaux sociaux, voir manifeste, gérer compte.',
       position: 'left'
     },
     {
@@ -416,7 +416,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'feed-tab',
       target: 'feed-tab',
       title: 'Pestaña Feed',
-      description: 'Noticias personalizadas según postura.',
+      description: 'Noticias personalizadas según postura. Vea lo que importa a sus valores.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -440,7 +440,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'news-feed',
       target: 'news-feed',
       title: 'El Feed de Noticias',
-      description: 'Artículos IA según postura política.',
+      description: 'Artículos personalizados por IA según postura. Manténgase informado sobre lo que importa.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -448,7 +448,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'Pestaña Sense',
-      description: 'Escanear alineación de marcas.',
+      description: 'Escanear marcas, empresas, entidades o individuos para verificar alineación. Decisiones informadas.',
       position: 'top',
       requiredTab: 'SENSE'
     },
@@ -456,7 +456,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'stance-tab',
       target: 'stance-tab',
       title: 'Pestaña Postura',
-      description: 'Huella política y persona IA.',
+      description: 'Su huella política. Vea posturas económica, social, diplomática y persona.',
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
@@ -488,7 +488,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'menu',
       target: 'menu-button',
       title: 'Menú',
-      description: 'Configuración, redes, manifiesto, cuenta.',
+      description: 'Acceder configuración, conectar redes sociales, ver manifiesto, gestionar cuenta.',
       position: 'left'
     },
     {
