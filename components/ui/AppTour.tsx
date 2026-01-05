@@ -45,6 +45,8 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
         targetElement = document.querySelector(step.target);
       }
 
+      console.log(`[Tour] Step ${currentStep}: target="${step.target}", element found:`, !!targetElement);
+
       if (targetElement) {
         // Scroll element into view smoothly
         targetElement.scrollIntoView({
@@ -56,10 +58,12 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
         // Wait for scroll animation, then update rect
         setTimeout(() => {
           const rect = targetElement!.getBoundingClientRect();
+          console.log(`[Tour] Setting highlightRect:`, rect);
           setHighlightRect(rect);
         }, 400); // 400ms for smooth scroll to complete
       } else {
         // If target not found, use center of screen (no highlight)
+        console.warn(`[Tour] Target not found: ${step.target}`);
         setHighlightRect(null);
       }
     };
