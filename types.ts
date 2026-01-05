@@ -23,7 +23,10 @@ export interface PoliticalCoordinates {
   economic: number; // -100 (Socialism) to 100 (Free Market)
   social: number; // -100 (Authoritarian) to 100 (Libertarian)
   diplomatic: number; // -100 (Nationalist) to 100 (Internationalist)
-  label: string; // AI Generated Persona
+  label: string; // AI Generated Persona (display label, e.g., "Indian-American Statist Nationalist")
+  coreStanceType?: string; // Canonical stanceType for rankings (e.g., "socialist-nationalist")
+  displayLabel?: string; // Alias for label (for clarity in future refactors)
+  nationalityPrefix?: string; // Extracted nationality (e.g., "Indian-American", "Chinese-American")
 }
 
 export interface GroundingSource {
