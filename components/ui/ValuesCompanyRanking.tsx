@@ -78,7 +78,7 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
 
         {/* Onboarding Required State */}
         <PixelCard className="p-4 text-center">
-          <div className="font-pixel text-sm uppercase">
+          <div className="font-pixel text-sm animate-pulse uppercase">
             {t('feed', 'onboarding_required_rankings')}
           </div>
         </PixelCard>
