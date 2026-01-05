@@ -521,8 +521,8 @@ const ONBOARDING_STEPS_NEW_USER: Record<Language, TourStep> = {
   [Language.EN]: {
     id: 'onboarding',
     target: 'onboarding-modal',
-    title: 'Complete Your Calibration',
-    description: 'This questionnaire calibrates your political stance. Complete it to unlock personalized features.',
+    title: 'Questionnaire for Calibration',
+    description: 'Calibrate your political stance and unlock AI-personalized features.',
     position: 'bottom',
     requiredTab: 'FINGERPRINT'
   },
