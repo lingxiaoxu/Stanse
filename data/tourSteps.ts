@@ -33,14 +33,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
     },
     {
       id: 'market-stocks',
-      target: '[data-tour-id="market-stocks"]',
+      target: 'market-stocks',
       title: 'Market Alignment',
       description: 'Real-time stock prices for companies that align with (or oppose) your political values. Track how markets reflect your ideology.',
       position: 'top'
     },
     {
       id: 'company-rankings',
-      target: '[data-tour-id="company-rankings"]',
+      target: 'company-rankings',
       title: 'Values-Based Rankings',
       description: 'Top companies to support or oppose based on FEC donations, ESG scores, executive statements, and news analysis.',
       position: 'top'
@@ -61,7 +61,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
     },
     {
       id: 'coordinates',
-      target: '[data-tour-id="coordinates-chart"]',
+      target: 'coordinates-chart',
       title: 'Political Coordinates',
       description: 'Your position on 3 axes: Economic (left/right), Social (libertarian/authoritarian), Diplomatic (globalist/nationalist).',
       position: 'top'
@@ -107,14 +107,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
     },
     {
       id: 'market-stocks',
-      target: '[data-tour-id="market-stocks"]',
+      target: 'market-stocks',
       title: '市场对齐',
       description: '与您政治价值观一致（或相反）的公司的实时股价。追踪市场如何反映您的意识形态。',
       position: 'top'
     },
     {
       id: 'company-rankings',
-      target: '[data-tour-id="company-rankings"]',
+      target: 'company-rankings',
       title: '基于价值观的排名',
       description: '基于 FEC 捐款、ESG 评分、高管声明和新闻分析的支持或反对公司排名。',
       position: 'top'
@@ -135,7 +135,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
     },
     {
       id: 'coordinates',
-      target: '[data-tour-id="coordinates-chart"]',
+      target: 'coordinates-chart',
       title: '政治坐标',
       description: '您在 3 个轴上的位置：经济（左/右）、社会（自由/威权）、外交（全球/民族）。',
       position: 'top'
