@@ -431,7 +431,7 @@ export const FeedView: React.FC = () => {
       {/* Not onboarded message */}
       {!hasCompletedOnboarding && (
         <PixelCard className="text-center py-8">
-          <p className="font-mono text-xs text-gray-400 uppercase tracking-wider">{t('feed', 'onboarding_required_news')}</p>
+          <p className="font-pixel text-sm animate-pulse uppercase">{t('feed', 'onboarding_required_news')}</p>
         </PixelCard>
       )}
 
@@ -454,7 +454,7 @@ export const FeedView: React.FC = () => {
       )}
 
       {/* Feed List Container with Local Relative Positioning for Timeline */}
-      {feedNews.length > 0 && (
+      {hasCompletedOnboarding && feedNews.length > 0 && (
         <div className="relative pl-6">
           {/* Timeline Line */}
           <div className="absolute left-[3px] top-2 bottom-6 w-0.5 bg-pixel-black opacity-20 z-0"></div>
