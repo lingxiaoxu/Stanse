@@ -155,9 +155,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   return (
     <div
       className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${!isTourActive ? 'bg-black/70' : ''}`}
-      data-tour-id="onboarding-modal"
     >
-      <PixelCard className="w-full max-w-md bg-pixel-white p-6 max-h-[90vh] overflow-y-auto">
+      <PixelCard
+        className="w-full max-w-md bg-pixel-white p-6 max-h-[90vh] overflow-y-auto"
+        data-tour-id="onboarding-modal"
+      >
         {/* Header */}
         <div className="flex justify-between items-center mb-6 border-b-2 border-black pb-4">
           <div>
