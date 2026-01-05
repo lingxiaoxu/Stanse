@@ -29,49 +29,56 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       target: 'feed-tab',
       title: 'Feed Tab',
       description: 'Personalized news curated for your political stance. See what matters to you based on your values.',
-      position: 'top'
+      position: 'top',
+      requiredTab: 'FEED'
     },
     {
       id: 'market-stocks',
       target: 'market-stocks',
       title: 'Market Alignment',
       description: 'Real-time stock prices for companies that align with (or oppose) your political values. Track how markets reflect your ideology.',
-      position: 'top'
+      position: 'top',
+      requiredTab: 'FEED'
     },
     {
       id: 'company-rankings',
       target: 'company-rankings',
       title: 'Values-Based Rankings',
       description: 'Top companies to support or oppose based on FEC donations, ESG scores, executive statements, and news analysis.',
-      position: 'top'
+      position: 'top',
+      requiredTab: 'FEED'
     },
     {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'Sense Tab',
       description: 'Scan any brand or company to check their alignment with your political values. Make informed purchasing decisions.',
-      position: 'top'
+      position: 'top',
+      requiredTab: 'SENSE'
     },
     {
       id: 'stance-tab',
       target: 'stance-tab',
       title: 'Stance Tab',
       description: 'Your political fingerprint. View your coordinates on economic, social, and diplomatic axes, plus your AI-generated persona.',
-      position: 'top'
+      position: 'top',
+      requiredTab: 'FINGERPRINT'
     },
     {
       id: 'coordinates',
       target: 'coordinates-chart',
       title: 'Political Coordinates',
       description: 'Your position on 3 axes: Economic (left/right), Social (libertarian/authoritarian), Diplomatic (globalist/nationalist).',
-      position: 'top'
+      position: 'top',
+      requiredTab: 'FINGERPRINT'
     },
     {
       id: 'union-tab',
       target: 'union-tab',
       title: 'Union Tab',
       description: 'Track your collective political impact through Polis Protocol blockchain. See real-time union strength and capital diverted.',
-      position: 'top'
+      position: 'top',
+      requiredTab: 'UNION'
     },
     {
       id: 'menu',

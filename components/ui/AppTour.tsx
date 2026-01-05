@@ -8,6 +8,7 @@ export interface TourStep {
   title: string;
   description: string;
   position?: 'top' | 'bottom' | 'left' | 'right' | 'center';
+  requiredTab?: string; // ViewState to switch to (e.g., 'FEED', 'STANCE')
 }
 
 interface AppTourProps {
@@ -15,9 +16,10 @@ interface AppTourProps {
   isOpen: boolean;
   onComplete: () => void;
   onSkip: () => void;
+  onSwitchTab?: (tab: string) => void;
 }
 
-export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onSkip }) => {
+export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onSkip, onSwitchTab }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
   const { t } = useLanguage();
@@ -25,10 +27,15 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
   useEffect(() => {
     if (!isOpen || steps.length === 0) return;
 
-    const updateHighlight = () => {
-      const step = steps[currentStep];
-      if (!step) return;
+    const step = steps[currentStep];
+    if (!step) return;
 
+    // Switch tab if required
+    if (step.requiredTab && onSwitchTab) {
+      onSwitchTab(step.requiredTab);
+    }
+
+    const updateHighlight = () => {
       // Try to find element by data-tour-id first, then by selector
       let targetElement = document.querySelector(`[data-tour-id="${step.target}"]`);
       if (!targetElement) {
@@ -36,29 +43,38 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
       }
 
       if (targetElement) {
-        const rect = targetElement.getBoundingClientRect();
-        setHighlightRect(rect);
+        // Scroll element into view smoothly
+        targetElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'center'
+        });
+
+        // Wait for scroll animation, then update rect
+        setTimeout(() => {
+          const rect = targetElement!.getBoundingClientRect();
+          setHighlightRect(rect);
+        }, 400); // 400ms for smooth scroll to complete
       } else {
-        // If target not found, use center of screen
+        // If target not found, use center of screen (no highlight)
         setHighlightRect(null);
       }
     };
 
-    updateHighlight();
+    // Delay to allow tab switch to complete
+    const initialDelay = step.requiredTab ? 600 : 200;
+    const timeout = setTimeout(updateHighlight, initialDelay);
 
     // Update on resize/scroll
     window.addEventListener('resize', updateHighlight);
     window.addEventListener('scroll', updateHighlight);
-
-    // Small delay to ensure DOM is ready
-    const timeout = setTimeout(updateHighlight, 100);
 
     return () => {
       window.removeEventListener('resize', updateHighlight);
       window.removeEventListener('scroll', updateHighlight);
       clearTimeout(timeout);
     };
-  }, [currentStep, steps, isOpen]);
+  }, [currentStep, steps, isOpen, onSwitchTab]);
 
   if (!isOpen || steps.length === 0) return null;
 
@@ -98,14 +114,26 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
           left = highlightRect.left + (highlightRect.width / 2) - (tooltipWidth / 2);
           break;
         case 'top':
-          // Position above the element
-          top = Math.max(highlightRect.top - tooltipHeight - padding, 20);
-          left = highlightRect.left + (highlightRect.width / 2) - (tooltipWidth / 2);
+          // Check if element is in bottom navigation (bottom 20% of screen)
+          const isBottomNav = highlightRect.bottom > window.innerHeight * 0.8;
 
-          // If not enough space on top, position to the side instead
-          if (top < 20) {
-            top = highlightRect.top;
-            left = highlightRect.right + padding;
+          if (isBottomNav) {
+            // For bottom nav, position tooltip much higher to avoid overlap
+            top = Math.min(
+              window.innerHeight * 0.35,  // Position at 35% from top (upper-middle area)
+              highlightRect.top - tooltipHeight - 80  // Or 80px above if space allows
+            );
+            left = highlightRect.left + (highlightRect.width / 2) - (tooltipWidth / 2);
+          } else {
+            // Regular positioning for other elements
+            top = Math.max(highlightRect.top - tooltipHeight - padding, 20);
+            left = highlightRect.left + (highlightRect.width / 2) - (tooltipWidth / 2);
+
+            // If not enough space on top, position to the side instead
+            if (top < 20) {
+              top = highlightRect.top;
+              left = highlightRect.right + padding;
+            }
           }
           break;
         case 'right':
