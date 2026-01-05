@@ -221,48 +221,58 @@ export const connectSocialMedia = async (
   handle: string,
   additionalData?: Partial<SocialMediaConnection>
 ): Promise<string> => {
-  // Document ID is userId_platform (ensures one doc per user per platform)
-  const docId = `${userId}_${platform}`;
-  const connectionRef = doc(db, 'socialConnections', docId);
+  try {
+    // Document ID is userId_platform (ensures one doc per user per platform)
+    const docId = `${userId}_${platform}`;
+    const connectionRef = doc(db, 'socialConnections', docId);
 
-  // Get existing connection (if any)
-  const existingSnap = await getDoc(connectionRef);
-  const isFirstConnection = !existingSnap.exists();
-  const now = new Date().toISOString();
+    // Get existing connection (if any)
+    const existingSnap = await getDoc(connectionRef);
+    const isFirstConnection = !existingSnap.exists();
+    const now = new Date().toISOString();
 
-  // Build connection data, only including defined values
-  const connectionData: Record<string, any> = {
-    userId,
-    platform,
-    handle: handle.replace('@', ''), // Remove @ prefix if present
-    verified: additionalData?.verified || false,
-    connectedAt: existingSnap.data()?.connectedAt || now, // Preserve original connection time
-    isActive: true,
-    updatedAt: now
-  };
+    // Build connection data, only including defined values
+    const connectionData: Record<string, any> = {
+      userId,
+      platform,
+      handle: handle.replace('@', ''), // Remove @ prefix if present
+      verified: additionalData?.verified || false,
+      connectedAt: existingSnap.data()?.connectedAt || now, // Preserve original connection time
+      isActive: true,
+      updatedAt: now
+    };
 
-  // Only add optional fields if they have values
-  if (additionalData?.displayName) connectionData.displayName = additionalData.displayName;
-  if (additionalData?.profileUrl) connectionData.profileUrl = additionalData.profileUrl;
-  if (additionalData?.followerCount !== undefined) connectionData.followerCount = additionalData.followerCount;
-  if (additionalData?.accessToken) connectionData.accessToken = additionalData.accessToken;
-  if (additionalData?.refreshToken) connectionData.refreshToken = additionalData.refreshToken;
-  if (additionalData?.tokenExpiresAt) connectionData.tokenExpiresAt = additionalData.tokenExpiresAt;
-  if (additionalData?.apiUserId) connectionData.apiUserId = additionalData.apiUserId;
-  if (additionalData?.lastSyncedAt) connectionData.lastSyncedAt = additionalData.lastSyncedAt;
+    // Only add optional fields if they have values
+    if (additionalData?.displayName) connectionData.displayName = additionalData.displayName;
+    if (additionalData?.profileUrl) connectionData.profileUrl = additionalData.profileUrl;
+    if (additionalData?.followerCount !== undefined) connectionData.followerCount = additionalData.followerCount;
+    if (additionalData?.accessToken) connectionData.accessToken = additionalData.accessToken;
+    if (additionalData?.refreshToken) connectionData.refreshToken = additionalData.refreshToken;
+    if (additionalData?.tokenExpiresAt) connectionData.tokenExpiresAt = additionalData.tokenExpiresAt;
+    if (additionalData?.apiUserId) connectionData.apiUserId = additionalData.apiUserId;
+    if (additionalData?.lastSyncedAt) connectionData.lastSyncedAt = additionalData.lastSyncedAt;
 
-  // Save main document (upsert)
-  await setDoc(connectionRef, connectionData, { merge: true });
+    // Save main document (upsert)
+    await setDoc(connectionRef, connectionData, { merge: true });
 
-  // Add history entry
-  const historyRef = collection(db, 'socialConnections', docId, 'history');
-  await addDoc(historyRef, {
-    ...connectionData,
-    action: isFirstConnection ? 'connected' : 'updated',
-    timestamp: now
-  });
+    // Add history entry (best effort)
+    try {
+      const historyRef = collection(db, 'socialConnections', docId, 'history');
+      await addDoc(historyRef, {
+        ...connectionData,
+        action: isFirstConnection ? 'connected' : 'updated',
+        timestamp: now
+      });
+    } catch (historyError) {
+      console.warn(`Failed to add history entry for connection:`, historyError);
+      // Continue - main connection succeeded
+    }
 
-  return docId;
+    return docId;
+  } catch (error) {
+    console.error(`Failed to connect ${platform} for user ${userId}:`, error);
+    throw error; // Re-throw for UI to show error
+  }
 };
 
 /**
@@ -275,22 +285,27 @@ export const getSocialMediaConnection = async (
   userId: string,
   platform: SocialPlatform
 ): Promise<SocialMediaConnection | null> => {
-  const docId = `${userId}_${platform}`;
-  const connectionRef = doc(db, 'socialConnections', docId);
-  const docSnap = await getDoc(connectionRef);
+  try {
+    const docId = `${userId}_${platform}`;
+    const connectionRef = doc(db, 'socialConnections', docId);
+    const docSnap = await getDoc(connectionRef);
 
-  if (!docSnap.exists()) {
-    return null;
+    if (!docSnap.exists()) {
+      return null;
+    }
+
+    const data = docSnap.data();
+
+    // Only return if active
+    if (!data.isActive) {
+      return null;
+    }
+
+    return { id: docSnap.id, ...data } as SocialMediaConnection;
+  } catch (error) {
+    console.error(`Error getting ${platform} connection for user ${userId}:`, error);
+    return null; // Return null on error (graceful degradation)
   }
-
-  const data = docSnap.data();
-
-  // Only return if active
-  if (!data.isActive) {
-    return null;
-  }
-
-  return { id: docSnap.id, ...data } as SocialMediaConnection;
 };
 
 /**
@@ -336,28 +351,38 @@ export const disconnectSocialMedia = async (
   userId: string,
   platform: SocialPlatform
 ): Promise<void> => {
-  const docId = `${userId}_${platform}`;
-  const connectionRef = doc(db, 'socialConnections', docId);
-  const docSnap = await getDoc(connectionRef);
+  try {
+    const docId = `${userId}_${platform}`;
+    const connectionRef = doc(db, 'socialConnections', docId);
+    const docSnap = await getDoc(connectionRef);
 
-  if (!docSnap.exists()) return;
+    if (!docSnap.exists()) return;
 
-  const now = new Date().toISOString();
+    const now = new Date().toISOString();
 
-  // Update main document
-  await updateDoc(connectionRef, {
-    isActive: false,
-    updatedAt: now
-  });
+    // Update main document
+    await updateDoc(connectionRef, {
+      isActive: false,
+      updatedAt: now
+    });
 
-  // Add history entry
-  const historyRef = collection(db, 'socialConnections', docId, 'history');
-  await addDoc(historyRef, {
-    ...docSnap.data(),
-    action: 'disconnected',
-    isActive: false,
-    timestamp: now
-  });
+    // Add history entry (best effort - don't fail if history write fails)
+    try {
+      const historyRef = collection(db, 'socialConnections', docId, 'history');
+      await addDoc(historyRef, {
+        ...docSnap.data(),
+        action: 'disconnected',
+        isActive: false,
+        timestamp: now
+      });
+    } catch (historyError) {
+      console.warn(`Failed to add history entry for ${platform}:`, historyError);
+      // Continue - main disconnect succeeded
+    }
+  } catch (error) {
+    console.error(`Failed to disconnect ${platform} for user ${userId}:`, error);
+    throw error; // Re-throw for caller to handle
+  }
 };
 
 /**
@@ -437,30 +462,40 @@ export const updateSocialMediaConnection = async (
   platform: SocialPlatform,
   updates: Partial<SocialMediaConnection>
 ): Promise<void> => {
-  const docId = `${userId}_${platform}`;
-  const connectionRef = doc(db, 'socialConnections', docId);
-  const docSnap = await getDoc(connectionRef);
+  try {
+    const docId = `${userId}_${platform}`;
+    const connectionRef = doc(db, 'socialConnections', docId);
+    const docSnap = await getDoc(connectionRef);
 
-  if (!docSnap.exists()) {
-    throw new Error(`Social media connection not found: ${userId}_${platform}`);
+    if (!docSnap.exists()) {
+      throw new Error(`Social media connection not found: ${userId}_${platform}`);
+    }
+
+    const now = new Date().toISOString();
+
+    // Update main document
+    await updateDoc(connectionRef, {
+      ...updates,
+      updatedAt: now
+    });
+
+    // Add history entry (best effort)
+    try {
+      const historyRef = collection(db, 'socialConnections', docId, 'history');
+      await addDoc(historyRef, {
+        ...docSnap.data(),
+        ...updates,
+        action: 'metadata_updated',
+        timestamp: now
+      });
+    } catch (historyError) {
+      console.warn(`Failed to add history entry for metadata update:`, historyError);
+      // Continue - main update succeeded
+    }
+  } catch (error) {
+    console.error(`Failed to update ${platform} connection for user ${userId}:`, error);
+    throw error; // Re-throw for caller
   }
-
-  const now = new Date().toISOString();
-
-  // Update main document
-  await updateDoc(connectionRef, {
-    ...updates,
-    updatedAt: now
-  });
-
-  // Add history entry
-  const historyRef = collection(db, 'socialConnections', docId, 'history');
-  await addDoc(historyRef, {
-    ...docSnap.data(),
-    ...updates,
-    action: 'metadata_updated',
-    timestamp: now
-  });
 };
 
 /**
