@@ -80,7 +80,8 @@ documentation/
 
 ### 🔗 Firebase & Social Media Integration
 
-41. [41_social_media_firebase_schema.md](backend/41_social_media_firebase_schema.md) - **NEW** - Social media connections Firebase schema, OAuth integration, and Twitter/X API preparation
+41. [41_social_media_firebase_schema.md](backend/41_social_media_firebase_schema.md) - Social media connections Firebase schema, OAuth integration, and Twitter/X API preparation
+42. [42_dual_stance_system_and_persona_expansion.md](backend/42_dual_stance_system_and_persona_expansion.md) - **NEW** - Dual stanceType system, expanded persona classification (8→32→64 types), nationality preservation
 
 ---
 
@@ -194,7 +195,8 @@ documentation/
 - [FEC Data Enhancement Plan](backend/26_fec_data_enhancement_plan.md) 🔮 **ROADMAP**
 
 ### Firebase & Database Schemas
-- [Social Media Firebase Schema](backend/41_social_media_firebase_schema.md) ⭐ **NEW** - Social media connections, OAuth, Twitter/X API
+- [Social Media Firebase Schema](backend/41_social_media_firebase_schema.md) - Social media connections, OAuth, Twitter/X API
+- [Dual StanceType System](backend/42_dual_stance_system_and_persona_expansion.md) ⭐ **NEW** - AI labels + canonical types, nationality preservation
 
 ---
 

@@ -65,15 +65,67 @@ const STANCE_TYPE_LABELS: Record<StanceType, string> = {
 /**
  * Extract nationality prefix from current label
  * e.g., "Chinese American Progressive Globalist" → "Chinese American"
+ * e.g., "Indian-American Statist Nationalist" → "Indian-American"
+ *
+ * This function extracts cultural/national origin from persona labels,
+ * preserving them when updating to canonical stanceTypes.
  */
 function extractNationalityPrefix(currentLabel: string): string {
-  // Remove known stance types from the label
+  if (!currentLabel) return '';
+
+  // First, try to match known stance types
   for (const stanceLabel of Object.values(STANCE_TYPE_LABELS)) {
     if (currentLabel.endsWith(stanceLabel)) {
       return currentLabel.substring(0, currentLabel.length - stanceLabel.length).trim();
     }
   }
-  // If no known stance type found, return empty (user has simple label)
+
+  // If no match, try to extract prefix from AI-generated labels
+  // Common patterns:
+  // "Indian-American Statist Nationalist" → "Indian-American"
+  // "Chinese American Populist Conservative" → "Chinese American"
+
+  // Split label into words
+  const words = currentLabel.split(/\s+/);
+
+  // Common political terms that indicate the start of persona type (not nationality)
+  const personaKeywords = [
+    'Socialist', 'Statist', 'Capitalist', 'Libertarian', 'Conservative',
+    'Progressive', 'Liberal', 'Authoritarian', 'Populist', 'Nationalist',
+    'Globalist', 'Internationalist', 'Isolationist', 'Centrist', 'Moderate',
+    'Democrat', 'Republican', 'Anarchist', 'Fascist', 'Communist',
+    'Neoconservative', 'Paleoconservative', 'Neoliberal', 'Social', 'Political'
+  ];
+
+  // Find where persona type starts
+  let prefixEndIndex = -1;
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    // Check if this word is a persona keyword
+    if (personaKeywords.some(keyword => word.includes(keyword))) {
+      prefixEndIndex = i;
+      break;
+    }
+  }
+
+  // If found persona keyword, everything before it is nationality
+  if (prefixEndIndex > 0) {
+    return words.slice(0, prefixEndIndex).join(' ');
+  }
+
+  // Fallback: if label has more than 2 words, assume first 1-2 words are nationality
+  // e.g., "American Socialist" → "American"
+  // e.g., "Chinese American Socialist" → "Chinese American"
+  if (words.length >= 3) {
+    // Check if second word is "American" or "Canadian" etc (compound nationality)
+    if (words[1].match(/American|Canadian|Australian|European|African|Asian/i)) {
+      return words.slice(0, 2).join(' ');
+    }
+    // Otherwise just take first word
+    return words[0];
+  }
+
+  // No nationality prefix found
   return '';
 }
 
