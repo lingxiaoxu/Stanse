@@ -253,7 +253,8 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
               width: `${highlightRect.width + 16}px`,
               height: `${highlightRect.height + 16}px`,
               boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.3), 0 0 30px rgba(59, 130, 246, 0.4)',
-              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              zIndex: 10501  // Above onboarding modal (10500) to show highlight border
             }}
           />
         )}
