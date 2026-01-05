@@ -400,7 +400,7 @@ export const FeedView: React.FC = () => {
       </div>
 
       {/* SECTION 2: THE FEED */}
-      <div className="text-center mb-10">
+      <div className="text-center mb-10" data-tour-id="news-feed">
         <div className="flex items-center justify-center gap-4">
           <h2 className="font-pixel text-5xl">{t('feed', 'title')}</h2>
           {hasCompletedOnboarding && (
