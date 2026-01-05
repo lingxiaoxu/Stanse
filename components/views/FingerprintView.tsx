@@ -77,15 +77,34 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords, isTour
         setPersonaProgress(prev => Math.min(prev + 5, 90));
       }, 500);
 
-      // Add timeout for the API call (30 seconds)
+      // Start calibration (let it run to completion)
+      const calibrationPromise = completeOnboarding(answers, language);
+
+      // Add timeout for user feedback (60 seconds - Gemini can be slow)
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Calibration timeout')), 30000)
+        setTimeout(() => reject(new Error('Calibration timeout')), 60000)
       );
 
-      const newCoords = await Promise.race([
-        completeOnboarding(answers, language),
-        timeoutPromise
-      ]);
+      let newCoords: PoliticalCoordinates;
+      try {
+        // Try to get result within timeout
+        newCoords = await Promise.race([
+          calibrationPromise,
+          timeoutPromise
+        ]);
+      } catch (timeoutError) {
+        // Timeout occurred, but let calibration continue in background
+        console.log('⏱️ Calibration timeout, continuing in background...');
+        clearInterval(progressInterval);
+        setPersonaProgress(95);
+
+        // Show timeout message but keep trying
+        alert('Calibration is taking longer than expected. Please wait, we are still processing...');
+
+        // Wait for actual calibration to complete (no timeout this time)
+        newCoords = await calibrationPromise;
+        console.log('✅ Background calibration completed successfully!');
+      }
 
       clearInterval(progressInterval);
 
@@ -97,16 +116,18 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords, isTour
 
       setPersonaProgress(100);
 
+      // Update all frontend state
       setLocalCoords(newCoords);
       setPersona(newCoords.label);
       setIsAnimating(false);
       setPersonaLoading(false);
-      // Set final coords
       setDisplayCoords({
         economic: newCoords.economic,
         social: newCoords.social,
         diplomatic: newCoords.diplomatic
       });
+
+      console.log('✅ Frontend state updated with calibration results');
     } catch (error: any) {
       if (abortController.signal.aborted) {
         console.log('Persona calculation was aborted during error');
