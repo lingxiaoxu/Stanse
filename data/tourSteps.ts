@@ -523,7 +523,7 @@ const ONBOARDING_STEPS_NEW_USER: Record<Language, TourStep> = {
     target: 'onboarding-modal',
     title: 'Complete Your Calibration',
     description: 'This questionnaire calibrates your political stance. Complete it to unlock personalized features.',
-    position: 'center',
+    position: 'bottom',
     requiredTab: 'FINGERPRINT'
   },
   [Language.ZH]: {
@@ -531,7 +531,7 @@ const ONBOARDING_STEPS_NEW_USER: Record<Language, TourStep> = {
     target: 'onboarding-modal',
     title: '完成立场校准',
     description: '此问卷用于校准您的政治立场。完成后可解锁个性化功能。',
-    position: 'center',
+    position: 'bottom',
     requiredTab: 'FINGERPRINT'
   },
   [Language.JA]: {
@@ -539,7 +539,7 @@ const ONBOARDING_STEPS_NEW_USER: Record<Language, TourStep> = {
     target: 'onboarding-modal',
     title: 'キャリブレーションを完了',
     description: 'このアンケートは政治的立場を較正します。完了すると個別機能がロック解除されます。',
-    position: 'center',
+    position: 'bottom',
     requiredTab: 'FINGERPRINT'
   },
   [Language.FR]: {
@@ -547,7 +547,7 @@ const ONBOARDING_STEPS_NEW_USER: Record<Language, TourStep> = {
     target: 'onboarding-modal',
     title: 'Complétez Votre Calibrage',
     description: 'Ce questionnaire calibre votre position politique. Complétez-le pour débloquer les fonctionnalités personnalisées.',
-    position: 'center',
+    position: 'bottom',
     requiredTab: 'FINGERPRINT'
   },
   [Language.ES]: {
@@ -555,7 +555,7 @@ const ONBOARDING_STEPS_NEW_USER: Record<Language, TourStep> = {
     target: 'onboarding-modal',
     title: 'Complete Su Calibración',
     description: 'Este cuestionario calibra su postura política. Complételo para desbloquear funciones personalizadas.',
-    position: 'center',
+    position: 'bottom',
     requiredTab: 'FINGERPRINT'
   }
 };
