@@ -573,9 +573,27 @@ export interface EntityStance {
 }
 
 /**
+ * Get canonical entity name using AI
+ * Converts variations like "Huawei Technologies" → "huawei"
+ */
+const getCanonicalEntityName = async (entityName: string): Promise<string> => {
+  try {
+    // Import getCanonicalEntityNameAI from geminiService
+    const { getCanonicalEntityNameAI } = await import('./geminiService');
+    const canonical = await getCanonicalEntityNameAI(entityName);
+    console.log(`🔤 Canonical name: "${entityName}" → "${canonical}"`);
+    return canonical;
+  } catch (error) {
+    console.warn('Failed to get canonical name, using basic normalization:', error);
+    // Fallback: basic normalization (lowercase, trim)
+    return entityName.toLowerCase().trim();
+  }
+};
+
+/**
  * Save user's stance on a specific entity
  * @param userId - The user's ID
- * @param entityName - The entity name (normalized to lowercase)
+ * @param entityName - The entity name (will be canonicalized using AI)
  * @param stance - SUPPORT or OPPOSE
  * @param reason - Optional reason for the stance
  */
@@ -585,8 +603,8 @@ export const saveEntityStance = async (
   stance: 'SUPPORT' | 'OPPOSE',
   reason?: string
 ): Promise<void> => {
-  // Normalize entity name (lowercase, trim)
-  const normalizedName = entityName.toLowerCase().trim();
+  // Get canonical entity name using AI
+  const normalizedName = await getCanonicalEntityName(entityName);
 
   const stanceRef = doc(db, 'entityStances', userId, 'entities', normalizedName);
 

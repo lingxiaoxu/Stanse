@@ -234,6 +234,41 @@ export interface UserDemographicsForAnalysis {
  * @param demographics - Optional geographic context (birth country, current residence)
  * @returns BrandAlignment with score, analysis, and real-time grounding sources
  */
+
+/**
+ * Get canonical entity name using AI
+ * Normalizes entity names for consistent storage/lookup
+ * "Huawei Technologies" → "huawei"
+ */
+export const getCanonicalEntityNameAI = async (entityName: string): Promise<string> => {
+  try {
+    const prompt = `Extract the canonical name from: "${entityName}"
+
+Rules:
+- Remove suffixes: Technologies, Inc., Corp., Ltd., Company, LLC, PLC, Group, Holdings
+- Keep core brand/person/country name
+- Return ONLY canonical name
+- Lowercase result
+
+Examples:
+"Huawei Technologies" → "huawei"
+"Apple Inc." → "apple"
+"Microsoft Corporation" → "microsoft"
+
+Entity: "${entityName}"
+Canonical:`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt
+    });
+
+    return response.text?.trim().toLowerCase() || entityName.toLowerCase().trim();
+  } catch (error) {
+    return entityName.toLowerCase().trim();
+  }
+};
+
 export const analyzeBrandAlignment = async (
   entityName: string,
   userProfile: PoliticalCoordinates,
