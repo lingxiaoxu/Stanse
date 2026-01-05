@@ -34,7 +34,7 @@ const StanseApp: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const { t, language } = useLanguage();
-  const { user, userProfile: authUserProfile, logout, loading, updateCoordinates } = useAuth();
+  const { user, userProfile: authUserProfile, logout, loading, updateCoordinates, hasCompletedOnboarding } = useAuth();
 
   // Use profile from Firebase or fallback to initial
   const userProfile = authUserProfile?.coordinates || INITIAL_PROFILE;
@@ -76,9 +76,19 @@ const StanseApp: React.FC = () => {
       try {
         await markTourCompleted(user.uid, language);
         setShowTour(false);
+
+        // Navigate to Stance tab after 1 second
+        setTimeout(() => {
+          setView(ViewState.FINGERPRINT);
+        }, 1000);
       } catch (error) {
         console.error('Failed to mark tour as completed:', error);
         setShowTour(false); // Close anyway
+
+        // Still navigate to Stance tab even if save failed
+        setTimeout(() => {
+          setView(ViewState.FINGERPRINT);
+        }, 1000);
       }
     }
   };
@@ -243,7 +253,7 @@ const StanseApp: React.FC = () => {
 
       {/* App Tour Overlay */}
       <AppTour
-        steps={getTourSteps(language)}
+        steps={getTourSteps(language, hasCompletedOnboarding)}
         isOpen={showTour}
         onComplete={handleTourComplete}
         onSkip={handleTourSkip}

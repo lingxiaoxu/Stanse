@@ -64,8 +64,26 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
     }
   };
 
+  // Show placeholder for new users (like Market Alignment does)
   if (!hasCompletedOnboarding) {
-    return null;
+    return (
+      <div className={`mb-8 ${className}`} data-tour-id="company-rankings">
+        {/* Header */}
+        <div className="flex items-center justify-center mb-3 gap-2 text-gray-500">
+          <ThumbsUp size={14} />
+          <span className="font-mono text-[10px] tracking-[0.2em] uppercase">
+            {t('feed', 'company_ranking')}
+          </span>
+        </div>
+
+        {/* Onboarding Required State */}
+        <PixelCard className="p-4 text-center">
+          <div className="font-pixel text-sm uppercase">
+            {t('feed', 'onboarding_required_rankings')}
+          </div>
+        </PixelCard>
+      </div>
+    );
   }
 
   const handleCompanyClick = async (company: RankedCompany, type: 'support' | 'oppose') => {
