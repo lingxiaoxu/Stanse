@@ -4,17 +4,23 @@ import { TourStep } from '../components/ui/AppTour';
 /**
  * App Tour Steps - Multilingual
  *
- * Each language has 7 steps:
+ * Each language has 12 steps (dynamically adjusted based on user state):
  * 1. Welcome (center)
  * 2. Feed Tab (bottom)
- * 3. Sense Tab (bottom)
- * 4. Stance Tab (bottom)
- * 5. Union Tab (bottom)
- * 6. Menu (left)
- * 7. Final Welcome (center)
+ * 3. Market Alignment
+ * 4. Company Rankings
+ * 5. News Feed
+ * 6. Sense Tab (bottom)
+ * 7. Stance Tab (bottom)
+ * 8. Coordinates OR Onboarding (conditional based on hasCompletedOnboarding)
+ * 9. Union Tab (bottom)
+ * 10. Active Allies
+ * 11. Menu (left)
+ * 12. Final Welcome (center)
  */
 
-export const TOUR_STEPS: Record<Language, TourStep[]> = {
+// Base tour steps (without coordinates step)
+const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
   // ==================== ENGLISH ====================
   [Language.EN]: [
     {
@@ -72,14 +78,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
-    {
-      id: 'coordinates',
-      target: 'coordinates-chart',
-      title: 'Political Coordinates',
-      description: 'Your position on Economic, Social, and Diplomatic axes.',
-      position: 'top',
-      requiredTab: 'FINGERPRINT'
-    },
+    // coordinates step will be inserted dynamically by getTourSteps()
     {
       id: 'union-tab',
       target: 'union-tab',
@@ -169,14 +168,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
-    {
-      id: 'coordinates',
-      target: 'coordinates-chart',
-      title: '政治坐标',
-      description: '经济、社会、外交三轴位置。',
-      position: 'top',
-      requiredTab: 'FINGERPRINT'
-    },
+    // coordinates step will be inserted dynamically by getTourSteps()
     {
       id: 'union-tab',
       target: 'union-tab',
@@ -266,14 +258,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
-    {
-      id: 'coordinates',
-      target: 'coordinates-chart',
-      title: '政治的座標',
-      description: '経済・社会・外交の3軸。',
-      position: 'top',
-      requiredTab: 'FINGERPRINT'
-    },
+    // coordinates step will be inserted dynamically by getTourSteps()
     {
       id: 'union-tab',
       target: 'union-tab',
@@ -363,14 +348,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
-    {
-      id: 'coordinates',
-      target: 'coordinates-chart',
-      title: 'Coordonnées Politiques',
-      description: 'Position axes Économique, Social, Diplomatique.',
-      position: 'top',
-      requiredTab: 'FINGERPRINT'
-    },
+    // coordinates step will be inserted dynamically by getTourSteps()
     {
       id: 'union-tab',
       target: 'union-tab',
@@ -460,14 +438,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
-    {
-      id: 'coordinates',
-      target: 'coordinates-chart',
-      title: 'Coordenadas Políticas',
-      description: 'Posición ejes Económico, Social, Diplomático.',
-      position: 'top',
-      requiredTab: 'FINGERPRINT'
-    },
+    // coordinates step will be inserted dynamically by getTourSteps()
     {
       id: 'union-tab',
       target: 'union-tab',
@@ -501,9 +472,118 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
   ]
 };
 
+// Coordinates step for users who have completed onboarding
+const COORDINATES_STEPS_EXISTING_USER: Record<Language, TourStep> = {
+  [Language.EN]: {
+    id: 'coordinates',
+    target: 'coordinates-chart',
+    title: 'Political Coordinates',
+    description: 'Your position on Economic, Social, and Diplomatic axes.',
+    position: 'top',
+    requiredTab: 'FINGERPRINT'
+  },
+  [Language.ZH]: {
+    id: 'coordinates',
+    target: 'coordinates-chart',
+    title: '政治坐标',
+    description: '经济、社会、外交三轴位置。',
+    position: 'top',
+    requiredTab: 'FINGERPRINT'
+  },
+  [Language.JA]: {
+    id: 'coordinates',
+    target: 'coordinates-chart',
+    title: '政治的座標',
+    description: '経済・社会・外交の3軸。',
+    position: 'top',
+    requiredTab: 'FINGERPRINT'
+  },
+  [Language.FR]: {
+    id: 'coordinates',
+    target: 'coordinates-chart',
+    title: 'Coordonnées Politiques',
+    description: 'Position axes Économique, Social, Diplomatique.',
+    position: 'top',
+    requiredTab: 'FINGERPRINT'
+  },
+  [Language.ES]: {
+    id: 'coordinates',
+    target: 'coordinates-chart',
+    title: 'Coordenadas Políticas',
+    description: 'Posición ejes Económico, Social, Diplomático.',
+    position: 'top',
+    requiredTab: 'FINGERPRINT'
+  }
+};
+
+// Onboarding step for new users who haven't completed onboarding
+const ONBOARDING_STEPS_NEW_USER: Record<Language, TourStep> = {
+  [Language.EN]: {
+    id: 'onboarding',
+    target: 'onboarding-modal',
+    title: 'Complete Your Calibration',
+    description: 'This questionnaire calibrates your political stance. Complete it to unlock personalized features.',
+    position: 'center',
+    requiredTab: 'FINGERPRINT'
+  },
+  [Language.ZH]: {
+    id: 'onboarding',
+    target: 'onboarding-modal',
+    title: '完成立场校准',
+    description: '此问卷用于校准您的政治立场。完成后可解锁个性化功能。',
+    position: 'center',
+    requiredTab: 'FINGERPRINT'
+  },
+  [Language.JA]: {
+    id: 'onboarding',
+    target: 'onboarding-modal',
+    title: 'キャリブレーションを完了',
+    description: 'このアンケートは政治的立場を較正します。完了すると個別機能がロック解除されます。',
+    position: 'center',
+    requiredTab: 'FINGERPRINT'
+  },
+  [Language.FR]: {
+    id: 'onboarding',
+    target: 'onboarding-modal',
+    title: 'Complétez Votre Calibrage',
+    description: 'Ce questionnaire calibre votre position politique. Complétez-le pour débloquer les fonctionnalités personnalisées.',
+    position: 'center',
+    requiredTab: 'FINGERPRINT'
+  },
+  [Language.ES]: {
+    id: 'onboarding',
+    target: 'onboarding-modal',
+    title: 'Complete Su Calibración',
+    description: 'Este cuestionario calibra su postura política. Complételo para desbloquear funciones personalizadas.',
+    position: 'center',
+    requiredTab: 'FINGERPRINT'
+  }
+};
+
 /**
- * Get tour steps for current language
+ * Get tour steps for current language, dynamically adjusted based on user state
+ * @param language - Current app language
+ * @param hasCompletedOnboarding - Whether user has completed onboarding questionnaire
  */
-export const getTourSteps = (language: Language): TourStep[] => {
-  return TOUR_STEPS[language] || TOUR_STEPS[Language.EN];
+export const getTourSteps = (language: Language, hasCompletedOnboarding: boolean = true): TourStep[] => {
+  const baseSteps = BASE_TOUR_STEPS[language] || BASE_TOUR_STEPS[Language.EN];
+
+  // Find the stance-tab step index (coordinates should be inserted after it)
+  const stanceTabIndex = baseSteps.findIndex(step => step.id === 'stance-tab');
+
+  if (stanceTabIndex === -1) {
+    // Fallback: just return base steps if structure is unexpected
+    return baseSteps;
+  }
+
+  // Insert appropriate coordinates/onboarding step after stance-tab
+  const coordinatesStep = hasCompletedOnboarding
+    ? COORDINATES_STEPS_EXISTING_USER[language] || COORDINATES_STEPS_EXISTING_USER[Language.EN]
+    : ONBOARDING_STEPS_NEW_USER[language] || ONBOARDING_STEPS_NEW_USER[Language.EN];
+
+  return [
+    ...baseSteps.slice(0, stanceTabIndex + 1),
+    coordinatesStep,
+    ...baseSteps.slice(stanceTabIndex + 1)
+  ];
 };
