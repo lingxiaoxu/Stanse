@@ -189,28 +189,33 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Social Media Connections - users can only access their own connections
+    // Social Media Connections - main document pattern (userId_platform)
+    // Structure: socialConnections/{userId}_{platform}
+    //   with history subcollection: socialConnections/{userId}_{platform}/history/{timestamp}
     match /socialConnections/{connectionId} {
+      // Extract userId from connectionId (format: userId_PLATFORM)
+      // connectionId format: gbbfW038Vkejgq0mnzADpXtJVWK2_TWITTER
+
       // Users can only read their own connections
       allow read: if request.auth != null
                   && resource.data.userId == request.auth.uid;
 
-      // Users can only create connections for themselves
-      allow create: if request.auth != null
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.platform in ['TWITTER', 'FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TIKTOK']
-                    && request.resource.data.handle is string
-                    && request.resource.data.handle.size() > 0
-                    && request.resource.data.isActive == true;
+      // Users can create/update connections (upsert pattern with setDoc merge)
+      allow write: if request.auth != null
+                   && request.resource.data.userId == request.auth.uid
+                   && request.resource.data.platform in ['TWITTER', 'FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'TIKTOK']
+                   && request.resource.data.handle is string
+                   && request.resource.data.handle.size() > 0;
 
-      // Users can only update their own connections
-      allow update: if request.auth != null
-                    && resource.data.userId == request.auth.uid
-                    && request.resource.data.userId == request.auth.uid;
-
-      // Users can only delete their own connections
+      // Users can delete their own connections
       allow delete: if request.auth != null
                     && resource.data.userId == request.auth.uid;
+
+      // History subcollection - users can read/write their own history
+      match /history/{historyId} {
+        allow read, write: if request.auth != null
+                           && get(/databases/$(database)/documents/socialConnections/$(connectionId)).data.userId == request.auth.uid;
+      }
     }
 
     // Public read for certain collections
