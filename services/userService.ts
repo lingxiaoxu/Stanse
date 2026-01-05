@@ -395,26 +395,32 @@ export const disconnectAllSocialMedia = async (userId: string): Promise<void> =>
   const now = new Date().toISOString();
 
   const disconnectPromises = platforms.map(async (platform) => {
-    const docId = `${userId}_${platform}`;
-    const connectionRef = doc(db, 'socialConnections', docId);
-    const docSnap = await getDoc(connectionRef);
+    try {
+      const docId = `${userId}_${platform}`;
+      const connectionRef = doc(db, 'socialConnections', docId);
+      const docSnap = await getDoc(connectionRef);
 
-    if (!docSnap.exists()) return;
+      if (!docSnap.exists()) return;
 
-    // Update main document
-    await updateDoc(connectionRef, {
-      isActive: false,
-      updatedAt: now
-    });
+      // Update main document
+      await updateDoc(connectionRef, {
+        isActive: false,
+        updatedAt: now
+      });
 
-    // Add history entry
-    const historyRef = collection(db, 'socialConnections', docId, 'history');
-    await addDoc(historyRef, {
-      ...docSnap.data(),
-      action: 'disconnected_via_reset',
-      isActive: false,
-      timestamp: now
-    });
+      // Add history entry
+      const historyRef = collection(db, 'socialConnections', docId, 'history');
+      await addDoc(historyRef, {
+        ...docSnap.data(),
+        action: 'disconnected_via_reset',
+        isActive: false,
+        timestamp: now
+      });
+    } catch (error) {
+      // Silently handle errors for individual platforms
+      // Don't let one platform's error block the reset
+      console.warn(`Failed to disconnect ${platform} for user ${userId}:`, error);
+    }
   });
 
   await Promise.all(disconnectPromises);
