@@ -227,6 +227,22 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
+      id: 'market-stocks',
+      target: 'market-stocks',
+      title: '市場アライメント',
+      description: 'あなたの政治的価値観と一致する（または反対する）企業のリアルタイム株価。市場があなたのイデオロギーをどう反映しているかを追跡。',
+      position: 'top',
+      requiredTab: 'FEED'
+    },
+    {
+      id: 'company-rankings',
+      target: 'company-rankings',
+      title: '価値観ベースのランキング',
+      description: 'FEC 献金、ESG スコア、経営陣の声明、ニュース分析に基づいて支持または反対すべき企業。',
+      position: 'top',
+      requiredTab: 'FEED'
+    },
+    {
       id: 'news-feed',
       target: 'news-feed',
       title: 'ニュースフィード',
@@ -251,6 +267,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FINGERPRINT'
     },
     {
+      id: 'coordinates',
+      target: 'coordinates-chart',
+      title: '政治的座標',
+      description: '3つの軸での位置：経済（左/右）、社会（リバタリアン/権威主義）、外交（グローバリスト/ナショナリスト）。',
+      position: 'top',
+      requiredTab: 'FINGERPRINT'
+    },
+    {
       id: 'union-tab',
       target: 'union-tab',
       title: 'ユニオンタブ',
@@ -258,7 +282,6 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       position: 'top',
       requiredTab: 'UNION'
     },
-    {
     {
       id: 'active-allies',
       target: 'active-allies',
@@ -300,6 +323,22 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
+      id: 'market-stocks',
+      target: 'market-stocks',
+      title: 'Alignement du Marché',
+      description: 'Prix des actions en temps réel pour les entreprises qui s\'alignent avec (ou s\'opposent à) vos valeurs politiques.',
+      position: 'top',
+      requiredTab: 'FEED'
+    },
+    {
+      id: 'company-rankings',
+      target: 'company-rankings',
+      title: 'Classements Basés sur les Valeurs',
+      description: 'Meilleures entreprises à soutenir ou à opposer basées sur les dons FEC, scores ESG, déclarations des dirigeants et analyse des actualités.',
+      position: 'top',
+      requiredTab: 'FEED'
+    },
+    {
       id: 'news-feed',
       target: 'news-feed',
       title: 'Le Flux d\'Actualités',
@@ -324,6 +363,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FINGERPRINT'
     },
     {
+      id: 'coordinates',
+      target: 'coordinates-chart',
+      title: 'Coordonnées Politiques',
+      description: 'Votre position sur 3 axes : Économique (gauche/droite), Social (libertarien/autoritaire), Diplomatique (mondialiste/nationaliste).',
+      position: 'top',
+      requiredTab: 'FINGERPRINT'
+    },
+    {
       id: 'union-tab',
       target: 'union-tab',
       title: 'Onglet Union',
@@ -331,7 +378,6 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       position: 'top',
       requiredTab: 'UNION'
     },
-    {
     {
       id: 'active-allies',
       target: 'active-allies',
@@ -373,6 +419,22 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
+      id: 'market-stocks',
+      target: 'market-stocks',
+      title: 'Alineación del Mercado',
+      description: 'Precios de acciones en tiempo real para empresas que se alinean con (u oponen a) sus valores políticos.',
+      position: 'top',
+      requiredTab: 'FEED'
+    },
+    {
+      id: 'company-rankings',
+      target: 'company-rankings',
+      title: 'Clasificaciones Basadas en Valores',
+      description: 'Principales empresas para apoyar u oponerse basadas en donaciones FEC, puntajes ESG, declaraciones ejecutivas y análisis de noticias.',
+      position: 'top',
+      requiredTab: 'FEED'
+    },
+    {
       id: 'news-feed',
       target: 'news-feed',
       title: 'El Feed de Noticias',
@@ -397,6 +459,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FINGERPRINT'
     },
     {
+      id: 'coordinates',
+      target: 'coordinates-chart',
+      title: 'Coordenadas Políticas',
+      description: 'Su posición en 3 ejes: Económico (izquierda/derecha), Social (libertario/autoritario), Diplomático (globalista/nacionalista).',
+      position: 'top',
+      requiredTab: 'FINGERPRINT'
+    },
+    {
       id: 'union-tab',
       target: 'union-tab',
       title: 'Pestaña Unión',
@@ -404,7 +474,6 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       position: 'top',
       requiredTab: 'UNION'
     },
-    {
     {
       id: 'active-allies',
       target: 'active-allies',
