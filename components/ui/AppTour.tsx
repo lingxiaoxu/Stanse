@@ -107,7 +107,7 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
   const getTooltipStyle = (): React.CSSProperties => {
     const padding = 32; // Increased padding to avoid overlap
     const tooltipWidth = 360;
-    const tooltipHeight = 260; // Approximate
+    const tooltipHeight = 220; // Reduced from 260 (more compact design)
 
     // Default center position
     let top = window.innerHeight / 2 - tooltipHeight / 2;
@@ -261,7 +261,7 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
 
       {/* Tooltip - Clickable area to prevent event bubbling */}
       <div
-        className="bg-white border-4 border-black shadow-pixel p-6 pt-8 animate-fade-in relative"
+        className="bg-white border-4 border-black shadow-pixel p-5 pt-7 animate-fade-in relative"
         style={{ ...getTooltipStyle(), pointerEvents: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -275,7 +275,7 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
         </button>
 
         {/* Progress indicator */}
-        <div className="flex gap-1.5 mb-5 pr-8">
+        <div className="flex gap-1.5 mb-4 pr-8">
           {steps.map((_, index) => (
             <div
               key={index}
@@ -291,40 +291,40 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
         </div>
 
         {/* Content */}
-        <div className="mb-6">
-          <h3 className="font-pixel text-2xl mb-3 pr-8">{currentTourStep.title}</h3>
-          <p className="font-mono text-sm text-gray-700 leading-relaxed">
+        <div className="mb-4">
+          <h3 className="font-pixel text-xl mb-2 pr-8 leading-tight">{currentTourStep.title}</h3>
+          <p className="font-mono text-xs text-gray-700 leading-snug">
             {currentTourStep.description}
           </p>
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between border-t-2 border-gray-200 pt-4">
+        <div className="flex items-center justify-between border-t-2 border-gray-200 pt-3">
           <div className="font-mono text-xs text-gray-500">
-            Step {currentStep + 1} of {steps.length}
+            {currentStep + 1}/{steps.length}
           </div>
 
           <div className="flex gap-2">
             {!isFirstStep && (
               <button
                 onClick={handlePrevious}
-                className="px-4 py-2 font-mono text-xs border-2 border-black bg-white hover:bg-gray-100 transition-all"
+                className="px-3 py-1.5 font-mono text-xs border-2 border-black bg-white hover:bg-gray-100 transition-all"
               >
                 {t('tour', 'back') || 'BACK'}
               </button>
             )}
             <button
               onClick={handleNext}
-              className="px-5 py-2 font-mono text-xs font-bold border-2 border-black bg-black text-white hover:bg-gray-800 transition-all flex items-center gap-2"
+              className="px-4 py-1.5 font-mono text-xs font-bold border-2 border-black bg-black text-white hover:bg-gray-800 transition-all flex items-center gap-1"
             >
               {isLastStep ? (t('tour', 'finish') || 'FINISH') : (t('tour', 'next') || 'NEXT')}
-              {!isLastStep && <ChevronRight size={16} />}
+              {!isLastStep && <ChevronRight size={14} />}
             </button>
           </div>
         </div>
 
         {/* Tap anywhere hint */}
-        <div className="text-center mt-3 font-mono text-xs text-gray-400 italic">
+        <div className="text-center mt-1.5 font-mono text-[10px] text-gray-400 italic">
           {t('tour', 'tap_anywhere') || 'Tap anywhere to continue'}
         </div>
       </div>
