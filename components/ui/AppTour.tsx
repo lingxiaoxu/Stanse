@@ -116,6 +116,8 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
         case 'top':
           // Check if element is in bottom navigation (bottom 20% of screen)
           const isBottomNav = highlightRect.bottom > window.innerHeight * 0.8;
+          // Check if element is in upper half (might need tooltip below instead)
+          const isUpperHalf = highlightRect.top < window.innerHeight * 0.4;
 
           if (isBottomNav) {
             // For bottom nav, position tooltip much higher to avoid overlap
@@ -124,8 +126,26 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
               highlightRect.top - tooltipHeight - 80  // Or 80px above if space allows
             );
             left = highlightRect.left + (highlightRect.width / 2) - (tooltipWidth / 2);
+          } else if (isUpperHalf) {
+            // For elements in upper half, try to position tooltip BELOW to avoid covering
+            const spaceBelow = window.innerHeight - highlightRect.bottom;
+            const spaceAbove = highlightRect.top;
+
+            if (spaceBelow > tooltipHeight + padding + 100) {
+              // Enough space below - position tooltip below the element
+              top = highlightRect.bottom + padding;
+              left = highlightRect.left + (highlightRect.width / 2) - (tooltipWidth / 2);
+            } else if (spaceAbove > tooltipHeight + padding) {
+              // Not enough below, but space above - position above
+              top = highlightRect.top - tooltipHeight - padding;
+              left = highlightRect.left + (highlightRect.width / 2) - (tooltipWidth / 2);
+            } else {
+              // Not enough space either way - position to the side
+              top = Math.max(highlightRect.top, 20);
+              left = highlightRect.right + padding;
+            }
           } else {
-            // Regular positioning for other elements
+            // Regular positioning for middle elements
             top = Math.max(highlightRect.top - tooltipHeight - padding, 20);
             left = highlightRect.left + (highlightRect.width / 2) - (tooltipWidth / 2);
 
