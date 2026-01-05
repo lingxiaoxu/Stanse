@@ -50,7 +50,7 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'company-rankings',
       target: 'company-rankings',
       title: 'Values-Based Rankings',
-      description: 'Top companies to support or oppose based on FEC, ESG, and news.',
+      description: 'Top companies to support or oppose based on FEC data, ESG scores, news, and executive statements.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -140,7 +140,7 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'company-rankings',
       target: 'company-rankings',
       title: '基于价值观的排名',
-      description: '基于 FEC、ESG 和新闻的公司排名。',
+      description: '基于 FEC 数据、ESG 评分、新闻和高管声明的公司排名。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -230,7 +230,7 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'company-rankings',
       target: 'company-rankings',
       title: '価値観ベースのランキング',
-      description: 'FEC、ESG、ニュース基準のランキング。',
+      description: 'FECデータ、ESGスコア、ニュース、経営陣の声明に基づく企業ランキング。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -320,7 +320,7 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'company-rankings',
       target: 'company-rankings',
       title: 'Classements Basés sur les Valeurs',
-      description: 'Entreprises basées FEC, ESG, actualités.',
+      description: 'Entreprises classées selon données FEC, scores ESG, actualités et déclarations des dirigeants.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -410,7 +410,7 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'company-rankings',
       target: 'company-rankings',
       title: 'Clasificaciones Basadas en Valores',
-      description: 'Empresas basadas FEC, ESG, noticias.',
+      description: 'Empresas clasificadas según datos FEC, puntajes ESG, noticias y declaraciones ejecutivas.',
       position: 'top',
       requiredTab: 'FEED'
     },
