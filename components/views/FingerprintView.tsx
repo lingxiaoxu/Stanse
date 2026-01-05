@@ -424,7 +424,7 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
           </div>
         </PixelCard>
 
-        <div className="grid grid-cols-3 gap-3 text-center font-mono text-xs">
+        <div className="grid grid-cols-3 gap-3 text-center font-mono text-xs" data-tour-id="coordinates-chart">
           <div
             className="border-2 border-black p-3 bg-white shadow-pixel hover:-translate-y-1 transition-transform cursor-pointer"
             onClick={() => setShowExplanation('economic')}

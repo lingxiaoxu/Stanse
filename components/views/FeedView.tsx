@@ -339,7 +339,7 @@ export const FeedView: React.FC = () => {
     <div className="max-w-md mx-auto w-full pb-20">
 
       {/* SECTION 1: MARKET INDEX (Independent Area) */}
-      <div className="mb-12 relative">
+      <div className="mb-12 relative" data-tour-id="market-stocks">
          <div className="flex items-center justify-center mb-3 gap-2 text-gray-500">
             <TrendingUp size={14} />
             <span className="font-mono text-[10px] tracking-[0.2em] uppercase">{t('feed', 'market')}</span>
@@ -395,7 +395,9 @@ export const FeedView: React.FC = () => {
       </div>
 
       {/* SECTION 1.5: VALUES COMPANY RANKING */}
-      <ValuesCompanyRanking onRankingsChange={handleRankingsChange} />
+      <div data-tour-id="company-rankings">
+        <ValuesCompanyRanking onRankingsChange={handleRankingsChange} />
+      </div>
 
       {/* SECTION 2: THE FEED */}
       <div className="text-center mb-10">
