@@ -222,7 +222,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'feed-tab',
       target: 'feed-tab',
       title: 'フィードタブ',
-      description: '政治的立場に合わせてキュレーションされたパーソナライズされたニュース。あなたの価値観に基づいて重要なことを見る。',
+      description: '政治的立場に合わせたニュース。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -230,7 +230,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'market-stocks',
       target: 'market-stocks',
       title: '市場アライメント',
-      description: 'あなたの政治的価値観と一致する（または反対する）企業のリアルタイム株価。市場があなたのイデオロギーをどう反映しているかを追跡。',
+      description: '価値観一致企業の株価。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -238,7 +238,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'company-rankings',
       target: 'company-rankings',
       title: '価値観ベースのランキング',
-      description: 'FEC 献金、ESG スコア、経営陣の声明、ニュース分析に基づいて支持または反対すべき企業。',
+      description: 'FEC、ESG、ニュース基準のランキング。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -246,7 +246,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'news-feed',
       target: 'news-feed',
       title: 'ニュースフィード',
-      description: 'あなたの政治的立場に基づいて AI がキュレーションしたパーソナライズされたニュース記事。重要なトピックについて情報を得る。',
+      description: 'AI キュレーションのニュース記事。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -254,7 +254,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'センスタブ',
-      description: 'ブランドや企業をスキャンして、あなたの政治的価値観との整合性を確認。情報に基づいた購入決定を行う。',
+      description: 'ブランドの価値観整合性スキャン。',
       position: 'top',
       requiredTab: 'SENSE'
     },
@@ -262,7 +262,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'stance-tab',
       target: 'stance-tab',
       title: 'スタンスタブ',
-      description: 'あなたの政治的指紋。経済、社会、外交軸上の座標と AI 生成のペルソナを表示。',
+      description: '政治的指紋と AI ペルソナ。',
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
@@ -270,7 +270,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'coordinates',
       target: 'coordinates-chart',
       title: '政治的座標',
-      description: '3つの軸での位置：経済（左/右）、社会（リバタリアン/権威主義）、外交（グローバリスト/ナショナリスト）。',
+      description: '経済・社会・外交の3軸。',
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
@@ -278,7 +278,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'union-tab',
       target: 'union-tab',
       title: 'ユニオンタブ',
-      description: 'Polis Protocol ブロックチェーンを通じて集団的政治的影響を追跡。リアルタイムのユニオン強度と転換された資本を確認。',
+      description: 'ブロックチェーンで集団影響追跡。',
       position: 'top',
       requiredTab: 'UNION'
     },
@@ -286,7 +286,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'active-allies',
       target: 'active-allies',
       title: 'アクティブな仲間',
-      description: 'あなたの地域で政治的価値観に沿って消費を調整しているユーザーのリアルタイムカウント。リアルタイムの集団行動を見る。',
+      description: 'リアルタイムユーザー数。',
       position: 'top',
       requiredTab: 'UNION'
     },
@@ -294,7 +294,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'menu',
       target: 'menu-button',
       title: 'メニュー',
-      description: '設定へのアクセス、ソーシャルメディアアカウントの接続、マニフェストの表示、アカウント管理、ソースコードの探索。',
+      description: '設定、SNS、マニフェスト、アカウント。',
       position: 'left'
     },
     {
@@ -319,7 +319,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'feed-tab',
       target: 'feed-tab',
       title: 'Onglet Flux',
-      description: 'Actualités personnalisées selon votre position politique. Voyez ce qui compte pour vous en fonction de vos valeurs.',
+      description: 'Actualités personnalisées selon position.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -327,7 +327,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'market-stocks',
       target: 'market-stocks',
       title: 'Alignement du Marché',
-      description: 'Prix des actions en temps réel pour les entreprises qui s\'alignent avec (ou s\'opposent à) vos valeurs politiques.',
+      description: 'Prix actions alignées valeurs.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -335,7 +335,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'company-rankings',
       target: 'company-rankings',
       title: 'Classements Basés sur les Valeurs',
-      description: 'Meilleures entreprises à soutenir ou à opposer basées sur les dons FEC, scores ESG, déclarations des dirigeants et analyse des actualités.',
+      description: 'Entreprises basées FEC, ESG, actualités.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -343,7 +343,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'news-feed',
       target: 'news-feed',
       title: 'Le Flux d\'Actualités',
-      description: 'Articles d\'actualité personnalisés organisés par l\'IA selon votre position politique. Restez informé sur les sujets qui comptent pour vous.',
+      description: 'Articles IA selon position politique.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -351,7 +351,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'Onglet Sense',
-      description: 'Scannez les marques et entreprises pour vérifier leur alignement avec vos valeurs politiques. Prenez des décisions d\'achat éclairées.',
+      description: 'Scanner alignement des marques.',
       position: 'top',
       requiredTab: 'SENSE'
     },
@@ -359,7 +359,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'stance-tab',
       target: 'stance-tab',
       title: 'Onglet Position',
-      description: 'Votre empreinte politique. Visualisez vos coordonnées sur les axes économique, social et diplomatique, plus votre persona généré par l\'IA.',
+      description: 'Empreinte politique et persona IA.',
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
@@ -367,7 +367,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'coordinates',
       target: 'coordinates-chart',
       title: 'Coordonnées Politiques',
-      description: 'Votre position sur 3 axes : Économique (gauche/droite), Social (libertarien/autoritaire), Diplomatique (mondialiste/nationaliste).',
+      description: 'Position axes Économique, Social, Diplomatique.',
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
@@ -375,7 +375,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'union-tab',
       target: 'union-tab',
       title: 'Onglet Union',
-      description: 'Suivez votre impact politique collectif via la blockchain Polis Protocol. Voyez la force de l\'union et le capital détourné en temps réel.',
+      description: 'Impact collectif via blockchain.',
       position: 'top',
       requiredTab: 'UNION'
     },
@@ -383,7 +383,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'active-allies',
       target: 'active-allies',
       title: 'Alliés Actifs',
-      description: 'Nombre en temps réel d\'utilisateurs dans votre région alignant actuellement leur consommation avec les valeurs politiques.',
+      description: 'Nombre utilisateurs alignant consommation.',
       position: 'top',
       requiredTab: 'UNION'
     },
@@ -391,7 +391,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'menu',
       target: 'menu-button',
       title: 'Menu',
-      description: 'Accédez aux paramètres, connectez les comptes de réseaux sociaux, consultez notre manifeste, gérez votre compte et explorez le code source.',
+      description: 'Paramètres, réseaux, manifeste, compte.',
       position: 'left'
     },
     {
@@ -416,7 +416,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'feed-tab',
       target: 'feed-tab',
       title: 'Pestaña Feed',
-      description: 'Noticias personalizadas según su postura política. Vea lo que importa para usted basado en sus valores.',
+      description: 'Noticias personalizadas según postura.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -424,7 +424,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'market-stocks',
       target: 'market-stocks',
       title: 'Alineación del Mercado',
-      description: 'Precios de acciones en tiempo real para empresas que se alinean con (u oponen a) sus valores políticos.',
+      description: 'Precios acciones alineadas valores.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -432,7 +432,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'company-rankings',
       target: 'company-rankings',
       title: 'Clasificaciones Basadas en Valores',
-      description: 'Principales empresas para apoyar u oponerse basadas en donaciones FEC, puntajes ESG, declaraciones ejecutivas y análisis de noticias.',
+      description: 'Empresas basadas FEC, ESG, noticias.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -440,7 +440,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'news-feed',
       target: 'news-feed',
       title: 'El Feed de Noticias',
-      description: 'Artículos de noticias personalizados curados por IA según su postura política. Manténgase informado sobre temas que le importan.',
+      description: 'Artículos IA según postura política.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -448,7 +448,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'Pestaña Sense',
-      description: 'Escanee marcas y empresas para verificar su alineación con sus valores políticos. Tome decisiones de compra informadas.',
+      description: 'Escanear alineación de marcas.',
       position: 'top',
       requiredTab: 'SENSE'
     },
@@ -456,7 +456,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'stance-tab',
       target: 'stance-tab',
       title: 'Pestaña Postura',
-      description: 'Su huella política. Vea sus coordenadas en los ejes económico, social y diplomático, más su persona generado por IA.',
+      description: 'Huella política y persona IA.',
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
@@ -464,7 +464,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'coordinates',
       target: 'coordinates-chart',
       title: 'Coordenadas Políticas',
-      description: 'Su posición en 3 ejes: Económico (izquierda/derecha), Social (libertario/autoritario), Diplomático (globalista/nacionalista).',
+      description: 'Posición ejes Económico, Social, Diplomático.',
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
@@ -472,7 +472,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'union-tab',
       target: 'union-tab',
       title: 'Pestaña Unión',
-      description: 'Rastree su impacto político colectivo a través de blockchain Polis Protocol. Vea la fuerza de la unión y el capital desviado en tiempo real.',
+      description: 'Impacto colectivo vía blockchain.',
       position: 'top',
       requiredTab: 'UNION'
     },
@@ -480,7 +480,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'active-allies',
       target: 'active-allies',
       title: 'Aliados Activos',
-      description: 'Recuento en tiempo real de usuarios en su región alineando actualmente su consumo con valores políticos.',
+      description: 'Recuento usuarios alineando consumo.',
       position: 'top',
       requiredTab: 'UNION'
     },
@@ -488,7 +488,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'menu',
       target: 'menu-button',
       title: 'Menú',
-      description: 'Acceda a configuración, conecte cuentas de redes sociales, vea nuestro manifiesto, gestione su cuenta y explore el código fuente.',
+      description: 'Configuración, redes, manifiesto, cuenta.',
       position: 'left'
     },
     {
