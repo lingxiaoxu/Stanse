@@ -290,6 +290,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       position: 'top',
       requiredTab: 'UNION'
     },
+    {
       id: 'menu',
       target: 'menu-button',
       title: 'メニュー',
@@ -382,10 +383,11 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'active-allies',
       target: 'active-allies',
       title: 'Alliés Actifs',
-      description: 'Nombre en temps réel d\'utilisateurs dans votre région alignant actuellement leur consommation avec les valeurs politiques. Voyez l\'action collective en temps réel.',
+      description: 'Nombre en temps réel d\'utilisateurs dans votre région alignant actuellement leur consommation avec les valeurs politiques.',
       position: 'top',
       requiredTab: 'UNION'
     },
+    {
       id: 'menu',
       target: 'menu-button',
       title: 'Menu',
@@ -478,10 +480,11 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'active-allies',
       target: 'active-allies',
       title: 'Aliados Activos',
-      description: 'Recuento en tiempo real de usuarios en su región alineando actualmente su consumo con valores políticos. Vea la acción colectiva en tiempo real.',
+      description: 'Recuento en tiempo real de usuarios en su región alineando actualmente su consumo con valores políticos.',
       position: 'top',
       requiredTab: 'UNION'
     },
+    {
       id: 'menu',
       target: 'menu-button',
       title: 'Menú',
