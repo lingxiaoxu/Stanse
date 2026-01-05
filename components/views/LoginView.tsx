@@ -95,13 +95,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       <div className="w-full max-w-md z-10">
 
         {/* Language Selector - Top Right */}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
-             <div className="flex gap-0.5 sm:gap-1">
+        <div className="absolute top-2 right-2 sm:top-6 sm:right-6">
+             <div className="flex gap-0.5 sm:gap-1 flex-wrap justify-end max-w-[140px] sm:max-w-none">
                 {Object.values(Language).map((lang) => (
                     <button
                         key={lang}
                         onClick={() => setLanguage(lang)}
-                        className={`px-2 py-1 font-mono text-xs border-2 border-black transition-all ${
+                        className={`px-1.5 py-0.5 sm:px-2 sm:py-1 font-mono text-[10px] sm:text-xs border-2 border-black transition-all ${
                             language === lang ? 'bg-black text-white' : 'bg-white text-black hover:bg-gray-200'
                         }`}
                     >
