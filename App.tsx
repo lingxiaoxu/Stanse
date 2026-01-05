@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ViewState, PoliticalCoordinates, BrandAlignment } from './types';
 import { FECCompanyData } from './services/fecService';
 import { Compass, Search, Newspaper, Users, Menu } from 'lucide-react';
@@ -48,19 +48,40 @@ const StanseApp: React.FC = () => {
   // The report should persist until the user manually searches again.
   // This allows the user to compare how their stance affects the score.
 
+  // Track tour check state to prevent retriggering when authUserProfile updates
+  const tourCheckRef = useRef<{ userId: string; language: string; checked: boolean } | null>(null);
+
   // Check if tour should be shown after login
   useEffect(() => {
     const checkTour = async () => {
       if (user && authUserProfile) {
-        // Check if user has seen tour in current language
-        const hasSeenInCurrentLang = authUserProfile.tourCompleted?.[language] || false;
+        // Create a unique key for this user + language combination
+        const checkKey = `${user.uid}-${language}`;
+        const prevCheckKey = tourCheckRef.current ? `${tourCheckRef.current.userId}-${tourCheckRef.current.language}` : null;
 
-        if (!hasSeenInCurrentLang) {
-          // Small delay to ensure UI is ready
-          setTimeout(() => {
-            setShowTour(true);
-          }, 500);
+        // Only check tour if we haven't checked for this user+language combo yet
+        // or if the user/language changed
+        if (!tourCheckRef.current?.checked || checkKey !== prevCheckKey) {
+          // Check if user has seen tour in current language
+          const hasSeenInCurrentLang = authUserProfile.tourCompleted?.[language] || false;
+
+          if (!hasSeenInCurrentLang) {
+            // Small delay to ensure UI is ready
+            setTimeout(() => {
+              setShowTour(true);
+            }, 500);
+          }
+
+          // Mark this user+language combo as checked
+          tourCheckRef.current = {
+            userId: user.uid,
+            language: language,
+            checked: true
+          };
         }
+      } else {
+        // Reset check when user logs out
+        tourCheckRef.current = null;
       }
     };
 
@@ -76,6 +97,11 @@ const StanseApp: React.FC = () => {
       try {
         await markTourCompleted(user.uid, language);
         setShowTour(false);
+
+        // Reset tour check ref to allow checking again for other languages
+        if (tourCheckRef.current) {
+          tourCheckRef.current.checked = true;
+        }
 
         // Navigate to Stance tab after 1 second
         setTimeout(() => {
