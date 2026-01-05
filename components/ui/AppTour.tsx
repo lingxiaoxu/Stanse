@@ -150,34 +150,43 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
         onClick={handleNext}
         style={{ zIndex: 10001 }}
       >
-        {/* Dark overlay with SVG mask for spotlight effect */}
-        <svg
-          width="100%"
-          height="100%"
-          style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
-        >
-          <defs>
-            <mask id="tour-spotlight-mask">
-              <rect width="100%" height="100%" fill="white" />
-              {highlightRect && (
-                <rect
-                  x={highlightRect.left - 8}
-                  y={highlightRect.top - 8}
-                  width={highlightRect.width + 16}
-                  height={highlightRect.height + 16}
-                  rx="12"
-                  fill="black"
-                />
-              )}
-            </mask>
-          </defs>
-          <rect
+        {/* Dark overlay - full screen for center positions, with cutout for others */}
+        {currentTourStep.position === 'center' ? (
+          // Full dark overlay for center messages (no cutout)
+          <div
+            className="absolute inset-0 bg-black/75"
+            style={{ pointerEvents: 'none' }}
+          />
+        ) : (
+          // Dark overlay with SVG mask for spotlight effect
+          <svg
             width="100%"
             height="100%"
-            fill="rgba(0, 0, 0, 0.75)"
-            mask="url(#tour-spotlight-mask)"
-          />
-        </svg>
+            style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+          >
+            <defs>
+              <mask id="tour-spotlight-mask">
+                <rect width="100%" height="100%" fill="white" />
+                {highlightRect && (
+                  <rect
+                    x={highlightRect.left - 8}
+                    y={highlightRect.top - 8}
+                    width={highlightRect.width + 16}
+                    height={highlightRect.height + 16}
+                    rx="12"
+                    fill="black"
+                  />
+                )}
+              </mask>
+            </defs>
+            <rect
+              width="100%"
+              height="100%"
+              fill="rgba(0, 0, 0, 0.75)"
+              mask="url(#tour-spotlight-mask)"
+            />
+          </svg>
+        )}
 
         {/* Highlight border with pulse animation */}
         {highlightRect && (
