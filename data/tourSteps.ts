@@ -165,7 +165,7 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'stance-tab',
       target: 'stance-tab',
       title: '立场标签',
-      description: '您的政治指纹。查看经济、社会、外交立场和人格。',
+      description: '您的政治指纹。查看经济、社会、外交立场和政治视角。',
       position: 'top',
       requiredTab: 'FINGERPRINT'
     },
