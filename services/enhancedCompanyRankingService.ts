@@ -161,6 +161,10 @@ export const getEnhancedCompanyRanking = async (
 /**
  * Get company rankings for a user based on their political coordinates
  * This is the main API that components should use
+ *
+ * Supports dual stanceType system:
+ * - If coordinates.coreStanceType exists, use it directly (faster)
+ * - Otherwise, calculate from coordinates.economic/social/diplomatic (backward compatible)
  */
 export const getEnhancedCompanyRankingsForUser = async (
   economic: number,
@@ -170,6 +174,31 @@ export const getEnhancedCompanyRankingsForUser = async (
 ): Promise<CompanyRanking> => {
   const { getStanceType } = await import('../data/sp500Companies');
   const stanceType = getStanceType(economic, social, diplomatic);
+  return getEnhancedCompanyRanking(stanceType, forceRefresh);
+};
+
+/**
+ * Get company rankings using PoliticalCoordinates object
+ * Optimized version that uses coreStanceType if available
+ */
+export const getEnhancedCompanyRankingsForCoordinates = async (
+  coordinates: any, // Use any to avoid circular import
+  forceRefresh: boolean = false
+): Promise<CompanyRanking> => {
+  // Prefer coreStanceType if available (dual system)
+  if (coordinates.coreStanceType) {
+    console.log(`[Rankings] Using cached coreStanceType: ${coordinates.coreStanceType}`);
+    return getEnhancedCompanyRanking(coordinates.coreStanceType, forceRefresh);
+  }
+
+  // Fallback: calculate from coordinates (backward compatible)
+  console.log('[Rankings] Calculating stanceType from coordinates (no coreStanceType)');
+  const { getStanceType } = await import('../data/sp500Companies');
+  const stanceType = getStanceType(
+    coordinates.economic,
+    coordinates.social,
+    coordinates.diplomatic
+  );
   return getEnhancedCompanyRanking(stanceType, forceRefresh);
 };
 
