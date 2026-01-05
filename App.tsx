@@ -161,7 +161,7 @@ const StanseApp: React.FC = () => {
           />
         );
       case ViewState.FINGERPRINT:
-        return <FingerprintView coords={userProfile} />;
+        return <FingerprintView coords={userProfile} isTourActive={showTour} />;
       case ViewState.UNION:
         return <UnionView />;
       case ViewState.MANIFESTO:

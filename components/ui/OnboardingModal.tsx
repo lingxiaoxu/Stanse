@@ -20,6 +20,7 @@ interface OnboardingModalProps {
   isOpen: boolean;
   onComplete: (answers: OnboardingAnswers) => void;
   onClose?: () => void;
+  isTourActive?: boolean; // Whether app tour is currently running
 }
 
 const COUNTRIES = [
@@ -50,7 +51,8 @@ const US_STATES = [
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   isOpen,
   onComplete,
-  onClose
+  onClose,
+  isTourActive = false
 }) => {
   const { language } = useLanguage();
   const t = ONBOARDING_TRANSLATIONS[language];
@@ -151,7 +153,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" data-tour-id="onboarding-modal">
+    <div
+      className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${!isTourActive ? 'bg-black/70' : ''}`}
+      data-tour-id="onboarding-modal"
+    >
       <PixelCard className="w-full max-w-md bg-pixel-white p-6 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-6 border-b-2 border-black pb-4">
