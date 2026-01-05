@@ -271,7 +271,10 @@ export const calculateCoordinates = async (
       economic,
       social,
       diplomatic,
-      label: fullLabel
+      label: fullLabel,
+      displayLabel: fullLabel, // Dual system: display label
+      coreStanceType: actualStanceType, // Dual system: canonical type for rankings
+      nationalityPrefix: nationalityPrefix || undefined // Dual system: cultural origin
     };
 
     stanceLogger.operationSuccess(opId, 'calculateCoordinates', {
