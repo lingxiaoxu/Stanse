@@ -30,6 +30,9 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
     const step = steps[currentStep];
     if (!step) return;
 
+    // Clear highlight immediately when step changes (prevents ghost highlight)
+    setHighlightRect(null);
+
     // Switch tab if required
     if (step.requiredTab && onSwitchTab) {
       onSwitchTab(step.requiredTab);

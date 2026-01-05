@@ -49,6 +49,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
+      id: 'news-feed',
+      target: 'news-feed',
+      title: 'The Feed',
+      description: 'Personalized news articles curated by AI based on your political stance. Stay informed about topics that matter to you.',
+      position: 'top',
+      requiredTab: 'FEED'
+    },
+    {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'Sense Tab',
@@ -77,6 +85,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       target: 'union-tab',
       title: 'Union Tab',
       description: 'Track your collective political impact through Polis Protocol blockchain. See real-time union strength and capital diverted.',
+      position: 'top',
+      requiredTab: 'UNION'
+    },
+    {
+      id: 'active-allies',
+      target: 'active-allies',
+      title: 'Active Allies',
+      description: 'Real-time count of users in your region currently aligning their consumption with political values. See collective action in real-time.',
       position: 'top',
       requiredTab: 'UNION'
     },
@@ -130,6 +146,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
+      id: 'news-feed',
+      target: 'news-feed',
+      title: '新闻动态',
+      description: '基于您的政治立场由 AI 策划的个性化新闻文章。了解对您重要的主题。',
+      position: 'top',
+      requiredTab: 'FEED'
+    },
+    {
       id: 'sense-tab',
       target: 'sense-tab',
       title: '感知标签',
@@ -158,6 +182,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       target: 'union-tab',
       title: '联合标签',
       description: '通过 Polis Protocol 区块链追踪您的集体政治影响力。查看实时联盟强度和资本转移。',
+      position: 'top',
+      requiredTab: 'UNION'
+    },
+    {
+      id: 'active-allies',
+      target: 'active-allies',
+      title: '活跃盟友',
+      description: '您所在地区当前正在根据政治价值观调整消费的实时用户数。查看实时集体行动。',
       position: 'top',
       requiredTab: 'UNION'
     },

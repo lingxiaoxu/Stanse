@@ -294,7 +294,7 @@ export const UnionView: React.FC = () => {
         </div>
       </div>
 
-      <div className="text-center mb-6">
+      <div className="text-center mb-6" data-tour-id="union-header">
         <h2 className="font-pixel text-5xl">{t('union', 'title')}</h2>
         <p className="font-mono text-xs text-gray-400 uppercase">
           {t('union', 'subtitle')}
@@ -302,12 +302,12 @@ export const UnionView: React.FC = () => {
       </div>
 
       {/* Active Pulse Map - Clean White Version */}
-      <PixelCard className="relative bg-white">
+      <PixelCard className="relative bg-white" data-tour-id="active-allies">
         <div className="absolute top-3 right-3 flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-full">
              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
              <span className="font-mono text-[10px] font-bold text-red-500 tracking-wider">{t('union', 'live')}</span>
         </div>
-        
+
         <div className="flex flex-col items-center justify-center py-6 space-y-2">
            <span className="font-mono text-xs font-bold tracking-widest text-gray-400 uppercase">{t('union', 'active_allies')}</span>
            <div className="font-pixel text-7xl">
