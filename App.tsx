@@ -247,6 +247,7 @@ const StanseApp: React.FC = () => {
         isOpen={showTour}
         onComplete={handleTourComplete}
         onSkip={handleTourSkip}
+        onSwitchTab={(tab) => setView(tab as ViewState)}
       />
     </div>
   );
