@@ -95,8 +95,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       <div className="w-full max-w-md z-10">
 
         {/* Language Selector - Top Right */}
-        <div className="absolute top-6 right-6">
-             <div className="flex gap-1">
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+             <div className="flex gap-0.5 sm:gap-1">
                 {Object.values(Language).map((lang) => (
                     <button
                         key={lang}
@@ -193,7 +193,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               }}
               className="font-mono text-sm text-gray-600 hover:text-black underline"
             >
-              {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+              {isSignUp ? t('login', 'sign_in_prompt') : t('login', 'sign_up_prompt')}
             </button>
           </div>
 

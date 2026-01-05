@@ -6,13 +6,15 @@ const TRANSLATIONS = {
   [Language.EN]: {
     slogan: "Don't just vote. Live your values.",
     nav: { feed: "FEED", sense: "SENSE", stance: "STANCE", union: "UNION" },
-    login: { 
-        title: "IDENTIFY YOURSELF", 
-        email: "EMAIL FREQUENCY", 
-        key: "ACCESS KEY", 
-        btn: "ESTABLISH LINK", 
+    login: {
+        title: "IDENTIFY YOURSELF",
+        email: "EMAIL FREQUENCY",
+        key: "ACCESS KEY",
+        btn: "ESTABLISH LINK",
         google: "CONTINUE WITH GOOGLE",
-        protocol: "Zero-Knowledge Protocol"
+        protocol: "Zero-Knowledge Protocol",
+        sign_up_prompt: "Don't have an account? Sign Up",
+        sign_in_prompt: "Already have an account? Sign In"
     },
     menu: {
         manifesto: "MANIFESTO",
@@ -180,13 +182,15 @@ const TRANSLATIONS = {
   [Language.ZH]: {
     slogan: "不只投票，更要活出你的价值观。",
     nav: { feed: "动态", sense: "感知", stance: "立场", union: "联合" },
-    login: { 
-        title: "身份识别", 
-        email: "电子邮箱", 
-        key: "访问密钥", 
-        btn: "建立连接", 
+    login: {
+        title: "身份识别",
+        email: "电子邮箱",
+        key: "访问密钥",
+        btn: "建立连接",
         google: "通过 GOOGLE 继续",
-        protocol: "零知识证明协议"
+        protocol: "零知识证明协议",
+        sign_up_prompt: "还没有账户？注册",
+        sign_in_prompt: "已有账户？登录"
     },
     menu: {
         manifesto: "宣言",
@@ -354,13 +358,15 @@ const TRANSLATIONS = {
   [Language.JA]: {
     slogan: "ただ投票するだけでなく、価値観を生きる。",
     nav: { feed: "フィード", sense: "センス", stance: "スタンス", union: "ユニオン" },
-    login: { 
-        title: "本人確認", 
-        email: "メールアドレス", 
-        key: "アクセスキー", 
-        btn: "リンク確立", 
+    login: {
+        title: "本人確認",
+        email: "メールアドレス",
+        key: "アクセスキー",
+        btn: "リンク確立",
         google: "GOOGLEで続行",
-        protocol: "ゼロ知識証明プロトコル"
+        protocol: "ゼロ知識証明プロトコル",
+        sign_up_prompt: "アカウントをお持ちでない方は？登録",
+        sign_in_prompt: "既にアカウントをお持ちですか？サインイン"
     },
     menu: {
         manifesto: "マニフェスト",
@@ -528,13 +534,15 @@ const TRANSLATIONS = {
   [Language.FR]: {
     slogan: "Ne votez pas juste. Incarnez vos valeurs.",
     nav: { feed: "FLUX", sense: "SENS", stance: "POSITION", union: "UNION" },
-    login: { 
-        title: "IDENTIFICATION", 
-        email: "EMAIL", 
-        key: "CLÉ D'ACCÈS", 
-        btn: "ÉTABLIR LIEN", 
+    login: {
+        title: "IDENTIFICATION",
+        email: "EMAIL",
+        key: "CLÉ D'ACCÈS",
+        btn: "ÉTABLIR LIEN",
         google: "CONTINUER AVEC GOOGLE",
-        protocol: "Protocole à Divulgation Nulle"
+        protocol: "Protocole à Divulgation Nulle",
+        sign_up_prompt: "Pas de compte ? S'inscrire",
+        sign_in_prompt: "Déjà un compte ? Se connecter"
     },
     menu: {
         manifesto: "MANIFESTE",
@@ -702,13 +710,15 @@ const TRANSLATIONS = {
   [Language.ES]: {
     slogan: "No solo votes. Vive tus valores.",
     nav: { feed: "FEED", sense: "SENTIDO", stance: "POSTURA", union: "UNIÓN" },
-    login: { 
-        title: "IDENTIFÍCATE", 
-        email: "CORREO ELECTRÓNICO", 
-        key: "CLAVE DE ACCESO", 
-        btn: "ESTABLECER ENLACE", 
+    login: {
+        title: "IDENTIFÍCATE",
+        email: "CORREO ELECTRÓNICO",
+        key: "CLAVE DE ACCESO",
+        btn: "ESTABLECER ENLACE",
         google: "CONTINUAR CON GOOGLE",
-        protocol: "Protocolo de Conocimiento Cero"
+        protocol: "Protocolo de Conocimiento Cero",
+        sign_up_prompt: "¿No tienes cuenta? Regístrate",
+        sign_in_prompt: "¿Ya tienes cuenta? Iniciar sesión"
     },
     menu: {
         manifesto: "MANIFIESTO",
