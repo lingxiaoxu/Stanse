@@ -7,6 +7,7 @@ import { analyzeBrandAlignment, UserDemographicsForAnalysis } from '../../servic
 import { queryCompanyFECData, FECCompanyData, FECPartyData, formatPartyName, getPartyColor } from '../../services/fecService';
 import { PoliticalCoordinates, BrandAlignment, ViewState } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface SenseViewProps {
   userProfile: PoliticalCoordinates;
@@ -39,6 +40,8 @@ export const SenseView: React.FC<SenseViewProps> = ({
   persistedFecData,
   onFecDataChange
 }) => {
+  const { user } = useAuth();
+
   // Use persisted state if available, otherwise fall back to local state
   const [localQuery, setLocalQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -68,7 +71,7 @@ export const SenseView: React.FC<SenseViewProps> = ({
     try {
       // Query both Gemini and FEC data in parallel
       const [brandData, fecResult] = await Promise.all([
-        analyzeBrandAlignment(query, userProfile, userDemographics),
+        analyzeBrandAlignment(query, userProfile, userDemographics, user?.uid),
         queryCompanyFECData(query)
       ]);
       setResult(brandData);
@@ -333,7 +336,7 @@ export const SenseView: React.FC<SenseViewProps> = ({
                                         setFecData(null);
                                         try {
                                             const [brandData, fecResult] = await Promise.all([
-                                                analyzeBrandAlignment(entityName, userProfile, userDemographics),
+                                                analyzeBrandAlignment(entityName, userProfile, userDemographics, user?.uid),
                                                 queryCompanyFECData(entityName)
                                             ]);
                                             setResult(brandData);

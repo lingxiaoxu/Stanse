@@ -559,3 +559,95 @@ export const hasSeenTourInLanguage = async (
   const profile = await getUserProfile(userId);
   return profile?.tourCompleted?.[language as keyof typeof profile.tourCompleted] || false;
 };
+
+// ==================== Entity Stances ====================
+// Track user's explicit support/oppose stances on specific entities
+// Collection structure: entityStances/{userId}/entities/{entityName}
+
+export interface EntityStance {
+  entityName: string;
+  stance: 'SUPPORT' | 'OPPOSE';
+  reason?: string;
+  timestamp: string;
+  userId: string;
+}
+
+/**
+ * Save user's stance on a specific entity
+ * @param userId - The user's ID
+ * @param entityName - The entity name (normalized to lowercase)
+ * @param stance - SUPPORT or OPPOSE
+ * @param reason - Optional reason for the stance
+ */
+export const saveEntityStance = async (
+  userId: string,
+  entityName: string,
+  stance: 'SUPPORT' | 'OPPOSE',
+  reason?: string
+): Promise<void> => {
+  // Normalize entity name (lowercase, trim)
+  const normalizedName = entityName.toLowerCase().trim();
+
+  const stanceRef = doc(db, 'entityStances', userId, 'entities', normalizedName);
+
+  const stanceData: EntityStance = {
+    entityName: normalizedName,
+    stance,
+    reason: reason || undefined,
+    timestamp: new Date().toISOString(),
+    userId
+  };
+
+  await setDoc(stanceRef, stanceData);
+  console.log(`✅ Saved entity stance: ${normalizedName} = ${stance}`);
+};
+
+/**
+ * Get user's stance on a specific entity
+ * @param userId - The user's ID
+ * @param entityName - The entity name (normalized to lowercase)
+ * @returns EntityStance if exists, null otherwise
+ */
+export const getEntityStance = async (
+  userId: string,
+  entityName: string
+): Promise<EntityStance | null> => {
+  const normalizedName = entityName.toLowerCase().trim();
+  const stanceRef = doc(db, 'entityStances', userId, 'entities', normalizedName);
+
+  const stanceSnap = await getDoc(stanceRef);
+
+  if (stanceSnap.exists()) {
+    return stanceSnap.data() as EntityStance;
+  }
+
+  return null;
+};
+
+/**
+ * Get all entity stances for a user
+ * @param userId - The user's ID
+ * @returns Array of all entity stances
+ */
+export const getAllEntityStances = async (
+  userId: string
+): Promise<EntityStance[]> => {
+  const entitiesRef = collection(db, 'entityStances', userId, 'entities');
+  const snapshot = await getDocs(entitiesRef);
+
+  return snapshot.docs.map(doc => doc.data() as EntityStance);
+};
+
+/**
+ * Delete user's stance on a specific entity
+ * @param userId - The user's ID
+ * @param entityName - The entity name
+ */
+export const deleteEntityStance = async (
+  userId: string,
+  entityName: string
+): Promise<void> => {
+  const normalizedName = entityName.toLowerCase().trim();
+  const stanceRef = doc(db, 'entityStances', userId, 'entities', normalizedName);
+  await deleteDoc(stanceRef);
+};

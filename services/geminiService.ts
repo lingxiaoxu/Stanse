@@ -237,9 +237,24 @@ export interface UserDemographicsForAnalysis {
 export const analyzeBrandAlignment = async (
   entityName: string,
   userProfile: PoliticalCoordinates,
-  demographics?: UserDemographicsForAnalysis
+  demographics?: UserDemographicsForAnalysis,
+  userId?: string  // Optional: to check for explicit entity stance
 ): Promise<BrandAlignment> => {
   try {
+    // Import getEntityStance dynamically to avoid circular dependency
+    let entityStance: any = null;
+    if (userId) {
+      try {
+        const { getEntityStance } = await import('../services/userService');
+        entityStance = await getEntityStance(userId, entityName);
+        if (entityStance) {
+          console.log(`📋 Found explicit entity stance: ${entityName} = ${entityStance.stance}`);
+        }
+      } catch (err) {
+        console.warn('Failed to check entity stance:', err);
+      }
+    }
+
     // Detect entity type for better analysis
     const entityTypePrompt = `Classify "${entityName}" into one of: COMPANY, PERSON, COUNTRY, ORGANIZATION, POLITICAL_PARTY. Return only the category.`;
     const typeResponse = await ai.models.generateContent({
@@ -428,8 +443,25 @@ Avoid generic statements - be concrete and informative.`
           domain: 'wikipedia.org'
         }]).slice(0, 3);
 
+    // Apply explicit entity stance penalty/bonus
+    let finalScore = result.score || 50;
+    if (entityStance) {
+      if (entityStance.stance === 'OPPOSE') {
+        // User explicitly opposes this entity - apply penalty
+        const penalty = 25;  // Reduce score by 25 points
+        finalScore = Math.max(0, finalScore - penalty);
+        console.log(`⚠️ Applied OPPOSE penalty: ${result.score} → ${finalScore} (-${penalty})`);
+      } else if (entityStance.stance === 'SUPPORT') {
+        // User explicitly supports this entity - apply bonus
+        const bonus = 15;  // Increase score by 15 points
+        finalScore = Math.min(100, finalScore + bonus);
+        console.log(`✅ Applied SUPPORT bonus: ${result.score} → ${finalScore} (+${bonus})`);
+      }
+    }
+
     return {
       ...result,
+      score: finalScore,  // Use adjusted score
       brandName: result.brandName || entityName,
       reasoning: result.reportSummary,
       sources: sources

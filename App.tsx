@@ -113,9 +113,15 @@ const StanseApp: React.FC = () => {
 
   // Handle entity recalibration from SenseView
   const handleRecalibrate = async (entityName: string, stance: 'SUPPORT' | 'OPPOSE', reason?: string) => {
-    if (!userProfile) return;
+    if (!userProfile || !user?.uid) return;
 
     try {
+      // Save explicit entity stance to Firebase
+      const { saveEntityStance } = await import('./services/userService');
+      await saveEntityStance(user.uid, entityName, stance, reason);
+      console.log(`✅ Entity stance saved: ${entityName} = ${stance}`);
+
+      // Recalibrate user coordinates based on feedback
       const newCoords = await recalibrateWithEntityFeedback(userProfile, entityName, stance, reason);
       await updateCoordinates(newCoords);
     } catch (error) {
