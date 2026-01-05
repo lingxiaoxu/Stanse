@@ -82,9 +82,9 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
 
   // Calculate tooltip position based on highlight and preferred position
   const getTooltipStyle = (): React.CSSProperties => {
-    const padding = 24;
+    const padding = 32; // Increased padding to avoid overlap
     const tooltipWidth = 360;
-    const tooltipHeight = 240; // Approximate
+    const tooltipHeight = 260; // Approximate
 
     // Default center position
     let top = window.innerHeight / 2 - tooltipHeight / 2;
@@ -93,26 +93,34 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
     if (highlightRect && currentTourStep.position !== 'center') {
       switch (currentTourStep.position) {
         case 'bottom':
-          top = highlightRect.bottom + padding;
+          // Position below the element, ensuring no overlap
+          top = Math.max(highlightRect.bottom + padding, 20);
           left = highlightRect.left + (highlightRect.width / 2) - (tooltipWidth / 2);
           break;
         case 'top':
-          top = highlightRect.top - tooltipHeight - padding;
+          // Position above the element
+          top = Math.max(highlightRect.top - tooltipHeight - padding, 20);
           left = highlightRect.left + (highlightRect.width / 2) - (tooltipWidth / 2);
+
+          // If not enough space on top, position to the side instead
+          if (top < 20) {
+            top = highlightRect.top;
+            left = highlightRect.right + padding;
+          }
           break;
         case 'right':
-          top = highlightRect.top + (highlightRect.height / 2) - (tooltipHeight / 2);
+          top = Math.max(highlightRect.top + (highlightRect.height / 2) - (tooltipHeight / 2), 20);
           left = highlightRect.right + padding;
           break;
         case 'left':
-          top = highlightRect.top + (highlightRect.height / 2) - (tooltipHeight / 2);
+          top = Math.max(highlightRect.top + (highlightRect.height / 2) - (tooltipHeight / 2), 20);
           left = highlightRect.left - tooltipWidth - padding;
           break;
       }
     }
 
-    // Keep tooltip within viewport
-    const margin = 16;
+    // Keep tooltip within viewport with margins
+    const margin = 20;
     if (left < margin) left = margin;
     if (left + tooltipWidth > window.innerWidth - margin) {
       left = window.innerWidth - tooltipWidth - margin;
@@ -189,21 +197,21 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
 
       {/* Tooltip - Clickable area to prevent event bubbling */}
       <div
-        className="bg-white border-4 border-black shadow-pixel p-6 animate-fade-in"
+        className="bg-white border-4 border-black shadow-pixel p-6 pt-8 animate-fade-in relative"
         style={{ ...getTooltipStyle(), pointerEvents: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
+        {/* Close button - positioned above progress bar */}
         <button
           onClick={onSkip}
-          className="absolute top-3 right-3 p-1 hover:bg-gray-200 rounded transition-colors"
+          className="absolute top-2 right-2 p-1 hover:bg-gray-200 rounded transition-colors z-10"
           aria-label="Skip tour"
         >
-          <X size={20} />
+          <X size={18} />
         </button>
 
         {/* Progress indicator */}
-        <div className="flex gap-1.5 mb-5">
+        <div className="flex gap-1.5 mb-5 pr-8">
           {steps.map((_, index) => (
             <div
               key={index}

@@ -29,28 +29,49 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       target: 'feed-tab',
       title: 'Feed Tab',
       description: 'Personalized news curated for your political stance. See what matters to you based on your values.',
-      position: 'bottom'
+      position: 'top'
+    },
+    {
+      id: 'market-stocks',
+      target: '[data-tour-id="market-stocks"]',
+      title: 'Market Alignment',
+      description: 'Real-time stock prices for companies that align with (or oppose) your political values. Track how markets reflect your ideology.',
+      position: 'top'
+    },
+    {
+      id: 'company-rankings',
+      target: '[data-tour-id="company-rankings"]',
+      title: 'Values-Based Rankings',
+      description: 'Top companies to support or oppose based on FEC donations, ESG scores, executive statements, and news analysis.',
+      position: 'top'
     },
     {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'Sense Tab',
-      description: 'Scan brands and companies to check their alignment with your political values. Make informed purchasing decisions.',
-      position: 'bottom'
+      description: 'Scan any brand or company to check their alignment with your political values. Make informed purchasing decisions.',
+      position: 'top'
     },
     {
       id: 'stance-tab',
       target: 'stance-tab',
       title: 'Stance Tab',
       description: 'Your political fingerprint. View your coordinates on economic, social, and diplomatic axes, plus your AI-generated persona.',
-      position: 'bottom'
+      position: 'top'
+    },
+    {
+      id: 'coordinates',
+      target: '[data-tour-id="coordinates-chart"]',
+      title: 'Political Coordinates',
+      description: 'Your position on 3 axes: Economic (left/right), Social (libertarian/authoritarian), Diplomatic (globalist/nationalist).',
+      position: 'top'
     },
     {
       id: 'union-tab',
       target: 'union-tab',
       title: 'Union Tab',
       description: 'Track your collective political impact through Polis Protocol blockchain. See real-time union strength and capital diverted.',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'menu',
@@ -82,28 +103,49 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       target: 'feed-tab',
       title: '动态标签',
       description: '根据您的政治立场个性化推荐新闻。基于您的价值观查看对您重要的内容。',
-      position: 'bottom'
+      position: 'top'
+    },
+    {
+      id: 'market-stocks',
+      target: '[data-tour-id="market-stocks"]',
+      title: '市场对齐',
+      description: '与您政治价值观一致（或相反）的公司的实时股价。追踪市场如何反映您的意识形态。',
+      position: 'top'
+    },
+    {
+      id: 'company-rankings',
+      target: '[data-tour-id="company-rankings"]',
+      title: '基于价值观的排名',
+      description: '基于 FEC 捐款、ESG 评分、高管声明和新闻分析的支持或反对公司排名。',
+      position: 'top'
     },
     {
       id: 'sense-tab',
       target: 'sense-tab',
       title: '感知标签',
-      description: '扫描品牌和公司，检查它们与您政治价值观的一致性。做出明智的购买决策。',
-      position: 'bottom'
+      description: '扫描任何品牌或公司，检查它们与您政治价值观的一致性。做出明智的购买决策。',
+      position: 'top'
     },
     {
       id: 'stance-tab',
       target: 'stance-tab',
       title: '立场标签',
       description: '您的政治指纹。查看您在经济、社会和外交轴上的坐标，以及 AI 生成的人格标签。',
-      position: 'bottom'
+      position: 'top'
+    },
+    {
+      id: 'coordinates',
+      target: '[data-tour-id="coordinates-chart"]',
+      title: '政治坐标',
+      description: '您在 3 个轴上的位置：经济（左/右）、社会（自由/威权）、外交（全球/民族）。',
+      position: 'top'
     },
     {
       id: 'union-tab',
       target: 'union-tab',
       title: '联合标签',
       description: '通过 Polis Protocol 区块链追踪您的集体政治影响力。查看实时联盟强度和资本转移。',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'menu',
@@ -135,28 +177,28 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       target: 'feed-tab',
       title: 'フィードタブ',
       description: '政治的立場に合わせてキュレーションされたパーソナライズされたニュース。あなたの価値観に基づいて重要なことを見る。',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'センスタブ',
       description: 'ブランドや企業をスキャンして、あなたの政治的価値観との整合性を確認。情報に基づいた購入決定を行う。',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'stance-tab',
       target: 'stance-tab',
       title: 'スタンスタブ',
       description: 'あなたの政治的指紋。経済、社会、外交軸上の座標と AI 生成のペルソナを表示。',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'union-tab',
       target: 'union-tab',
       title: 'ユニオンタブ',
       description: 'Polis Protocol ブロックチェーンを通じて集団的政治的影響を追跡。リアルタイムのユニオン強度と転換された資本を確認。',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'menu',
@@ -188,28 +230,28 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       target: 'feed-tab',
       title: 'Onglet Flux',
       description: 'Actualités personnalisées selon votre position politique. Voyez ce qui compte pour vous en fonction de vos valeurs.',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'Onglet Sense',
       description: 'Scannez les marques et entreprises pour vérifier leur alignement avec vos valeurs politiques. Prenez des décisions d\'achat éclairées.',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'stance-tab',
       target: 'stance-tab',
       title: 'Onglet Position',
       description: 'Votre empreinte politique. Visualisez vos coordonnées sur les axes économique, social et diplomatique, plus votre persona généré par l\'IA.',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'union-tab',
       target: 'union-tab',
       title: 'Onglet Union',
       description: 'Suivez votre impact politique collectif via la blockchain Polis Protocol. Voyez la force de l\'union et le capital détourné en temps réel.',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'menu',
@@ -241,28 +283,28 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       target: 'feed-tab',
       title: 'Pestaña Feed',
       description: 'Noticias personalizadas según su postura política. Vea lo que importa para usted basado en sus valores.',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'Pestaña Sense',
       description: 'Escanee marcas y empresas para verificar su alineación con sus valores políticos. Tome decisiones de compra informadas.',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'stance-tab',
       target: 'stance-tab',
       title: 'Pestaña Postura',
       description: 'Su huella política. Vea sus coordenadas en los ejes económico, social y diplomático, más su persona generado por IA.',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'union-tab',
       target: 'union-tab',
       title: 'Pestaña Unión',
       description: 'Rastree su impacto político colectivo a través de blockchain Polis Protocol. Vea la fuerza de la unión y el capital desviado en tiempo real.',
-      position: 'bottom'
+      position: 'top'
     },
     {
       id: 'menu',
