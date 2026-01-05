@@ -22,6 +22,13 @@ export interface UserProfile {
   coordinates: PoliticalCoordinates;
   onboarding?: OnboardingAnswers;
   hasCompletedOnboarding: boolean;
+  tourCompleted?: {
+    EN?: boolean;
+    ZH?: boolean;
+    JA?: boolean;
+    FR?: boolean;
+    ES?: boolean;
+  };
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -519,4 +526,36 @@ export const syncSocialMediaData = async (
   await updateSocialMediaConnection(userId, platform, {
     lastSyncedAt: new Date().toISOString()
   });
+};
+
+// ==================== App Tour ====================
+
+/**
+ * Mark app tour as completed for a specific language
+ * @param userId - The user's ID
+ * @param language - The language in which tour was completed
+ */
+export const markTourCompleted = async (
+  userId: string,
+  language: string
+): Promise<void> => {
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, {
+    [`tourCompleted.${language}`]: true,
+    updatedAt: serverTimestamp()
+  });
+};
+
+/**
+ * Check if user has completed tour in a specific language
+ * @param userId - The user's ID
+ * @param language - The language to check
+ * @returns true if tour completed in this language
+ */
+export const hasSeenTourInLanguage = async (
+  userId: string,
+  language: string
+): Promise<boolean> => {
+  const profile = await getUserProfile(userId);
+  return profile?.tourCompleted?.[language as keyof typeof profile.tourCompleted] || false;
 };

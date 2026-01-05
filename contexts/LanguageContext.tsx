@@ -147,6 +147,13 @@ const TRANSLATIONS = {
         language_fr: "Français",
         language_es: "Español"
     },
+    tour: {
+        tap_anywhere: "Tap anywhere to continue",
+        skip: "Skip Tour",
+        back: "BACK",
+        next: "NEXT",
+        finish: "FINISH"
+    },
     manifesto: {
         title: "MANIFESTO",
         subtitle: "The Philosophy of Stanse",
@@ -312,6 +319,13 @@ const TRANSLATIONS = {
         language_ja: "日本語",
         language_fr: "Français",
         language_es: "Español"
+    },
+    tour: {
+        tap_anywhere: "点击屏幕任意位置继续",
+        skip: "跳过导览",
+        back: "返回",
+        next: "下一步",
+        finish: "完成"
     },
     manifesto: {
         title: "宣言",
@@ -479,6 +493,13 @@ const TRANSLATIONS = {
         language_fr: "Français",
         language_es: "Español"
     },
+    tour: {
+        tap_anywhere: "画面をタップして続ける",
+        skip: "ツアーをスキップ",
+        back: "戻る",
+        next: "次へ",
+        finish: "完了"
+    },
     manifesto: {
         title: "マニフェスト",
         subtitle: "Stanseの哲学",
@@ -645,6 +666,13 @@ const TRANSLATIONS = {
         language_fr: "Français",
         language_es: "Español"
     },
+    tour: {
+        tap_anywhere: "Appuyez n'importe où pour continuer",
+        skip: "Passer la visite",
+        back: "RETOUR",
+        next: "SUIVANT",
+        finish: "TERMINER"
+    },
     manifesto: {
         title: "MANIFESTE",
         subtitle: "La Philosophie de Stanse",
@@ -810,6 +838,13 @@ const TRANSLATIONS = {
         language_ja: "日本語",
         language_fr: "Français",
         language_es: "Español"
+    },
+    tour: {
+        tap_anywhere: "Toque en cualquier lugar para continuar",
+        skip: "Saltar recorrido",
+        back: "ATRÁS",
+        next: "SIGUIENTE",
+        finish: "FINALIZAR"
     },
     manifesto: {
         title: "MANIFIESTO",
