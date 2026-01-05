@@ -227,6 +227,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
+      id: 'news-feed',
+      target: 'news-feed',
+      title: 'ニュースフィード',
+      description: 'あなたの政治的立場に基づいて AI がキュレーションしたパーソナライズされたニュース記事。重要なトピックについて情報を得る。',
+      position: 'top',
+      requiredTab: 'FEED'
+    },
+    {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'センスタブ',
@@ -251,6 +259,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'UNION'
     },
     {
+    {
+      id: 'active-allies',
+      target: 'active-allies',
+      title: 'アクティブな仲間',
+      description: 'あなたの地域で政治的価値観に沿って消費を調整しているユーザーのリアルタイムカウント。リアルタイムの集団行動を見る。',
+      position: 'top',
+      requiredTab: 'UNION'
+    },
       id: 'menu',
       target: 'menu-button',
       title: 'メニュー',
@@ -284,6 +300,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
+      id: 'news-feed',
+      target: 'news-feed',
+      title: 'Le Flux d\'Actualités',
+      description: 'Articles d\'actualité personnalisés organisés par l\'IA selon votre position politique. Restez informé sur les sujets qui comptent pour vous.',
+      position: 'top',
+      requiredTab: 'FEED'
+    },
+    {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'Onglet Sense',
@@ -308,6 +332,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'UNION'
     },
     {
+    {
+      id: 'active-allies',
+      target: 'active-allies',
+      title: 'Alliés Actifs',
+      description: 'Nombre en temps réel d\'utilisateurs dans votre région alignant actuellement leur consommation avec les valeurs politiques. Voyez l\'action collective en temps réel.',
+      position: 'top',
+      requiredTab: 'UNION'
+    },
       id: 'menu',
       target: 'menu-button',
       title: 'Menu',
@@ -341,6 +373,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
+      id: 'news-feed',
+      target: 'news-feed',
+      title: 'El Feed de Noticias',
+      description: 'Artículos de noticias personalizados curados por IA según su postura política. Manténgase informado sobre temas que le importan.',
+      position: 'top',
+      requiredTab: 'FEED'
+    },
+    {
       id: 'sense-tab',
       target: 'sense-tab',
       title: 'Pestaña Sense',
@@ -365,6 +405,14 @@ export const TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'UNION'
     },
     {
+    {
+      id: 'active-allies',
+      target: 'active-allies',
+      title: 'Aliados Activos',
+      description: 'Recuento en tiempo real de usuarios en su región alineando actualmente su consumo con valores políticos. Vea la acción colectiva en tiempo real.',
+      position: 'top',
+      requiredTab: 'UNION'
+    },
       id: 'menu',
       target: 'menu-button',
       title: 'Menú',
