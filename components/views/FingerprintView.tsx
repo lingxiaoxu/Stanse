@@ -12,9 +12,10 @@ import { useAppState } from '../../contexts/AppStateContext';
 
 interface FingerprintViewProps {
   coords: PoliticalCoordinates;
+  isTourActive?: boolean;
 }
 
-export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
+export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords, isTourActive = false }) => {
   const { hasCompletedOnboarding, completeOnboarding } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [localCoords, setLocalCoords] = useState(coords);
@@ -352,6 +353,7 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords }) => {
         isOpen={showOnboarding}
         onComplete={handleOnboardingComplete}
         onClose={() => setShowOnboarding(false)}
+        isTourActive={isTourActive}
       />
 
       <div className="space-y-6 w-full max-w-md mx-auto pb-20">
