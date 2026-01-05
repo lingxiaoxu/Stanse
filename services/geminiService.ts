@@ -276,14 +276,19 @@ export const analyzeBrandAlignment = async (
   userId?: string  // Optional: to check for explicit entity stance
 ): Promise<BrandAlignment> => {
   try {
+    // Canonicalize entity name first for consistent lookup
+    const canonicalName = await getCanonicalEntityNameAI(entityName);
+    console.log(`🔤 Canonical lookup: "${entityName}" → "${canonicalName}"`);
+
     // Import getEntityStance dynamically to avoid circular dependency
     let entityStance: any = null;
     if (userId) {
       try {
         const { getEntityStance } = await import('../services/userService');
-        entityStance = await getEntityStance(userId, entityName);
+        // Use canonical name for lookup (matches what was saved)
+        entityStance = await getEntityStance(userId, canonicalName);
         if (entityStance) {
-          console.log(`📋 Found explicit entity stance: ${entityName} = ${entityStance.stance}`);
+          console.log(`📋 Found explicit entity stance: ${canonicalName} = ${entityStance.stance}`);
         }
       } catch (err) {
         console.warn('Failed to check entity stance:', err);
