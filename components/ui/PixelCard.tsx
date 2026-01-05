@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface PixelCardProps {
+interface PixelCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
   title?: string;
@@ -8,12 +8,13 @@ interface PixelCardProps {
   actionElement?: React.ReactNode;
 }
 
-export const PixelCard: React.FC<PixelCardProps> = ({ 
-  children, 
-  className = '', 
-  title, 
+export const PixelCard: React.FC<PixelCardProps> = ({
+  children,
+  className = '',
+  title,
   variant = 'default',
-  actionElement 
+  actionElement,
+  ...rest
 }) => {
   const isDark = variant === 'dark';
   const isOutline = variant === 'outline';
@@ -30,13 +31,16 @@ export const PixelCard: React.FC<PixelCardProps> = ({
   }
 
   return (
-    <div className={`
-      relative group border-2 ${borderClass}
-      ${bgClass}
-      shadow-pixel hover:shadow-pixel-lg transition-all duration-300
-      mb-6 p-5 promax:p-6
-      ${className}
-    `}>
+    <div
+      {...rest}
+      className={`
+        relative group border-2 ${borderClass}
+        ${bgClass}
+        shadow-pixel hover:shadow-pixel-lg transition-all duration-300
+        mb-6 p-5 promax:p-6
+        ${className}
+      `}
+    >
       {/* Decorative Corner Bits (The Masterpiece Detail) */}
       {!isOutline && (
         <>
