@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ViewState, PoliticalCoordinates, BrandAlignment } from './types';
 import { FECCompanyData } from './services/fecService';
 import { Compass, Search, Newspaper, Users, Menu } from 'lucide-react';
@@ -13,10 +13,13 @@ import { PrivacyView } from './components/views/PrivacyView';
 import { SettingsView } from './components/views/SettingsView';
 import { AccountView } from './components/views/AccountView';
 import { MenuOverlay } from './components/ui/MenuOverlay';
+import { AppTour } from './components/ui/AppTour';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppStateProvider } from './contexts/AppStateContext';
 import { recalibrateWithEntityFeedback } from './services/agents/stanceAgent';
+import { getTourSteps } from './data/tourSteps';
+import { markTourCompleted } from './services/userService';
 
 // Initial mock state for user profile (used as fallback)
 const INITIAL_PROFILE: PoliticalCoordinates = {
@@ -29,7 +32,8 @@ const INITIAL_PROFILE: PoliticalCoordinates = {
 const StanseApp: React.FC = () => {
   const [view, setView] = useState<ViewState>(ViewState.FEED);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { t } = useLanguage();
+  const [showTour, setShowTour] = useState(false);
+  const { t, language } = useLanguage();
   const { user, userProfile: authUserProfile, logout, loading, updateCoordinates } = useAuth();
 
   // Use profile from Firebase or fallback to initial
@@ -44,8 +48,51 @@ const StanseApp: React.FC = () => {
   // The report should persist until the user manually searches again.
   // This allows the user to compare how their stance affects the score.
 
+  // Check if tour should be shown after login
+  useEffect(() => {
+    const checkTour = async () => {
+      if (user && authUserProfile) {
+        // Check if user has seen tour in current language
+        const hasSeenInCurrentLang = authUserProfile.tourCompleted?.[language] || false;
+
+        if (!hasSeenInCurrentLang) {
+          // Small delay to ensure UI is ready
+          setTimeout(() => {
+            setShowTour(true);
+          }, 500);
+        }
+      }
+    };
+
+    checkTour();
+  }, [user, authUserProfile, language]);
+
   const handleLogin = () => {
     setView(ViewState.FEED);
+  };
+
+  const handleTourComplete = async () => {
+    if (user) {
+      try {
+        await markTourCompleted(user.uid, language);
+        setShowTour(false);
+      } catch (error) {
+        console.error('Failed to mark tour as completed:', error);
+        setShowTour(false); // Close anyway
+      }
+    }
+  };
+
+  const handleTourSkip = async () => {
+    // Mark as completed even if skipped (so it doesn't show again)
+    if (user) {
+      try {
+        await markTourCompleted(user.uid, language);
+      } catch (error) {
+        console.error('Failed to mark tour as skipped:', error);
+      }
+    }
+    setShowTour(false);
   };
 
   const handleLogout = async () => {
@@ -144,9 +191,10 @@ const StanseApp: React.FC = () => {
         >
           STANSE
         </div>
-        <button 
+        <button
           className="p-2 active:scale-95 transition-transform hover:bg-gray-200 border-2 border-transparent hover:border-pixel-black rounded-none"
           onClick={() => setIsMenuOpen(true)}
+          data-tour-id="menu-button"
         >
           <Menu className="w-6 h-6 promax:w-8 promax:h-8" />
         </button>
@@ -162,39 +210,58 @@ const StanseApp: React.FC = () => {
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-pixel-black z-50 pb-safe safe-area-pb">
         <div className="flex justify-around items-center h-16 promax:h-20 max-w-lg promax:max-w-xl mx-auto">
-          <NavButton 
-            icon={<Newspaper size={24} className="promax:w-7 promax:h-7" />} 
+          <NavButton
+            icon={<Newspaper size={24} className="promax:w-7 promax:h-7" />}
             label={t('nav', 'feed')}
-            isActive={view === ViewState.FEED} 
-            onClick={() => setView(ViewState.FEED)} 
+            isActive={view === ViewState.FEED}
+            onClick={() => setView(ViewState.FEED)}
+            tourId="feed-tab"
           />
-          <NavButton 
-            icon={<Search size={24} className="promax:w-7 promax:h-7" />} 
+          <NavButton
+            icon={<Search size={24} className="promax:w-7 promax:h-7" />}
             label={t('nav', 'sense')}
-            isActive={view === ViewState.SENSE} 
-            onClick={() => setView(ViewState.SENSE)} 
+            isActive={view === ViewState.SENSE}
+            onClick={() => setView(ViewState.SENSE)}
+            tourId="sense-tab"
           />
-          <NavButton 
-            icon={<Compass size={24} className="promax:w-7 promax:h-7" />} 
+          <NavButton
+            icon={<Compass size={24} className="promax:w-7 promax:h-7" />}
             label={t('nav', 'stance')}
-            isActive={view === ViewState.FINGERPRINT} 
-            onClick={() => setView(ViewState.FINGERPRINT)} 
+            isActive={view === ViewState.FINGERPRINT}
+            onClick={() => setView(ViewState.FINGERPRINT)}
+            tourId="stance-tab"
           />
-          <NavButton 
-            icon={<Users size={24} className="promax:w-7 promax:h-7" />} 
+          <NavButton
+            icon={<Users size={24} className="promax:w-7 promax:h-7" />}
             label={t('nav', 'union')}
-            isActive={view === ViewState.UNION} 
-            onClick={() => setView(ViewState.UNION)} 
+            isActive={view === ViewState.UNION}
+            onClick={() => setView(ViewState.UNION)}
+            tourId="union-tab"
           />
         </div>
       </nav>
+
+      {/* App Tour Overlay */}
+      <AppTour
+        steps={getTourSteps(language)}
+        isOpen={showTour}
+        onComplete={handleTourComplete}
+        onSkip={handleTourSkip}
+      />
     </div>
   );
 };
 
-const NavButton: React.FC<{ icon: React.ReactNode, label: string, isActive: boolean, onClick: () => void }> = ({ icon, label, isActive, onClick }) => (
-  <button 
+const NavButton: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+  tourId?: string;
+}> = ({ icon, label, isActive, onClick, tourId }) => (
+  <button
     onClick={onClick}
+    data-tour-id={tourId}
     className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-200
       ${isActive ? 'bg-pixel-black text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-black'}
     `}
