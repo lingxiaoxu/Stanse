@@ -125,15 +125,12 @@ export const calculateProratedAmount = (
 };
 
 /**
- * Validate and use a promotion code
+ * Validate promotion code (without marking as used)
  */
-export const validateAndUsePromoCode = async (
-  code: string,
-  userId: string,
-  userEmail: string
-): Promise<{ valid: boolean; error?: string }> => {
+export const validatePromoCode = async (
+  code: string
+): Promise<{ valid: boolean; error?: string; docRef?: any }> => {
   try {
-    // Query for the promotion code
     const promoRef = collection(db, 'promotion_codes');
     const q = query(promoRef, where('code', '==', code.toUpperCase()), firestoreLimit(1));
     const snapshot = await getDocs(q);
@@ -149,19 +146,27 @@ export const validateAndUsePromoCode = async (
       return { valid: false, error: 'Promotion code already used' };
     }
 
-    // Mark as used
-    await updateDoc(promoDoc.ref, {
-      isUsed: true,
-      userId,
-      userEmail,
-      usedAt: new Date().toISOString()
-    });
-
-    return { valid: true };
+    return { valid: true, docRef: promoDoc.ref };
   } catch (error) {
     console.error('Failed to validate promo code:', error);
     return { valid: false, error: 'Failed to validate code' };
   }
+};
+
+/**
+ * Mark promotion code as used
+ */
+export const markPromoCodeUsed = async (
+  docRef: any,
+  userId: string,
+  userEmail: string
+): Promise<void> => {
+  await updateDoc(docRef, {
+    isUsed: true,
+    userId,
+    userEmail,
+    usedAt: new Date().toISOString()
+  });
 };
 
 /**
@@ -184,12 +189,14 @@ export const subscribeToPremium = async (
 
     // Handle promotion code
     let isPromo = false;
+    let promoDocRef: any = null;
     if (promoCode) {
-      const promoResult = await validateAndUsePromoCode(promoCode, userId, userEmail);
+      const promoResult = await validatePromoCode(promoCode);
       if (!promoResult.valid) {
         return { success: false, error: promoResult.error };
       }
       isPromo = true;
+      promoDocRef = promoResult.docRef;
     }
 
     // Calculate period end (always next month's 1st for tracking)
@@ -294,6 +301,16 @@ export const subscribeToPremium = async (
       console.log(`📊 Event tracked: SUBSCRIBE`);
     } catch (eventError) {
       console.error('Failed to record SUBSCRIBE event (non-critical):', eventError);
+    }
+
+    // Mark promo code as used ONLY after subscription succeeds
+    if (isPromo && promoDocRef) {
+      try {
+        await markPromoCodeUsed(promoDocRef, userId, userEmail);
+        console.log(`✅ Promo code marked as used`);
+      } catch (promoError) {
+        console.error('Failed to mark promo code as used (non-critical):', promoError);
+      }
     }
 
     console.log(`✅ User ${userId} subscribed successfully. Initial amount: $${initialAmount.toFixed(2)} (Trial active)`);
