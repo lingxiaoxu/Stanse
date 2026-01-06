@@ -193,8 +193,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Promotion Code Section */}
-      <div className={`border-2 border-black p-4 ${disablePromoCode ? 'bg-gray-200 opacity-60' : 'bg-gray-50'}`}>
-        <div className="flex items-center gap-2 mb-3">
+      <div className={`border-2 border-black p-3 ${disablePromoCode ? 'bg-gray-200 opacity-60' : 'bg-gray-50'}`}>
+        <div className="flex items-center gap-2 mb-2">
           <Tag size={16} className={disablePromoCode ? 'text-gray-400' : ''} />
           <label className="font-mono text-xs font-bold uppercase">
             Promotion Code {disablePromoCode && '(Only for new subscriptions)'}
@@ -205,7 +205,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           value={promoCode}
           onChange={(e) => !disablePromoCode && setPromoCode(e.target.value.toUpperCase())}
           placeholder={disablePromoCode ? "NOT AVAILABLE" : "ENTER CODE"}
-          className={`w-full border-2 p-3 font-mono uppercase ${
+          className={`w-full border-2 p-2 font-mono uppercase ${
             disablePromoCode
               ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
               : 'border-black bg-white'
@@ -213,7 +213,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           maxLength={20}
           disabled={isLoading || disablePromoCode}
         />
-        <p className="font-mono text-xs text-gray-500 mt-2">
+        <p className="font-mono text-xs text-gray-500 mt-1">
           {disablePromoCode
             ? 'Promotion codes can only be used when first subscribing'
             : hasPromoCode
@@ -244,39 +244,39 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           />
         </div>
 
-        {/* Card Number, Expiry, CVV - Single Row */}
-        <div className="grid grid-cols-12 gap-3">
-          {/* Card Number - Takes 7 columns */}
-          <div className="col-span-7 space-y-2">
-            <label className="font-mono text-xs font-bold block uppercase">Card Number</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={cardNumber}
-                onChange={handleCardNumberChange}
-                placeholder="4242 4242 4242 4242"
-                className={`w-full border-2 p-3 font-mono bg-white ${
-                  cardNumberError ? 'border-alert-red' : 'border-black'
-                }`}
-                disabled={isLoading || hasPromoCode}
-              />
-              {cardType && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs font-bold bg-yellow-100 px-2 py-1 border border-yellow-600">
-                  {cardType}
-                </span>
-              )}
-            </div>
-            {cardNumberError && (
-              <div className="flex items-center gap-1 text-alert-red font-mono text-xs">
-                <AlertCircle size={12} />
-                {cardNumberError}
-              </div>
+        {/* Card Number */}
+        <div className="space-y-2">
+          <label className="font-mono text-xs font-bold block uppercase">Card Number</label>
+          <div className="relative">
+            <input
+              type="text"
+              value={cardNumber}
+              onChange={handleCardNumberChange}
+              placeholder="4242 4242 4242 4242"
+              className={`w-full border-2 p-3 font-mono bg-white ${
+                cardNumberError ? 'border-alert-red' : 'border-black'
+              }`}
+              disabled={isLoading || hasPromoCode}
+            />
+            {cardType && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs font-bold bg-yellow-100 px-2 py-1 border border-yellow-600">
+                {cardType}
+              </span>
             )}
           </div>
+          {cardNumberError && (
+            <div className="flex items-center gap-1 text-alert-red font-mono text-xs">
+              <AlertCircle size={12} />
+              {cardNumberError}
+            </div>
+          )}
+        </div>
 
-          {/* Expiry - Takes 3 columns */}
-          <div className="col-span-3 space-y-2">
-            <label className="font-mono text-xs font-bold block uppercase">Expiry</label>
+        {/* Expiry and CVV */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Expiry Date */}
+          <div className="space-y-2">
+            <label className="font-mono text-xs font-bold block uppercase">Expiry (MM/YY)</label>
             <input
               type="text"
               value={expiry}
@@ -295,9 +295,11 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             )}
           </div>
 
-          {/* CVV - Takes 2 columns */}
-          <div className="col-span-2 space-y-2">
-            <label className="font-mono text-xs font-bold block uppercase">CVV</label>
+          {/* CVV */}
+          <div className="space-y-2">
+            <label className="font-mono text-xs font-bold block uppercase">
+              CVV {cardType === 'Amex' && '(4 digits)'}
+            </label>
             <input
               type="text"
               value={cvv}
@@ -317,40 +319,36 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           </div>
         </div>
 
-        {/* Billing ZIP and Save Checkbox - Single Row */}
-        <div className="grid grid-cols-2 gap-4 items-end">
-          <div className="space-y-2">
-            <label className="font-mono text-xs font-bold block uppercase">Billing ZIP</label>
-            <input
-              type="text"
-              value={billingZip}
-              onChange={(e) => setBillingZip(e.target.value)}
-              placeholder="12345"
-              className="w-full border-2 border-black p-3 font-mono bg-white"
-              disabled={isLoading || hasPromoCode}
-              maxLength={10}
-            />
-          </div>
-
-          {/* Save Payment Method - Aligned to bottom */}
-          {!hasPromoCode && (
-            <div className="pb-3">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="savePayment"
-                  checked={savePayment}
-                  onChange={(e) => setSavePayment(e.target.checked)}
-                  className="w-4 h-4 border-2 border-black"
-                  disabled={isLoading}
-                />
-                <label htmlFor="savePayment" className="font-mono text-xs">
-                  Save for future billing
-                </label>
-              </div>
-            </div>
-          )}
+        {/* Billing ZIP */}
+        <div className="space-y-2">
+          <label className="font-mono text-xs font-bold block uppercase">Billing ZIP Code</label>
+          <input
+            type="text"
+            value={billingZip}
+            onChange={(e) => setBillingZip(e.target.value)}
+            placeholder="12345"
+            className="w-full border-2 border-black p-3 font-mono bg-white"
+            disabled={isLoading || hasPromoCode}
+            maxLength={10}
+          />
         </div>
+
+        {/* Save Payment Method */}
+        {!hasPromoCode && (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="savePayment"
+              checked={savePayment}
+              onChange={(e) => setSavePayment(e.target.checked)}
+              className="w-4 h-4 border-2 border-black"
+              disabled={isLoading}
+            />
+            <label htmlFor="savePayment" className="font-mono text-xs">
+              Save payment method for future billing
+            </label>
+          </div>
+        )}
       </div>
 
       {/* Submit Button */}
@@ -365,7 +363,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 
       {/* Security Notice */}
       <p className="font-mono text-xs text-gray-500 text-center">
-        Your payment information is encrypted and secure
+        Payment is encrypted and secure
       </p>
     </form>
   );
