@@ -928,11 +928,24 @@ export const calculateCoordinatesFromOnboarding = async (
     console.log('Combined persona label:', fullLabel);
 
     // Clamp values to valid range
+    const economic = Math.max(-100, Math.min(100, result.economic || 0));
+    const social = Math.max(-100, Math.min(100, result.social || 0));
+    const diplomatic = Math.max(-100, Math.min(100, result.diplomatic || 0));
+
+    // Calculate coreStanceType using the same logic as stanceAgent
+    // Import dynamically to avoid circular dependency
+    const { getStanceType } = await import('../data/sp500Companies');
+    const coreStanceType = getStanceType(economic, social, diplomatic);
+    console.log('Calculated coreStanceType:', coreStanceType);
+
     return {
-      economic: Math.max(-100, Math.min(100, result.economic || 0)),
-      social: Math.max(-100, Math.min(100, result.social || 0)),
-      diplomatic: Math.max(-100, Math.min(100, result.diplomatic || 0)),
-      label: fullLabel
+      economic,
+      social,
+      diplomatic,
+      label: fullLabel,
+      displayLabel: fullLabel,  // Same as label for consistency with existing users
+      coreStanceType: coreStanceType,  // Canonical stance type for company rankings
+      nationalityPrefix: nationalityPrefix || undefined  // Preserve nationality prefix for future use
     };
 
   } catch (error: any) {
