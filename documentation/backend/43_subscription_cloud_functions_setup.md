@@ -97,18 +97,35 @@ gcloud secrets describe sendgrid-api-key --project=gen-lang-client-0960644135
 gcloud secrets versions access latest --secret=sendgrid-api-key
 ```
 
-### Grant Cloud Functions Access to Secret
+### Grant Cloud Functions Access to Secret (Cross-Project)
+
+**Important**: Your setup has Firebase (stanseproject) and Cloud Run (gen-lang-client-0960644135) in **different projects**.
+
+The SendGrid secret is in `gen-lang-client-0960644135`, but Cloud Functions run in `stanseproject`.
 
 ```bash
-# Get Cloud Functions service account
-PROJECT_NUMBER=$(gcloud projects describe gen-lang-client-0960644135 --format="value(projectNumber)")
-SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+# Get Firebase Functions service account
+FIREBASE_PROJECT_NUMBER=$(gcloud projects describe stanseproject --format="value(projectNumber)")
+FIREBASE_SERVICE_ACCOUNT="${FIREBASE_PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
-# Grant secret accessor role
+echo "Firebase Service Account: ${FIREBASE_SERVICE_ACCOUNT}"
+
+# Grant this service account access to Secret Manager in the OTHER project
 gcloud secrets add-iam-policy-binding sendgrid-api-key \
-  --member="serviceAccount:${SERVICE_ACCOUNT}" \
+  --member="serviceAccount:${FIREBASE_SERVICE_ACCOUNT}" \
   --role="roles/secretmanager.secretAccessor" \
   --project=gen-lang-client-0960644135
+
+# Verify permission granted
+gcloud secrets get-iam-policy sendgrid-api-key --project=gen-lang-client-0960644135
+```
+
+**Expected output**:
+```yaml
+bindings:
+- members:
+  - serviceAccount:626045766180-compute@developer.gserviceaccount.com
+  role: roles/secretmanager.secretAccessor
 ```
 
 ### Verify Sender Email in SendGrid
