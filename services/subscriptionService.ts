@@ -180,6 +180,7 @@ export const subscribeToPremium = async (
     // Check current subscription status
     const currentSub = await getSubscriptionStatus(userId);
     const hasUsedTrial = currentSub?.hasUsedTrial || false;
+    const originalTrialEndsAt = currentSub?.originalTrialEndsAt;
 
     // Handle promotion code
     let isPromo = false;
@@ -197,45 +198,63 @@ export const subscribeToPremium = async (
     periodEnd.setDate(1);
     periodEnd.setHours(0, 0, 0, 0);
 
-    // Initial billing amount is always $0 during subscription
-    // Actual charges happen later:
-    // - After trial ends (if not used trial before)
-    // - On monthly renewal (1st of each month)
+    // Determine trial end date
+    // Rule: If originalTrialEndsAt exists and is in the future, still in trial period
+    let trialEndsAt: string | undefined;
+    let isStillInTrial = false;
+
+    if (originalTrialEndsAt) {
+      // User has subscribed before - check if still within original trial
+      const originalTrialEnd = new Date(originalTrialEndsAt);
+      if (originalTrialEnd > now) {
+        // Still within original trial period!
+        trialEndsAt = originalTrialEndsAt;
+        isStillInTrial = true;
+        console.log(`✅ User still within original trial period (ends ${originalTrialEndsAt})`);
+      }
+    } else if (!hasUsedTrial) {
+      // First time subscriber - set new trial end date
+      const newTrialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      trialEndsAt = newTrialEnd.toISOString();
+    }
+
+    // Initial billing amount is always $0 during subscription/trial
     let initialAmount = 0;
 
-    if (isPromo) {
-      // Promo code: free until next month's 1st
-      initialAmount = 0;
-    } else {
-      // Regular subscription with trial
-      if (!paymentInfo) {
-        return { success: false, error: 'Payment information required' };
-      }
+    if (!isPromo && !paymentInfo) {
+      return { success: false, error: 'Payment information required' };
+    }
 
-      // During subscription, charge is $0
-      // Real charge happens:
-      // - After 7 days if first time (trial ends)
-      // - On 1st of month for renewals
-      initialAmount = 0;
-
-      // Save payment method if requested
-      if (savePayment) {
-        await savePaymentMethod(userId, paymentInfo);
-      }
+    // Save payment method if requested
+    if (!isPromo && paymentInfo && savePayment) {
+      await savePaymentMethod(userId, paymentInfo);
     }
 
     // Update subscription master document
     const subRef = doc(db, 'user_subscriptions', userId);
-    await setDoc(subRef, {
+    const subscriptionData: any = {
       userId,
       status: 'active',
-      hasUsedTrial: true, // Mark trial as used (will be true after this subscription)
+      hasUsedTrial: true, // Mark as true once user subscribes
       currentPeriodStart: now.toISOString(),
       currentPeriodEnd: periodEnd.toISOString(),
       latestAmount: initialAmount,
-      trialEndsAt: hasUsedTrial ? undefined : new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: new Date().toISOString()
-    });
+    };
+
+    // Set trial dates
+    if (trialEndsAt) {
+      subscriptionData.trialEndsAt = trialEndsAt;
+    }
+    if (!originalTrialEndsAt && trialEndsAt) {
+      // First time setting trial - preserve this date forever
+      subscriptionData.originalTrialEndsAt = trialEndsAt;
+    } else if (originalTrialEndsAt) {
+      // Preserve existing originalTrialEndsAt
+      subscriptionData.originalTrialEndsAt = originalTrialEndsAt;
+    }
+
+    await setDoc(subRef, subscriptionData);
 
     // Add to billing history
     const historyRef = collection(db, 'user_subscriptions', userId, 'history');
