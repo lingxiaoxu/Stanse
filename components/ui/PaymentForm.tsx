@@ -22,9 +22,14 @@ interface PaymentFormProps {
     savePayment?: boolean
   ) => Promise<void>;
   isLoading?: boolean;
+  disablePromoCode?: boolean; // Disable promo code for already subscribed users
 }
 
-export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, isLoading = false }) => {
+export const PaymentForm: React.FC<PaymentFormProps> = ({
+  onSubmit,
+  isLoading = false,
+  disablePromoCode = false
+}) => {
   const { t } = useLanguage();
 
   // Payment fields
@@ -188,22 +193,32 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ onSubmit, isLoading = 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Promotion Code Section */}
-      <div className="border-2 border-black p-4 bg-gray-50">
+      <div className={`border-2 border-black p-4 ${disablePromoCode ? 'bg-gray-200 opacity-60' : 'bg-gray-50'}`}>
         <div className="flex items-center gap-2 mb-3">
-          <Tag size={16} />
-          <label className="font-mono text-xs font-bold uppercase">Promotion Code (Optional)</label>
+          <Tag size={16} className={disablePromoCode ? 'text-gray-400' : ''} />
+          <label className="font-mono text-xs font-bold uppercase">
+            Promotion Code {disablePromoCode && '(Only for new subscriptions)'}
+          </label>
         </div>
         <input
           type="text"
           value={promoCode}
-          onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-          placeholder="ENTER CODE"
-          className="w-full border-2 border-black p-3 font-mono bg-white uppercase"
+          onChange={(e) => !disablePromoCode && setPromoCode(e.target.value.toUpperCase())}
+          placeholder={disablePromoCode ? "NOT AVAILABLE" : "ENTER CODE"}
+          className={`w-full border-2 p-3 font-mono uppercase ${
+            disablePromoCode
+              ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'border-black bg-white'
+          }`}
           maxLength={20}
-          disabled={isLoading}
+          disabled={isLoading || disablePromoCode}
         />
         <p className="font-mono text-xs text-gray-500 mt-2">
-          {hasPromoCode ? 'Using promo code - card info optional' : 'Leave blank to pay with card'}
+          {disablePromoCode
+            ? 'Promotion codes can only be used when first subscribing'
+            : hasPromoCode
+            ? 'Using promo code - card info optional'
+            : 'Leave blank to pay with card'}
         </p>
       </div>
 

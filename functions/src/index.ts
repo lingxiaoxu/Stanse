@@ -102,7 +102,8 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
       const snapshot = await subsRef.where('status', '==', 'active').get();
 
       let processedCount = 0;
-      let skippedCount = 0;
+      let skippedPromoCount = 0;
+      let skippedTrialCount = 0;
       let errorCount = 0;
       const errors: string[] = [];
 
@@ -110,15 +111,24 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
         const subData = doc.data();
         const userId = doc.id;
 
+        // Skip if user is in promo period
+        if (subData.promoExpiresAt) {
+          const promoExpiry = new Date(subData.promoExpiresAt);
+          if (promoExpiry > now) {
+            console.log(`⏭️  Skipping ${userId}: Promo active until ${subData.promoExpiresAt}`);
+            skippedPromoCount++;
+            continue;
+          }
+        }
+
         // Check if trial end date exists and has passed
         if (!subData.trialEndsAt) {
-          skippedCount++;
-          continue;
+          continue; // Already processed or no trial
         }
 
         const trialEndDate = new Date(subData.trialEndsAt);
         if (trialEndDate > now) {
-          skippedCount++;
+          skippedTrialCount++;
           continue;
         }
 
@@ -168,6 +178,11 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
       const totalRevenue = processedCount * MONTHLY_PRICE; // Approximate (actual amounts vary)
       const avgRevenue = processedCount > 0 ? totalRevenue / processedCount : 0;
+      const totalSkipped = skippedPromoCount + skippedTrialCount;
+
+      // Calculate potential revenue and loss
+      const potentialRevenue = (processedCount + skippedPromoCount) * MONTHLY_PRICE;
+      const revenueLoss = skippedPromoCount * MONTHLY_PRICE;
 
       // Save to revenue collection for reporting
       const periodString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -177,9 +192,13 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
         timestamp: now.toISOString(),
         totalSubscriptions: snapshot.size,
         chargedCount: processedCount,
-        skippedCount: skippedCount,
+        skippedCount: totalSkipped,
+        skippedPromoCount: skippedPromoCount,
+        skippedTrialCount: skippedTrialCount,
         errorCount: errorCount,
         totalRevenue: totalRevenue,
+        potentialRevenue: potentialRevenue,
+        revenueLoss: revenueLoss,
         averageRevenue: avgRevenue
       };
 
@@ -200,7 +219,8 @@ Duration: ${duration}s
 Results:
 - Total subscriptions checked: ${snapshot.size}
 - Trial end charges processed: ${processedCount}
-- Skipped (trial active): ${skippedCount}
+- Skipped (promo active): ${skippedPromoCount}
+- Skipped (trial active): ${skippedTrialCount}
 - Errors: ${errorCount}
 - Total revenue: $${totalRevenue.toFixed(2)}
 
@@ -258,7 +278,8 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
       const periodString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
       let processedCount = 0;
-      let skippedCount = 0;
+      let skippedPromoCount = 0;
+      let skippedTrialCount = 0;
       let errorCount = 0;
       const errors: string[] = [];
 
@@ -266,17 +287,34 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
         const subData = doc.data();
         const userId = doc.id;
 
+        // Skip if user is in promo period
+        if (subData.promoExpiresAt) {
+          const promoExpiry = new Date(subData.promoExpiresAt);
+          if (promoExpiry > now) {
+            console.log(`⏭️  Skipping ${userId}: Promo active until ${subData.promoExpiresAt}`);
+            skippedPromoCount++;
+            continue;
+          } else {
+            // Promo expired on this run - clear promo fields
+            await doc.ref.update({
+              promoExpiresAt: admin.firestore.FieldValue.delete(),
+              updatedAt: now.toISOString()
+            });
+            console.log(`✅ Cleared expired promo for ${userId}`);
+          }
+        }
+
         // Skip if user still in trial period
         if (subData.trialEndsAt) {
           const trialEndDate = new Date(subData.trialEndsAt);
           if (trialEndDate > now) {
             console.log(`⏭️  Skipping ${userId}: Still in trial (ends ${subData.trialEndsAt})`);
-            skippedCount++;
+            skippedTrialCount++;
             continue;
           }
         }
 
-        try {
+        try{
           // Add billing history record
           const historyRef = db.collection('user_subscriptions').doc(userId).collection('history');
           await historyRef.add({
@@ -306,6 +344,11 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
       const totalRevenue = processedCount * MONTHLY_PRICE;
       const avgRevenue = processedCount > 0 ? totalRevenue / processedCount : 0;
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      const totalSkipped = skippedPromoCount + skippedTrialCount;
+
+      // Calculate potential revenue and loss
+      const potentialRevenue = (processedCount + skippedPromoCount) * MONTHLY_PRICE;
+      const revenueLoss = skippedPromoCount * MONTHLY_PRICE;
 
       // Save to revenue collection for reporting
       const revenueData: any = {
@@ -314,9 +357,13 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
         timestamp: now.toISOString(),
         totalSubscriptions: snapshot.size,
         chargedCount: processedCount,
-        skippedCount: skippedCount,
+        skippedCount: totalSkipped,
+        skippedPromoCount: skippedPromoCount,
+        skippedTrialCount: skippedTrialCount,
         errorCount: errorCount,
         totalRevenue: totalRevenue,
+        potentialRevenue: potentialRevenue,
+        revenueLoss: revenueLoss,
         averageRevenue: avgRevenue
       };
 
@@ -338,7 +385,8 @@ Duration: ${duration}s
 Results:
 - Active subscriptions checked: ${snapshot.size}
 - Successfully renewed: ${processedCount}
-- Skipped (still in trial): ${skippedCount}
+- Skipped (promo active): ${skippedPromoCount}
+- Skipped (still in trial): ${skippedTrialCount}
 - Errors: ${errorCount}
 - Total revenue: $${totalRevenue.toFixed(2)}
 

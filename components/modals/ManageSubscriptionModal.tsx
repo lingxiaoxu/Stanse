@@ -329,13 +329,19 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
                 {subscriptionStatus === 'active' && (
                   <div className="bg-yellow-50 border-2 border-yellow-600 p-4 mb-6">
                     <p className="font-mono text-xs text-yellow-900">
-                      You already have an active subscription. You can update your payment method
-                      or add a promo code below.
+                      You already have an active subscription. You can update your payment method below.
+                    </p>
+                    <p className="font-mono text-xs text-yellow-900 mt-2 font-bold">
+                      Note: Promotion codes can only be used when first subscribing.
                     </p>
                   </div>
                 )}
 
-                <PaymentForm onSubmit={handlePaymentSubmit} isLoading={isSubmitting} />
+                <PaymentForm
+                  onSubmit={handlePaymentSubmit}
+                  isLoading={isSubmitting}
+                  disablePromoCode={subscriptionStatus === 'active'}
+                />
               </div>
             )}
           </div>
