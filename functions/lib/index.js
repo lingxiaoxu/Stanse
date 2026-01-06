@@ -349,6 +349,26 @@ exports.processMonthlyRenewals = functions.scheduler.onSchedule({
                 }
             }
             try {
+                // Check if user has payment method
+                const paymentDoc = await db.collection('payment_methods').doc(userId).get();
+                if (!paymentDoc.exists) {
+                    // No payment method - cancel subscription instead of renewing
+                    console.log(`⚠️  No payment method for ${userId}, canceling subscription`);
+                    await doc.ref.update({
+                        status: 'cancelled',
+                        updatedAt: now.toISOString()
+                    });
+                    const historyRef = db.collection('user_subscriptions').doc(userId).collection('history');
+                    await historyRef.add({
+                        type: 'CANCEL',
+                        amount: 0,
+                        period: periodString,
+                        timestamp: now.toISOString()
+                    });
+                    errors.push(`${userId}: No payment method, subscription auto-canceled`);
+                    errorCount++;
+                    continue;
+                }
                 // Add billing history record
                 const historyRef = db.collection('user_subscriptions').doc(userId).collection('history');
                 await historyRef.add({
