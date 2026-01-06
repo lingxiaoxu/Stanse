@@ -268,3 +268,44 @@ export const POLITICAL_QUESTIONS: PoliticalQuestion[] = [
     optionB: 'No, keep religion separate from government'
   }
 ];
+
+// ==================== Premium Subscription Types ====================
+
+export interface UserSubscription {
+  userId: string;
+  status: 'active' | 'cancelled';
+  hasUsedTrial: boolean;
+  currentPeriodStart: string; // ISO date string
+  currentPeriodEnd: string; // ISO date string
+  latestAmount: number;
+  updatedAt: string; // ISO date string
+}
+
+export interface BillingRecord {
+  type: 'SUBSCRIBE_SUCCESS' | 'CANCEL' | 'RENEW' | 'PROMO_APPLIED';
+  amount: number;
+  period: string; // "2026-01" format
+  paymentMethodUsed?: string; // Last 4 digits, e.g., "Visa-4242"
+  promoCode?: string;
+  timestamp: string; // ISO date string
+}
+
+export interface PaymentMethod {
+  userId: string;
+  cardholderName: string;
+  cardNumber: string; // Full number (simulated - in production would be tokenized)
+  cardType: 'Visa' | 'Mastercard' | 'Amex';
+  expiry: string; // MM/YY
+  cvv: string; // Stored for simulation only - NEVER store in production
+  billingZip: string;
+  createdAt: string; // ISO date string
+}
+
+export interface PromotionCode {
+  code: string;
+  isUsed: boolean;
+  userId?: string;
+  userEmail?: string;
+  createdAt: string; // ISO date string
+  usedAt?: string; // ISO date string
+}
