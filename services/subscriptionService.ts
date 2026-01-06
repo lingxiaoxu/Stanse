@@ -349,3 +349,75 @@ export const formatCardNumberForDisplay = (cardNumber: string): string => {
   const last4 = cardNumber.slice(-4);
   return `•••• •••• •••• ${last4}`;
 };
+
+/**
+ * Process monthly renewals for all active subscriptions
+ * Should be run on the 1st of every month via Cloud Scheduler
+ *
+ * Rule 5.2.5: Users active on 1st of month are charged full $29.99
+ * No prorating for mid-month cancellations
+ */
+export const processMonthlyRenewals = async (): Promise<{
+  processed: number;
+  errors: number;
+  totalRevenue: number;
+}> => {
+  try {
+    const subsRef = collection(db, 'user_subscriptions');
+    const q = query(subsRef, where('status', '==', 'active'));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      return { processed: 0, errors: 0, totalRevenue: 0 };
+    }
+
+    const now = new Date();
+    const currentPeriodStart = new Date(now);
+    currentPeriodStart.setDate(1);
+    currentPeriodStart.setHours(0, 0, 0, 0);
+
+    const currentPeriodEnd = new Date(currentPeriodStart);
+    currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+
+    const periodString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    let processedCount = 0;
+    let errorCount = 0;
+
+    for (const docSnap of snapshot.docs) {
+      const userId = docSnap.id;
+
+      try {
+        // Add billing history record
+        const historyRef = collection(db, 'user_subscriptions', userId, 'history');
+        await addDoc(historyRef, {
+          type: 'RENEW',
+          amount: MONTHLY_PRICE,
+          period: periodString,
+          timestamp: now.toISOString()
+        } as BillingRecord);
+
+        // Update subscription document
+        await updateDoc(docSnap.ref, {
+          currentPeriodStart: currentPeriodStart.toISOString(),
+          currentPeriodEnd: currentPeriodEnd.toISOString(),
+          latestAmount: MONTHLY_PRICE,
+          updatedAt: now.toISOString()
+        });
+
+        processedCount++;
+      } catch (error) {
+        console.error(`Failed to renew subscription for ${userId}:`, error);
+        errorCount++;
+      }
+    }
+
+    const totalRevenue = processedCount * MONTHLY_PRICE;
+    console.log(`✅ Processed ${processedCount} renewals. Total: $${totalRevenue.toFixed(2)}`);
+
+    return { processed: processedCount, errors: errorCount, totalRevenue };
+  } catch (error) {
+    console.error('Failed to process monthly renewals:', error);
+    throw error;
+  }
+};

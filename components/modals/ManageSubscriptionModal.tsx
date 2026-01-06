@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, CreditCard, XCircle, AlertTriangle, CheckCircle } from 'lucide-react';
+import { X, Clock, CreditCard, XCircle, AlertTriangle, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { PixelButton } from '../ui/PixelButton';
 import { PaymentForm } from '../ui/PaymentForm';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -20,7 +20,7 @@ interface ManageSubscriptionModalProps {
   onSubscriptionChange: () => void;
 }
 
-type TabType = 'billing' | 'payment' | 'cancel';
+type SectionType = 'billing' | 'payment' | 'cancel';
 
 export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = ({
   isOpen,
@@ -31,7 +31,9 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
   onSubscriptionChange
 }) => {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<TabType>('billing');
+
+  // Accordion state - track which sections are expanded
+  const [expandedSections, setExpandedSections] = useState<Set<SectionType>>(new Set(['payment']));
   const [billingHistory, setBillingHistory] = useState<BillingRecord[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,10 +41,13 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
   const [success, setSuccess] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
 
-  // Load billing history and subscription details
+  // Load billing history and subscription details when modal opens
   useEffect(() => {
     if (isOpen && userId) {
       loadData();
+      // Clear error/success messages when modal opens
+      setError(null);
+      setSuccess(null);
     }
   }, [isOpen, userId]);
 
@@ -61,6 +66,16 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
     } finally {
       setIsLoadingHistory(false);
     }
+  };
+
+  const toggleSection = (section: SectionType) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(section)) {
+      newExpanded.delete(section);
+    } else {
+      newExpanded.add(section);
+    }
+    setExpandedSections(newExpanded);
   };
 
   const handlePaymentSubmit = async (
@@ -190,9 +205,11 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
 
   if (!isOpen) return null;
 
+  const isSectionExpanded = (section: SectionType) => expandedSections.has(section);
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white border-4 border-black w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col">
+    <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
+      <div className="bg-white border-4 border-black w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col">
         {/* Header */}
         <div className="p-6 border-b-2 border-black bg-gray-50 flex justify-between items-center">
           <h2 className="font-pixel text-2xl">MANAGE SUBSCRIPTION</h2>
@@ -218,61 +235,29 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
           </div>
         )}
 
-        {/* Main Content */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left Navigation */}
-          <div className="w-64 border-r-2 border-black bg-gray-50">
-            <nav className="p-4 space-y-2">
-              <button
-                onClick={() => setActiveTab('billing')}
-                className={`w-full p-3 font-mono text-sm text-left border-2 transition-all flex items-center gap-2 ${
-                  activeTab === 'billing'
-                    ? 'bg-black text-white border-black'
-                    : 'bg-white text-black border-black hover:bg-gray-100'
-                }`}
-              >
-                <Clock size={16} />
-                Billing History
-              </button>
-              <button
-                onClick={() => setActiveTab('payment')}
-                className={`w-full p-3 font-mono text-sm text-left border-2 transition-all flex items-center gap-2 ${
-                  activeTab === 'payment'
-                    ? 'bg-black text-white border-black'
-                    : 'bg-white text-black border-black hover:bg-gray-100'
-                }`}
-              >
-                <CreditCard size={16} />
-                Payment Methods
-              </button>
-              <button
-                onClick={() => setActiveTab('cancel')}
-                className={`w-full p-3 font-mono text-sm text-left border-2 transition-all flex items-center gap-2 ${
-                  activeTab === 'cancel'
-                    ? 'bg-black text-white border-black'
-                    : 'bg-white text-black border-black hover:bg-gray-100'
-                }`}
-                disabled={subscriptionStatus !== 'active'}
-              >
-                <XCircle size={16} />
-                Cancel Subscription
-              </button>
-            </nav>
-          </div>
+        {/* Accordion Sections */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Section 1: Billing History */}
+          <div className="border-b-2 border-black">
+            <button
+              onClick={() => toggleSection('billing')}
+              className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Clock size={20} />
+                <span className="font-mono text-sm font-bold uppercase">Billing History</span>
+              </div>
+              {isSectionExpanded('billing') ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
 
-          {/* Right Content Area */}
-          <div className="flex-1 overflow-y-auto p-6">
-            {/* Billing History Tab */}
-            {activeTab === 'billing' && (
-              <div className="space-y-4">
-                <h3 className="font-mono text-lg font-bold uppercase mb-4">Billing History</h3>
-
+            {isSectionExpanded('billing') && (
+              <div className="p-6 bg-gray-50 border-t-2 border-black">
                 {isLoadingHistory ? (
-                  <div className="text-center py-12 font-mono text-sm text-gray-500">
+                  <div className="text-center py-8 font-mono text-sm text-gray-500">
                     LOADING...
                   </div>
                 ) : billingHistory.length === 0 ? (
-                  <div className="text-center py-12 font-mono text-sm text-gray-500">
+                  <div className="text-center py-8 font-mono text-sm text-gray-500">
                     No billing history yet
                   </div>
                 ) : (
@@ -280,7 +265,7 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
                     {billingHistory.map((record, index) => (
                       <div
                         key={index}
-                        className="border-2 border-black p-4 bg-white hover:bg-gray-50 transition-colors"
+                        className="border-2 border-black p-4 bg-white"
                       >
                         <div className="flex justify-between items-start mb-2">
                           <div className="flex-1">
@@ -318,32 +303,59 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
                 )}
               </div>
             )}
+          </div>
 
-            {/* Payment Methods Tab */}
-            {activeTab === 'payment' && (
-              <div className="space-y-4">
-                <h3 className="font-mono text-lg font-bold uppercase mb-4">Payment Methods</h3>
+          {/* Section 2: Payment Methods */}
+          <div className="border-b-2 border-black">
+            <button
+              onClick={() => toggleSection('payment')}
+              className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <CreditCard size={20} />
+                <span className="font-mono text-sm font-bold uppercase">Payment Methods</span>
+              </div>
+              {isSectionExpanded('payment') ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
 
-                {subscriptionStatus === 'active' ? (
+            {isSectionExpanded('payment') && (
+              <div className="p-6 bg-white border-t-2 border-black">
+                {subscriptionStatus === 'active' && (
                   <div className="bg-yellow-50 border-2 border-yellow-600 p-4 mb-6">
                     <p className="font-mono text-xs text-yellow-900">
                       You already have an active subscription. You can update your payment method
                       or add a promo code below.
                     </p>
                   </div>
-                ) : null}
+                )}
 
                 <PaymentForm onSubmit={handlePaymentSubmit} isLoading={isSubmitting} />
               </div>
             )}
+          </div>
 
-            {/* Cancel Subscription Tab */}
-            {activeTab === 'cancel' && (
-              <div className="space-y-4">
-                <h3 className="font-mono text-lg font-bold uppercase mb-4 text-alert-red">
-                  Cancel Subscription
-                </h3>
+          {/* Section 3: Cancel Subscription */}
+          <div>
+            <button
+              onClick={() => toggleSection('cancel')}
+              disabled={subscriptionStatus !== 'active'}
+              className={`w-full p-4 flex items-center justify-between transition-colors ${
+                subscriptionStatus !== 'active'
+                  ? 'opacity-50 cursor-not-allowed bg-gray-100'
+                  : 'hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <XCircle size={20} className={subscriptionStatus !== 'active' ? 'text-gray-400' : ''} />
+                <span className="font-mono text-sm font-bold uppercase">Cancel Subscription</span>
+              </div>
+              {subscriptionStatus === 'active' && (
+                isSectionExpanded('cancel') ? <ChevronUp size={20} /> : <ChevronDown size={20} />
+              )}
+            </button>
 
+            {isSectionExpanded('cancel') && subscriptionStatus === 'active' && (
+              <div className="p-6 bg-white border-t-2 border-black">
                 <div className="bg-red-50 border-2 border-alert-red p-6 space-y-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle size={24} className="text-alert-red flex-shrink-0 mt-1" />
@@ -373,7 +385,7 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
                   </PixelButton>
                 </div>
 
-                <div className="border-2 border-black p-4 bg-gray-50">
+                <div className="border-2 border-black p-4 bg-gray-50 mt-4">
                   <p className="font-mono text-xs text-gray-600">
                     After cancellation, you can resubscribe at any time. Your preferences and data
                     will be preserved.

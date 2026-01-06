@@ -227,6 +227,35 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Premium Subscription System
+    // Structure: user_subscriptions/{userId} with history subcollection
+    match /user_subscriptions/{userId} {
+      // Users can read/write only their own subscription
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Billing history subcollection
+      match /history/{historyId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null && request.auth.uid == userId;
+        allow update, delete: if false; // History is append-only
+      }
+    }
+
+    // Payment Methods - users can read/write their own payment info
+    match /payment_methods/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Promotion Codes - authenticated users can read, write for validation
+    match /promotion_codes/{codeId} {
+      allow read: if request.auth != null;
+      allow update: if request.auth != null
+                    && (!resource.data.isUsed || resource.data.isUsed == false)
+                    && request.resource.data.isUsed == true
+                    && request.resource.data.userId == request.auth.uid;
+      allow create, delete: if false; // Admin only
+    }
+
     // Public read for certain collections
     match /public_data/{document=**} {
       allow read: if true;
