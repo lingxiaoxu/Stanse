@@ -49,47 +49,92 @@ async function generateReport(period?: string) {
 
   // Aggregate data
   let totalRevenue = 0;
+  let totalPotentialRevenue = 0;
+  let totalRevenueLoss = 0;
   let totalCharged = 0;
   let totalSkipped = 0;
+  let totalSkippedPromo = 0;
+  let totalSkippedTrial = 0;
   let totalErrors = 0;
 
-  const byType: Record<string, { count: number; revenue: number; charged: number }> = {};
-  const byPeriod: Record<string, { revenue: number; charged: number; records: number }> = {};
+  const byType: Record<string, { count: number; revenue: number; charged: number; loss: number }> = {};
+  const byPeriod: Record<string, { revenue: number; potential: number; loss: number; charged: number; records: number }> = {};
 
   snapshot.docs.forEach((doc) => {
     const data = doc.data();
 
     totalRevenue += data.totalRevenue || 0;
+    totalPotentialRevenue += data.potentialRevenue || 0;
+    totalRevenueLoss += data.revenueLoss || 0;
     totalCharged += data.chargedCount || 0;
     totalSkipped += data.skippedCount || 0;
+    totalSkippedPromo += data.skippedPromoCount || 0;
+    totalSkippedTrial += data.skippedTrialCount || 0;
     totalErrors += data.errorCount || 0;
 
     // By type
     if (!byType[data.type]) {
-      byType[data.type] = { count: 0, revenue: 0, charged: 0 };
+      byType[data.type] = { count: 0, revenue: 0, charged: 0, loss: 0 };
     }
     byType[data.type].count++;
     byType[data.type].revenue += data.totalRevenue || 0;
     byType[data.type].charged += data.chargedCount || 0;
+    byType[data.type].loss += data.revenueLoss || 0;
 
     // By period
     if (!byPeriod[data.period]) {
-      byPeriod[data.period] = { revenue: 0, charged: 0, records: 0 };
+      byPeriod[data.period] = { revenue: 0, potential: 0, loss: 0, charged: 0, records: 0 };
     }
     byPeriod[data.period].revenue += data.totalRevenue || 0;
+    byPeriod[data.period].potential += data.potentialRevenue || 0;
+    byPeriod[data.period].loss += data.revenueLoss || 0;
     byPeriod[data.period].charged += data.chargedCount || 0;
     byPeriod[data.period].records++;
+  });
+
+  // Query subscription events for churn analysis
+  const eventsSnapshot = await db.collection('subscription_events').get();
+  const events = eventsSnapshot.docs.map(d => d.data());
+
+  // Group events by user
+  const userEvents = new Map();
+  events.forEach(event => {
+    if (!userEvents.has(event.userId)) {
+      userEvents.set(event.userId, []);
+    }
+    userEvents.get(event.userId).push(event);
+  });
+
+  // Analyze churned users
+  let promoCanceledCount = 0;
+  let trialCanceledCount = 0;
+
+  userEvents.forEach((userEventList) => {
+    const cancelEvent = userEventList.find((e: any) => e.eventType === 'CANCEL');
+    if (cancelEvent) {
+      if (cancelEvent.metadata?.canceledDuringPromo) promoCanceledCount++;
+      if (cancelEvent.metadata?.canceledDuringTrial) trialCanceledCount++;
+    }
   });
 
   // Print summary
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('Overall Summary');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`Total Revenue: $${totalRevenue.toFixed(2)}`);
-  console.log(`Total Users Charged: ${totalCharged}`);
-  console.log(`Total Skipped: ${totalSkipped}`);
-  console.log(`Total Errors: ${totalErrors}`);
-  console.log(`Average Revenue per Charge: $${(totalRevenue / totalCharged || 0).toFixed(2)}`);
+  console.log(`Actual Revenue Collected:      $${totalRevenue.toFixed(2)}`);
+  console.log(`Potential Revenue (no promos): $${totalPotentialRevenue.toFixed(2)}`);
+  console.log(`Revenue Lost to Promos:        $${totalRevenueLoss.toFixed(2)}`);
+  console.log(`Promo Impact:                  -${((totalRevenueLoss / totalPotentialRevenue) * 100 || 0).toFixed(1)}%`);
+  console.log('');
+  console.log(`Total Users Charged:           ${totalCharged}`);
+  console.log(`Skipped (Promo Active):        ${totalSkippedPromo}`);
+  console.log(`Skipped (Trial Active):        ${totalSkippedTrial}`);
+  console.log(`Total Skipped:                 ${totalSkipped}`);
+  console.log(`Total Errors:                  ${totalErrors}`);
+  console.log('');
+  console.log(`Canceled During Promo:         ${promoCanceledCount}`);
+  console.log(`Canceled During Trial:         ${trialCanceledCount}`);
+  console.log(`Average Revenue per Charge:    $${(totalRevenue / totalCharged || 0).toFixed(2)}`);
   console.log('');
 
   // By type
@@ -100,6 +145,7 @@ async function generateReport(period?: string) {
     console.log(`${type}:`);
     console.log(`  Runs: ${stats.count}`);
     console.log(`  Revenue: $${stats.revenue.toFixed(2)}`);
+    console.log(`  Revenue Lost to Promos: $${stats.loss.toFixed(2)}`);
     console.log(`  Users Charged: ${stats.charged}`);
     console.log(`  Avg per Run: $${(stats.revenue / stats.count).toFixed(2)}`);
     console.log('');
@@ -113,9 +159,11 @@ async function generateReport(period?: string) {
     .sort(([a], [b]) => b.localeCompare(a)) // Sort newest first
     .forEach(([period, stats]) => {
       console.log(`${period}:`);
-      console.log(`  Revenue: $${stats.revenue.toFixed(2)}`);
-      console.log(`  Users Charged: ${stats.charged}`);
-      console.log(`  Billing Runs: ${stats.records}`);
+      console.log(`  Actual Revenue:     $${stats.revenue.toFixed(2)}`);
+      console.log(`  Potential Revenue:  $${stats.potential.toFixed(2)}`);
+      console.log(`  Lost to Promos:     $${stats.loss.toFixed(2)}`);
+      console.log(`  Users Charged:      ${stats.charged}`);
+      console.log(`  Billing Runs:       ${stats.records}`);
       console.log('');
     });
 
