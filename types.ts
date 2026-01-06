@@ -278,7 +278,8 @@ export interface UserSubscription {
   currentPeriodStart: string; // ISO date string
   currentPeriodEnd: string; // ISO date string
   latestAmount: number;
-  trialEndsAt?: string; // ISO date string - when trial ends (only set if trial not used before)
+  trialEndsAt?: string; // ISO date string - when trial ends (cleared after first charge)
+  originalTrialEndsAt?: string; // ISO date string - NEVER changes, set on first subscription
   updatedAt: string; // ISO date string
 }
 
