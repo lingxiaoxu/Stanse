@@ -166,6 +166,25 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
       }
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      const totalRevenue = processedCount * MONTHLY_PRICE; // Approximate (actual amounts vary)
+      const avgRevenue = processedCount > 0 ? totalRevenue / processedCount : 0;
+
+      // Save to revenue collection for reporting
+      const periodString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      await db.collection('revenue').add({
+        type: 'TRIAL_END_CHARGE',
+        period: periodString,
+        timestamp: now.toISOString(),
+        totalSubscriptions: snapshot.size,
+        chargedCount: processedCount,
+        skippedCount: skippedCount,
+        errorCount: errorCount,
+        totalRevenue: totalRevenue,
+        averageRevenue: avgRevenue,
+        details: {
+          errors: errors.length > 0 ? errors : undefined
+        }
+      });
 
       // Send summary email
       const emailBody = `
@@ -180,6 +199,7 @@ Results:
 - Trial end charges processed: ${processedCount}
 - Skipped (trial active): ${skippedCount}
 - Errors: ${errorCount}
+- Total revenue: $${totalRevenue.toFixed(2)}
 
 ${errors.length > 0 ? `\nErrors:\n${errors.join('\n')}` : ''}
 
@@ -192,7 +212,7 @@ Status: ${errorCount > 0 ? 'COMPLETED WITH ERRORS' : 'SUCCESS'}
         errorCount > 0
       );
 
-      console.log(`✅ Completed: ${processedCount} processed, ${errorCount} errors`);
+      console.log(`✅ Completed: ${processedCount} processed, ${errorCount} errors, $${totalRevenue.toFixed(2)} revenue`);
     } catch (error: any) {
       console.error('Fatal error:', error);
 
@@ -281,7 +301,24 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
       }
 
       const totalRevenue = processedCount * MONTHLY_PRICE;
+      const avgRevenue = processedCount > 0 ? totalRevenue / processedCount : 0;
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+
+      // Save to revenue collection for reporting
+      await db.collection('revenue').add({
+        type: 'MONTHLY_RENEWAL',
+        period: periodString,
+        timestamp: now.toISOString(),
+        totalSubscriptions: snapshot.size,
+        chargedCount: processedCount,
+        skippedCount: skippedCount,
+        errorCount: errorCount,
+        totalRevenue: totalRevenue,
+        averageRevenue: avgRevenue,
+        details: {
+          errors: errors.length > 0 ? errors : undefined
+        }
+      });
 
       // Send summary email
       const emailBody = `
