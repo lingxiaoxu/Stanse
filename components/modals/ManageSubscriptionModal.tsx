@@ -406,8 +406,7 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
 
                 <div className="border-2 border-black p-4 bg-gray-50 mt-4">
                   <p className="font-mono text-xs text-gray-600">
-                    After cancellation, you can resubscribe at any time. Your preferences and data
-                    will be preserved.
+                    After cancellation, you can resubscribe at any time.
                   </p>
                 </div>
               </div>
