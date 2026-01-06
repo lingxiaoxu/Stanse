@@ -254,6 +254,13 @@ export const subscribeToPremium = async (
       subscriptionData.originalTrialEndsAt = originalTrialEndsAt;
     }
 
+    // Set promo fields if using promo code
+    if (isPromo && promoCode) {
+      subscriptionData.promoExpiresAt = periodEnd.toISOString(); // Next month's 1st
+      subscriptionData.promoCodeUsed = promoCode;
+      console.log(`✅ Promo code ${promoCode} applied, free until ${periodEnd.toISOString()}`);
+    }
+
     await setDoc(subRef, subscriptionData);
 
     // Add to billing history

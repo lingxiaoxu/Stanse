@@ -280,6 +280,8 @@ export interface UserSubscription {
   latestAmount: number;
   trialEndsAt?: string; // ISO date string - when trial ends (cleared after first charge)
   originalTrialEndsAt?: string; // ISO date string - NEVER changes, set on first subscription
+  promoExpiresAt?: string; // ISO date string - when promo period ends (next month's 1st), cleared after expiry
+  promoCodeUsed?: string; // The promo code that was used
   updatedAt: string; // ISO date string
 }
 
@@ -318,12 +320,43 @@ export interface RevenueRecord {
   timestamp: string; // ISO date string
   totalSubscriptions: number; // Total active subscriptions checked
   chargedCount: number; // Number of users actually charged
-  skippedCount: number; // Number skipped (trial/promo)
+  skippedCount: number; // Total skipped (trial + promo)
+  skippedPromoCount: number; // Users skipped due to active promo
+  skippedTrialCount: number; // Users skipped due to active trial
   errorCount: number;
-  totalRevenue: number; // Total revenue in this batch
+  totalRevenue: number; // Actual revenue collected
+  potentialRevenue: number; // Revenue if no promos (charged + promo users × price)
+  revenueLoss: number; // Revenue lost to promo codes
   averageRevenue: number; // Average per charged user
   details?: {
     errors?: string[]; // Error messages if any
     chargedUserIds?: string[]; // List of charged user IDs (for auditing)
+  };
+}
+
+// ==================== Subscription Event Tracking ====================
+
+export type SubscriptionEventType = 'SUBSCRIBE' | 'CANCEL' | 'TRIAL_END' | 'PROMO_END';
+
+export interface SubscriptionEvent {
+  userId: string;
+  userEmail: string;
+  eventType: SubscriptionEventType;
+  timestamp: string; // ISO date string
+  metadata: {
+    // For SUBSCRIBE events
+    promoCode?: string;
+    trialEndsAt?: string;
+    promoExpiresAt?: string;
+    periodStart?: string;
+    periodEnd?: string;
+    // For CANCEL events
+    canceledDuringTrial?: boolean;
+    canceledDuringPromo?: boolean;
+    // For TRIAL_END events
+    convertedToActive?: boolean;
+    chargedAmount?: number;
+    // For PROMO_END events
+    promoCodeUsed?: string;
   };
 }
