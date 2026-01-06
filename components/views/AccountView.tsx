@@ -1,15 +1,32 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PixelCard } from '../ui/PixelCard';
-import { Mail, Key, Check, AlertCircle } from 'lucide-react';
+import { Mail, Key, Check, AlertCircle, Crown } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { getSubscriptionStatus } from '../../services/subscriptionService';
+import { ManageSubscriptionModal } from '../modals/ManageSubscriptionModal';
 
 export const AccountView: React.FC = () => {
   const { t } = useLanguage();
   const { user, sendPasswordReset } = useAuth();
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [passwordResetStatus, setPasswordResetStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [subscriptionStatus, setSubscriptionStatus] = useState<'active' | 'cancelled' | null>(null);
+  const [showManageModal, setShowManageModal] = useState(false);
+
+  // Load subscription status on mount
+  useEffect(() => {
+    if (user) {
+      loadSubscriptionStatus();
+    }
+  }, [user]);
+
+  const loadSubscriptionStatus = async () => {
+    if (!user) return;
+    const sub = await getSubscriptionStatus(user.uid);
+    setSubscriptionStatus(sub?.status || null);
+  };
 
   const handlePasswordReset = async () => {
     if (!user?.email) return;
@@ -42,6 +59,45 @@ export const AccountView: React.FC = () => {
               <div className="min-w-0 flex-1">
                 <div className="font-bold font-mono text-lg mb-1">{t('menu', 'account_email')}</div>
                 <div className="font-mono text-sm text-gray-700 break-all">{user?.email || 'No email available'}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Premium Subscription Section */}
+          <div className="p-6 bg-white">
+            <div className="flex items-start gap-3">
+              <Crown size={20} className="mt-1 text-yellow-600 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="font-bold font-mono text-lg mb-1">{t('menu', 'premium')}</div>
+                <div className="font-mono text-xs text-gray-600 mb-4">
+                  {t('menu', 'premium_desc')}
+                </div>
+
+                <div className="flex gap-2">
+                  {subscriptionStatus === 'active' ? (
+                    <>
+                      <button
+                        disabled
+                        className="px-4 py-2 font-mono text-xs border-2 border-black bg-gray-200 text-gray-400 cursor-not-allowed"
+                      >
+                        {t('menu', 'subscribed_btn')}
+                      </button>
+                      <button
+                        onClick={() => setShowManageModal(true)}
+                        className="px-4 py-2 font-mono text-xs border-2 border-black bg-black text-white hover:bg-gray-800 transition-colors"
+                      >
+                        MANAGE
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setShowManageModal(true)}
+                      className="px-4 py-2 font-mono text-xs border-2 border-black bg-black text-white hover:bg-gray-800 transition-colors"
+                    >
+                      {t('menu', 'subscribe_btn')}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -89,6 +145,18 @@ export const AccountView: React.FC = () => {
 
         </div>
       </PixelCard>
+
+      {/* Manage Subscription Modal */}
+      {user && (
+        <ManageSubscriptionModal
+          isOpen={showManageModal}
+          onClose={() => setShowManageModal(false)}
+          userId={user.uid}
+          userEmail={user.email || ''}
+          subscriptionStatus={subscriptionStatus}
+          onSubscriptionChange={loadSubscriptionStatus}
+        />
+      )}
     </div>
   );
 };
