@@ -278,11 +278,12 @@ export interface UserSubscription {
   currentPeriodStart: string; // ISO date string
   currentPeriodEnd: string; // ISO date string
   latestAmount: number;
+  trialEndsAt?: string; // ISO date string - when trial ends (only set if trial not used before)
   updatedAt: string; // ISO date string
 }
 
 export interface BillingRecord {
-  type: 'SUBSCRIBE_SUCCESS' | 'CANCEL' | 'RENEW' | 'PROMO_APPLIED';
+  type: 'SUBSCRIBE_SUCCESS' | 'CANCEL' | 'RENEW' | 'PROMO_APPLIED' | 'TRIAL_END_CHARGE';
   amount: number;
   period: string; // "2026-01" format
   paymentMethodUsed?: string; // Last 4 digits, e.g., "Visa-4242"
