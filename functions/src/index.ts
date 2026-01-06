@@ -171,7 +171,7 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
 
       // Save to revenue collection for reporting
       const periodString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      await db.collection('revenue').add({
+      const revenueData: any = {
         type: 'TRIAL_END_CHARGE',
         period: periodString,
         timestamp: now.toISOString(),
@@ -180,11 +180,14 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
         skippedCount: skippedCount,
         errorCount: errorCount,
         totalRevenue: totalRevenue,
-        averageRevenue: avgRevenue,
-        details: {
-          errors: errors.length > 0 ? errors : undefined
-        }
-      });
+        averageRevenue: avgRevenue
+      };
+
+      if (errors.length > 0) {
+        revenueData.details = { errors: errors };
+      }
+
+      await db.collection('revenue').add(revenueData);
 
       // Send summary email
       const emailBody = `
@@ -305,7 +308,7 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
 
       // Save to revenue collection for reporting
-      await db.collection('revenue').add({
+      const revenueData: any = {
         type: 'MONTHLY_RENEWAL',
         period: periodString,
         timestamp: now.toISOString(),
@@ -314,11 +317,14 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
         skippedCount: skippedCount,
         errorCount: errorCount,
         totalRevenue: totalRevenue,
-        averageRevenue: avgRevenue,
-        details: {
-          errors: errors.length > 0 ? errors : undefined
-        }
-      });
+        averageRevenue: avgRevenue
+      };
+
+      if (errors.length > 0) {
+        revenueData.details = { errors: errors };
+      }
+
+      await db.collection('revenue').add(revenueData);
 
       // Send summary email
       const emailBody = `
