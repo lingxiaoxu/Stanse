@@ -540,10 +540,31 @@ export const markTourCompleted = async (
   language: string
 ): Promise<void> => {
   const userRef = doc(db, 'users', userId);
-  await updateDoc(userRef, {
-    [`tourCompleted.${language}`]: true,
-    updatedAt: serverTimestamp()
-  });
+
+  // Get current user data to check if tourCompleted exists
+  const userDoc = await getDoc(userRef);
+  const userData = userDoc.data();
+
+  // If tourCompleted doesn't exist yet, initialize all languages
+  // This ensures consistency with reset-all-tours.ts behavior
+  if (!userData?.tourCompleted) {
+    await updateDoc(userRef, {
+      tourCompleted: {
+        EN: language === 'EN',
+        ZH: language === 'ZH',
+        JA: language === 'JA',
+        FR: language === 'FR',
+        ES: language === 'ES'
+      },
+      updatedAt: serverTimestamp()
+    });
+  } else {
+    // tourCompleted already exists, just update the specific language
+    await updateDoc(userRef, {
+      [`tourCompleted.${language}`]: true,
+      updatedAt: serverTimestamp()
+    });
+  }
 };
 
 /**
