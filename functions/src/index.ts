@@ -10,7 +10,7 @@ const secretClient = new SecretManagerServiceClient();
 const MONTHLY_PRICE = 29.99;
 const ADMIN_EMAIL = 'lxu912@gmail.com';
 const FROM_EMAIL = 'lxu912@gmail.com'; // Must be verified in SendGrid
-const PROJECT_ID = 'gen-lang-client-0960644135';
+const CLOUD_RUN_PROJECT_ID = 'gen-lang-client-0960644135'; // Where Secret Manager is
 const SENDGRID_SECRET_NAME = 'sendgrid-api-key'; // Your secret name in Secret Manager
 
 // Cache for SendGrid API key (loaded once per function instance)
@@ -26,15 +26,16 @@ async function getSendGridApiKey(): Promise<string> {
 
   try {
     const [version] = await secretClient.accessSecretVersion({
-      name: `projects/${PROJECT_ID}/secrets/${SENDGRID_SECRET_NAME}/versions/latest`,
+      name: `projects/${CLOUD_RUN_PROJECT_ID}/secrets/${SENDGRID_SECRET_NAME}/versions/latest`,
     });
 
     const payload = version.payload?.data?.toString();
     if (payload) {
-      sendgridApiKey = payload;
-      sgMail.setApiKey(sendgridApiKey);
-      console.log('✅ SendGrid API key loaded from Secret Manager');
-      return sendgridApiKey;
+      const apiKey = payload;
+      sgMail.setApiKey(apiKey);
+      sendgridApiKey = apiKey; // Cache it
+      console.log('✅ SendGrid API key loaded from Secret Manager (cross-project)');
+      return apiKey;
     }
   } catch (error) {
     console.error('Failed to load SendGrid API key from Secret Manager:', error);
