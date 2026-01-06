@@ -311,3 +311,19 @@ export interface PromotionCode {
   createdAt: string; // ISO date string
   usedAt?: string; // ISO date string
 }
+
+export interface RevenueRecord {
+  type: 'TRIAL_END_CHARGE' | 'MONTHLY_RENEWAL';
+  period: string; // "2026-01" format
+  timestamp: string; // ISO date string
+  totalSubscriptions: number; // Total active subscriptions checked
+  chargedCount: number; // Number of users actually charged
+  skippedCount: number; // Number skipped (trial/promo)
+  errorCount: number;
+  totalRevenue: number; // Total revenue in this batch
+  averageRevenue: number; // Average per charged user
+  details?: {
+    errors?: string[]; // Error messages if any
+    chargedUserIds?: string[]; // List of charged user IDs (for auditing)
+  };
+}
