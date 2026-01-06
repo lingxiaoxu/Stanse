@@ -58,7 +58,7 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'news-feed',
       target: 'news-feed',
       title: 'The Feed',
-      description: 'Personalized news curated by AI based on your political stance. Stay informed about what matter to you.',
+      description: 'Personalized news curated by AI based on your political stance. Stay informed about what matters to you.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -529,32 +529,32 @@ const ONBOARDING_STEPS_NEW_USER: Record<Language, TourStep> = {
   [Language.ZH]: {
     id: 'onboarding',
     target: 'onboarding-modal',
-    title: '完成立场校准',
-    description: '此问卷用于校准您的政治立场。完成后可解锁个性化功能。',
+    title: '校准问卷',
+    description: '校准您的政治立场并解锁 AI 个性化功能。',
     position: 'bottom',
     requiredTab: 'FINGERPRINT'
   },
   [Language.JA]: {
     id: 'onboarding',
     target: 'onboarding-modal',
-    title: 'キャリブレーションを完了',
-    description: 'このアンケートは政治的立場を較正します。完了すると個別機能がロック解除されます。',
+    title: 'キャリブレーション用アンケート',
+    description: '政治的立場を較正し、AIパーソナライズ機能をロック解除します。',
     position: 'bottom',
     requiredTab: 'FINGERPRINT'
   },
   [Language.FR]: {
     id: 'onboarding',
     target: 'onboarding-modal',
-    title: 'Complétez Votre Calibrage',
-    description: 'Ce questionnaire calibre votre position politique. Complétez-le pour débloquer les fonctionnalités personnalisées.',
+    title: 'Questionnaire de Calibrage',
+    description: 'Calibrez votre position politique et débloquez les fonctionnalités personnalisées par IA.',
     position: 'bottom',
     requiredTab: 'FINGERPRINT'
   },
   [Language.ES]: {
     id: 'onboarding',
     target: 'onboarding-modal',
-    title: 'Complete Su Calibración',
-    description: 'Este cuestionario calibra su postura política. Complételo para desbloquear funciones personalizadas.',
+    title: 'Cuestionario de Calibración',
+    description: 'Calibre su postura política y desbloquee funciones personalizadas por IA.',
     position: 'bottom',
     requiredTab: 'FINGERPRINT'
   }
