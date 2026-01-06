@@ -376,12 +376,19 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
                         Are you sure you want to cancel your subscription?
                       </p>
                       <p className="font-mono text-xs text-gray-700">
-                        Your premium features will remain active until the end of your current
-                        billing period.
+                        {subscription?.trialEndsAt
+                          ? 'Your free trial will end on the date below. No charges will apply.'
+                          : subscription?.promoExpiresAt
+                          ? 'Your promo period will end on the date below. No charges will apply.'
+                          : 'Your premium features will remain active until the end of your current billing period.'}
                       </p>
                       {subscription && (
                         <p className="font-mono text-xs font-bold">
-                          Current period ends: {formatDate(subscription.currentPeriodEnd)}
+                          {subscription.trialEndsAt
+                            ? `Trial ends: ${formatDate(subscription.trialEndsAt)}`
+                            : subscription.promoExpiresAt
+                            ? `Promo expires: ${formatDate(subscription.promoExpiresAt)}`
+                            : `Current period ends: ${formatDate(subscription.currentPeriodEnd)}`}
                         </p>
                       )}
                     </div>
