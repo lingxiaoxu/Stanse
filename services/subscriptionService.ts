@@ -277,29 +277,39 @@ export const subscribeToPremium = async (
     const historyRef = collection(db, 'user_subscriptions', userId, 'history');
     const periodString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    await addDoc(historyRef, {
+    const billingData: any = {
       type: isPromo ? 'PROMO_APPLIED' : 'SUBSCRIBE_SUCCESS',
       amount: initialAmount,
       period: periodString,
-      paymentMethodUsed: paymentInfo ? `${paymentInfo.cardType}-${paymentInfo.cardNumber.slice(-4)}` : undefined,
-      promoCode: isPromo ? promoCode : undefined,
       timestamp: new Date().toISOString()
-    } as BillingRecord);
+    };
+
+    if (paymentInfo) {
+      billingData.paymentMethodUsed = `${paymentInfo.cardType}-${paymentInfo.cardNumber.slice(-4)}`;
+    }
+    if (isPromo && promoCode) {
+      billingData.promoCode = promoCode;
+    }
+
+    await addDoc(historyRef, billingData as BillingRecord);
 
     // Record SUBSCRIBE event for analytics
     try {
+      const eventMetadata: any = {
+        periodStart: now.toISOString(),
+        periodEnd: periodEnd.toISOString()
+      };
+
+      if (isPromo && promoCode) eventMetadata.promoCode = promoCode;
+      if (trialEndsAt) eventMetadata.trialEndsAt = trialEndsAt;
+      if (isPromo) eventMetadata.promoExpiresAt = periodEnd.toISOString();
+
       await addDoc(collection(db, 'subscription_events'), {
         userId,
         userEmail,
         eventType: 'SUBSCRIBE',
         timestamp: now.toISOString(),
-        metadata: {
-          promoCode: isPromo ? promoCode : undefined,
-          trialEndsAt: trialEndsAt || undefined,
-          promoExpiresAt: isPromo ? periodEnd.toISOString() : undefined,
-          periodStart: now.toISOString(),
-          periodEnd: periodEnd.toISOString()
-        }
+        metadata: eventMetadata
       });
       console.log(`📊 Event tracked: SUBSCRIBE`);
     } catch (eventError) {
