@@ -262,10 +262,11 @@ service cloud.firestore {
       allow write: if false; // Only Cloud Functions (server-side via Admin SDK)
     }
 
-    // Subscription Events - Cloud Functions write, authenticated users read
+    // Subscription Events - Users can write their own events, all authenticated users can read
     match /subscription_events/{eventId} {
       allow read: if request.auth != null;
-      allow write: if false; // Only Cloud Functions (server-side via Admin SDK)
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false; // Events are immutable
     }
 
     // Public read for certain collections
