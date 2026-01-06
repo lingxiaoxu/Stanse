@@ -153,7 +153,8 @@ function extractNationalityFromLabel(currentLabel: string): string {
     'Socialist', 'Statist', 'Capitalist', 'Libertarian', 'Conservative',
     'Progressive', 'Liberal', 'Authoritarian', 'Populist', 'Nationalist',
     'Globalist', 'Internationalist', 'Isolationist', 'Centrist', 'Moderate',
-    'Democrat', 'Republican', 'Neoconservative', 'Paleoconservative'
+    'Democrat', 'Republican', 'Neoconservative', 'Paleoconservative',
+    'Communitarian', 'Pragmatic', 'Traditional', 'Contrarian'
   ];
 
   // Find where persona type starts
@@ -238,12 +239,24 @@ async function migrateUsers() {
         updates['coordinates.nationalityPrefix'] = nationalityPrefix;
       }
 
+      // Ensure tourCompleted has all languages (preserve existing true values, add missing as false)
+      const currentTourCompleted = userData.tourCompleted || {};
+      const completeTourCompleted = {
+        EN: currentTourCompleted.EN || false,
+        ZH: currentTourCompleted.ZH || false,
+        JA: currentTourCompleted.JA || false,
+        FR: currentTourCompleted.FR || false,
+        ES: currentTourCompleted.ES || false
+      };
+      updates['tourCompleted'] = completeTourCompleted;
+
       console.log(`🔄 ${userId} (${userData.email}):`);
       console.log(`   Coordinates: econ=${economic}, social=${social}, diplo=${diplomatic}`);
       console.log(`   Core StanceType: ${coreStanceType}`);
       console.log(`   Nationality: "${nationalityPrefix || 'None'}"`);
       console.log(`   Display Label: "${displayLabel}"`);
       console.log(`   Previous Label: "${currentLabel}"`);
+      console.log(`   Tour Completed: ${JSON.stringify(completeTourCompleted)}`);
 
       try {
         await usersRef.doc(userId).update(updates);
@@ -279,7 +292,8 @@ function extractPersonaType(label: string): string {
   const personaKeywords = [
     'Socialist', 'Statist', 'Capitalist', 'Libertarian', 'Conservative',
     'Progressive', 'Liberal', 'Authoritarian', 'Populist', 'Nationalist',
-    'Globalist', 'Internationalist'
+    'Globalist', 'Internationalist',
+    'Communitarian', 'Pragmatic', 'Traditional', 'Contrarian'
   ];
 
   // Find where persona type starts
