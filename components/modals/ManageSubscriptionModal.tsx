@@ -215,7 +215,7 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
 
   return (
     <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
-      <div className="bg-white border-4 border-black w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col">
+      <div className="bg-white border-4 border-black w-full max-w-xl max-h-[90vh] overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col">
         {/* Header */}
         <div className="p-6 border-b-2 border-black bg-gray-50 flex justify-between items-center">
           <h2 className="font-pixel text-2xl">MANAGE SUBSCRIPTION</h2>
