@@ -242,30 +242,78 @@ export interface UserDemographicsForAnalysis {
  */
 export const getCanonicalEntityNameAI = async (entityName: string): Promise<string> => {
   try {
-    const prompt = `Extract the canonical name from: "${entityName}"
+    // Two-step AI canonicalization for maximum consistency
+
+    // Step 1: AI-guided suffix removal
+    // Ask AI to identify and remove common legal/corporate suffixes
+    const step1Prompt = `Remove ONLY legal and corporate suffixes from this entity name: "${entityName}"
+
+Common suffixes to remove:
+- Legal: Inc., Incorporated, Corp., Corporation, Ltd., Limited, LLC, PLC
+- Corporate: Technologies, Technology, Tech, Systems, Solutions, Group, Holdings, Company, Co.
+- Geographic: International, Intl.
 
 Rules:
-- Remove suffixes: Technologies, Inc., Corp., Ltd., Company, LLC, PLC, Group, Holdings
-- Keep core brand/person/country name
-- Return ONLY canonical name
-- Lowercase result
+- Keep the core business/brand name
+- Remove suffixes at the END only
+- Lowercase the result
+- Return ONLY the cleaned name
 
 Examples:
+"Cisco Systems" → "cisco"
 "Huawei Technologies" → "huawei"
 "Apple Inc." → "apple"
 "Microsoft Corporation" → "microsoft"
+"Cisco" → "cisco"
 
 Entity: "${entityName}"
-Canonical:`;
+Cleaned:`;
 
-    const response = await ai.models.generateContent({
+    const step1Response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: prompt
+      contents: step1Prompt
     });
 
-    return response.text?.trim().toLowerCase() || entityName.toLowerCase().trim();
+    const step1Result = step1Response.text?.trim().toLowerCase() || entityName.toLowerCase();
+    console.log(`🔤 Step 1 - Suffix removal: "${entityName}" → "${step1Result}"`);
+
+    // Step 2: AI-guided final canonicalization
+    // Further simplify complex multi-word names to core brand identifier
+    const step2Prompt = `Simplify to the single core brand identifier: "${step1Result}"
+
+Rules:
+- Extract ONLY the essential brand name (usually 1 word, max 2)
+- Remove any remaining descriptive/qualifier words
+- Keep as-is if already a simple brand name
+- Lowercase output
+
+Examples:
+"jp morgan chase" → "jpmorgan"
+"bank of america" → "bankofamerica"
+"cisco network" → "cisco"
+"goldman sachs" → "goldmansachs"
+"google" → "google"
+"meta platforms" → "meta"
+
+Entity: "${step1Result}"
+Core brand:`;
+
+    const step2Response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: step2Prompt
+    });
+
+    const finalResult = step2Response.text?.trim().toLowerCase() || step1Result;
+    console.log(`🔤 Step 2 - Final canonicalization: "${step1Result}" → "${finalResult}"`);
+    console.log(`🔤 Complete canonicalization: "${entityName}" → "${finalResult}"`);
+
+    return finalResult;
   } catch (error) {
-    return entityName.toLowerCase().trim();
+    console.warn('Canonicalization failed, using basic normalization:', error);
+    // Fallback: basic regex-based normalization
+    let fallback = entityName.toLowerCase().trim();
+    fallback = fallback.replace(/\s+(technologies|technology|tech|systems|inc\.?|corp\.?|ltd\.?|llc|plc)\s*$/i, '');
+    return fallback.trim();
   }
 };
 
