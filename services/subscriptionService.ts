@@ -191,28 +191,32 @@ export const subscribeToPremium = async (
       isPromo = true;
     }
 
-    // Calculate billing amount
-    let amount: number;
-    let periodEnd: Date;
+    // Calculate period end (always next month's 1st for tracking)
+    let periodEnd = new Date(now);
+    periodEnd.setMonth(periodEnd.getMonth() + 1);
+    periodEnd.setDate(1);
+    periodEnd.setHours(0, 0, 0, 0);
+
+    // Initial billing amount is always $0 during subscription
+    // Actual charges happen later:
+    // - After trial ends (if not used trial before)
+    // - On monthly renewal (1st of each month)
+    let initialAmount = 0;
 
     if (isPromo) {
       // Promo code: free until next month's 1st
-      amount = 0;
-      periodEnd = new Date(now);
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-      periodEnd.setDate(1);
-      periodEnd.setHours(0, 0, 0, 0);
+      initialAmount = 0;
     } else {
-      // Regular subscription: calculate prorated amount
+      // Regular subscription with trial
       if (!paymentInfo) {
         return { success: false, error: 'Payment information required' };
       }
 
-      amount = calculateProratedAmount(now, hasUsedTrial);
-      periodEnd = new Date(now);
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-      periodEnd.setDate(1);
-      periodEnd.setHours(0, 0, 0, 0);
+      // During subscription, charge is $0
+      // Real charge happens:
+      // - After 7 days if first time (trial ends)
+      // - On 1st of month for renewals
+      initialAmount = 0;
 
       // Save payment method if requested
       if (savePayment) {
@@ -225,10 +229,11 @@ export const subscribeToPremium = async (
     await setDoc(subRef, {
       userId,
       status: 'active',
-      hasUsedTrial: true, // Mark trial as used
+      hasUsedTrial: true, // Mark trial as used (will be true after this subscription)
       currentPeriodStart: now.toISOString(),
       currentPeriodEnd: periodEnd.toISOString(),
-      latestAmount: amount,
+      latestAmount: initialAmount,
+      trialEndsAt: hasUsedTrial ? undefined : new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       updatedAt: new Date().toISOString()
     });
 
@@ -238,15 +243,15 @@ export const subscribeToPremium = async (
 
     await addDoc(historyRef, {
       type: isPromo ? 'PROMO_APPLIED' : 'SUBSCRIBE_SUCCESS',
-      amount,
+      amount: initialAmount,
       period: periodString,
       paymentMethodUsed: paymentInfo ? `${paymentInfo.cardType}-${paymentInfo.cardNumber.slice(-4)}` : undefined,
       promoCode: isPromo ? promoCode : undefined,
       timestamp: new Date().toISOString()
     } as BillingRecord);
 
-    console.log(`✅ User ${userId} subscribed successfully. Amount: $${amount.toFixed(2)}`);
-    return { success: true, amount };
+    console.log(`✅ User ${userId} subscribed successfully. Initial amount: $${initialAmount.toFixed(2)} (Trial active)`);
+    return { success: true, amount: initialAmount };
 
   } catch (error) {
     console.error('Failed to subscribe user:', error);

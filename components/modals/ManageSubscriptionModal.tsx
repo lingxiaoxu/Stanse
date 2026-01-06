@@ -180,6 +180,12 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
             SUBSCRIBED
           </span>
         );
+      case 'TRIAL_END_CHARGE':
+        return (
+          <span className="px-2 py-1 bg-purple-100 border border-purple-600 text-purple-800 font-mono text-xs">
+            TRIAL ENDED
+          </span>
+        );
       case 'PROMO_APPLIED':
         return (
           <span className="px-2 py-1 bg-yellow-100 border border-yellow-600 text-yellow-800 font-mono text-xs">
