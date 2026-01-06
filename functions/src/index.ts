@@ -1,15 +1,51 @@
 import * as functions from 'firebase-functions/v2';
 import * as admin from 'firebase-admin';
+import sgMail from '@sendgrid/mail';
+import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 
 admin.initializeApp();
 const db = admin.firestore();
+const secretClient = new SecretManagerServiceClient();
 
 const MONTHLY_PRICE = 29.99;
-const ADMIN_EMAIL = 'lx2158@columbia.edu'; // Configure this
+const ADMIN_EMAIL = 'lxu912@gmail.com';
+const FROM_EMAIL = 'lxu912@gmail.com'; // Must be verified in SendGrid
+const PROJECT_ID = 'gen-lang-client-0960644135';
+const SENDGRID_SECRET_NAME = 'sendgrid-api-key'; // Your secret name in Secret Manager
+
+// Cache for SendGrid API key (loaded once per function instance)
+let sendgridApiKey: string | null = null;
 
 /**
- * Send email notification (using Gmail SMTP via Sendgrid/similar in production)
- * For now, just logs - integrate with SendGrid/AWS SES/Gmail API as needed
+ * Get SendGrid API key from Google Secret Manager
+ */
+async function getSendGridApiKey(): Promise<string> {
+  if (sendgridApiKey) {
+    return sendgridApiKey;
+  }
+
+  try {
+    const [version] = await secretClient.accessSecretVersion({
+      name: `projects/${PROJECT_ID}/secrets/${SENDGRID_SECRET_NAME}/versions/latest`,
+    });
+
+    const payload = version.payload?.data?.toString();
+    if (payload) {
+      sendgridApiKey = payload;
+      sgMail.setApiKey(sendgridApiKey);
+      console.log('✅ SendGrid API key loaded from Secret Manager');
+      return sendgridApiKey;
+    }
+  } catch (error) {
+    console.error('Failed to load SendGrid API key from Secret Manager:', error);
+  }
+
+  return '';
+}
+
+/**
+ * Send email notification via SendGrid
+ * Falls back to logging if SendGrid not configured
  */
 async function sendEmailNotification(
   subject: string,
@@ -22,20 +58,27 @@ async function sendEmailNotification(
   console.log(body);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-  // TODO: Integrate with email service (SendGrid, AWS SES, etc.)
-  // Example with SendGrid:
-  // await sendgrid.send({
-  //   to: ADMIN_EMAIL,
-  //   from: 'noreply@stanse.app',
-  //   subject: subject,
-  //   text: body
-  // });
+  // Load SendGrid API key from Secret Manager
+  const apiKey = await getSendGridApiKey();
 
-  // For now, just log to Cloud Functions logs
-  if (isError) {
-    console.error('❌ ERROR EMAIL:', subject);
+  if (apiKey) {
+    try {
+      await sgMail.send({
+        to: ADMIN_EMAIL,
+        from: FROM_EMAIL,
+        subject: subject,
+        text: body,
+        html: `<pre style="font-family: monospace; font-size: 12px;">${body}</pre>`
+      });
+      console.log(`✅ Email sent successfully to ${ADMIN_EMAIL}`);
+    } catch (error: any) {
+      console.error('❌ Failed to send email via SendGrid:', error.message);
+      if (error.response) {
+        console.error('SendGrid error:', error.response.body);
+      }
+    }
   } else {
-    console.log('✅ SUCCESS EMAIL:', subject);
+    console.log('ℹ️ Email not sent (SendGrid API key not available)');
   }
 }
 

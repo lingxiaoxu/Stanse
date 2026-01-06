@@ -72,32 +72,55 @@ firebase deploy --only functions:processMonthlyRenewals
 
 ---
 
-## Email Configuration
+## Email Configuration with SendGrid (Already Configured!)
 
-### Current Implementation
-Emails are **logged to Cloud Functions console** only.
+### ✅ SendGrid Integration via Google Secret Manager
 
-### Enable Real Email Sending
+The code is already configured to:
+1. Load SendGrid API key from Google Secret Manager
+2. Send emails on every scheduled run
+3. Fall back to logging if Secret Manager access fails
 
-#### Option 1: SendGrid (Recommended)
-1. Sign up at https://sendgrid.com
-2. Get API key
-3. Set Firebase config:
-   ```bash
-   firebase functions:config:set sendgrid.key="YOUR_API_KEY"
-   ```
-4. Update `sendEmailNotification()` in `functions/src/index.ts`:
-   ```typescript
-   import sgMail from '@sendgrid/mail';
-   sgMail.setApiKey(functions.config().sendgrid.key);
+### Your Secret Manager Configuration
 
-   await sgMail.send({
-     to: ADMIN_EMAIL,
-     from: 'noreply@stanse.app',
-     subject: subject,
-     text: body
-   });
-   ```
+**Secret Name**: `sendgrid-api-key`
+**Project**: `gen-lang-client-0960644135`
+**Location**: `projects/gen-lang-client-0960644135/secrets/sendgrid-api-key/versions/latest`
+
+### Verify SendGrid Secret Exists
+
+```bash
+# Check if secret exists
+gcloud secrets describe sendgrid-api-key --project=gen-lang-client-0960644135
+
+# View secret value (if you have permission)
+gcloud secrets versions access latest --secret=sendgrid-api-key
+```
+
+### Grant Cloud Functions Access to Secret
+
+```bash
+# Get Cloud Functions service account
+PROJECT_NUMBER=$(gcloud projects describe gen-lang-client-0960644135 --format="value(projectNumber)")
+SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+# Grant secret accessor role
+gcloud secrets add-iam-policy-binding sendgrid-api-key \
+  --member="serviceAccount:${SERVICE_ACCOUNT}" \
+  --role="roles/secretmanager.secretAccessor" \
+  --project=gen-lang-client-0960644135
+```
+
+### Verify Sender Email in SendGrid
+
+**Important**: SendGrid requires sender email verification!
+
+1. Login to https://app.sendgrid.com
+2. Go to **Settings** → **Sender Authentication**
+3. Click **Verify a Single Sender**
+4. Enter email: `lxu912@gmail.com`
+5. Check your inbox and click verification link
+6. Once verified, emails will send successfully
 
 #### Option 2: Gmail API
 Use Firebase Extension: "Trigger Email from Firestore"
