@@ -14,7 +14,8 @@ const TRANSLATIONS = {
         google: "CONTINUE WITH GOOGLE",
         protocol: "Zero-Knowledge Protocol",
         sign_up_prompt: "Don't have an account? Sign Up",
-        sign_in_prompt: "Already have an account? Sign In"
+        sign_in_prompt: "Already have an account? Sign In",
+        encrypted_channel: "ENCRYPTED CHANNEL"
     },
     menu: {
         manifesto: "MANIFESTO",
@@ -190,7 +191,8 @@ const TRANSLATIONS = {
         google: "通过 GOOGLE 继续",
         protocol: "零知识证明协议",
         sign_up_prompt: "还没有账户？注册",
-        sign_in_prompt: "已有账户？登录"
+        sign_in_prompt: "已有账户？登录",
+        encrypted_channel: "加密通道"
     },
     menu: {
         manifesto: "宣言",
@@ -366,7 +368,8 @@ const TRANSLATIONS = {
         google: "GOOGLEで続行",
         protocol: "ゼロ知識証明プロトコル",
         sign_up_prompt: "アカウントをお持ちでない方は？登録",
-        sign_in_prompt: "既にアカウントをお持ちですか？サインイン"
+        sign_in_prompt: "既にアカウントをお持ちですか？サインイン",
+        encrypted_channel: "暗号化チャンネル"
     },
     menu: {
         manifesto: "マニフェスト",
@@ -542,7 +545,8 @@ const TRANSLATIONS = {
         google: "CONTINUER AVEC GOOGLE",
         protocol: "Protocole à Divulgation Nulle",
         sign_up_prompt: "Pas de compte ? S'inscrire",
-        sign_in_prompt: "Déjà un compte ? Se connecter"
+        sign_in_prompt: "Déjà un compte ? Se connecter",
+        encrypted_channel: "CANAL CRYPTÉ"
     },
     menu: {
         manifesto: "MANIFESTE",
@@ -718,7 +722,8 @@ const TRANSLATIONS = {
         google: "CONTINUAR CON GOOGLE",
         protocol: "Protocolo de Conocimiento Cero",
         sign_up_prompt: "¿No tienes cuenta? Regístrate",
-        sign_in_prompt: "¿Ya tienes cuenta? Iniciar sesión"
+        sign_in_prompt: "¿Ya tienes cuenta? Iniciar sesión",
+        encrypted_channel: "CANAL ENCRIPTADO"
     },
     menu: {
         manifesto: "MANIFIESTO",

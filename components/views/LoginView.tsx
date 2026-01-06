@@ -199,7 +199,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
           <div className="my-6 flex items-center gap-4">
             <div className="h-0.5 flex-1 bg-gray-300"></div>
-            <span className="font-mono text-xs text-gray-400">ENCRYPTED CHANNEL</span>
+            <span className="font-mono text-xs text-gray-400">{t('login', 'encrypted_channel')}</span>
             <div className="h-0.5 flex-1 bg-gray-300"></div>
           </div>
 
