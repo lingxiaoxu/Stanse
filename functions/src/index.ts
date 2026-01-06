@@ -11,7 +11,7 @@ const MONTHLY_PRICE = 29.99;
 const ADMIN_EMAIL = 'lxu912@gmail.com';
 const FROM_EMAIL = 'lxu912@gmail.com'; // Must be verified in SendGrid
 const CLOUD_RUN_PROJECT_ID = 'gen-lang-client-0960644135'; // Where Secret Manager is
-const SENDGRID_SECRET_NAME = 'sendgrid-api-key'; // Your secret name in Secret Manager
+const SENDGRID_SECRET_NAME = 'SENDGRID_API_KEY'; // Your secret name in Secret Manager (case-sensitive!)
 
 // Cache for SendGrid API key (loaded once per function instance)
 let sendgridApiKey: string | null = null;
@@ -192,7 +192,7 @@ Status: ${errorCount > 0 ? 'COMPLETED WITH ERRORS' : 'SUCCESS'}
         errorCount > 0
       );
 
-      return { success: true, processed: processedCount, errors: errorCount };
+      console.log(`✅ Completed: ${processedCount} processed, ${errorCount} errors`);
     } catch (error: any) {
       console.error('Fatal error:', error);
 
@@ -235,11 +235,23 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
       const periodString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
       let processedCount = 0;
+      let skippedCount = 0;
       let errorCount = 0;
       const errors: string[] = [];
 
       for (const doc of snapshot.docs) {
+        const subData = doc.data();
         const userId = doc.id;
+
+        // Skip if user still in trial period
+        if (subData.trialEndsAt) {
+          const trialEndDate = new Date(subData.trialEndsAt);
+          if (trialEndDate > now) {
+            console.log(`⏭️  Skipping ${userId}: Still in trial (ends ${subData.trialEndsAt})`);
+            skippedCount++;
+            continue;
+          }
+        }
 
         try {
           // Add billing history record
@@ -259,6 +271,7 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
             updatedAt: now.toISOString()
           });
 
+          console.log(`✅ Renewed ${userId}: $${MONTHLY_PRICE}`);
           processedCount++;
         } catch (error: any) {
           console.error(`Failed to renew ${userId}:`, error);
@@ -280,8 +293,9 @@ Period: ${periodString}
 Duration: ${duration}s
 
 Results:
-- Active subscriptions: ${snapshot.size}
+- Active subscriptions checked: ${snapshot.size}
 - Successfully renewed: ${processedCount}
+- Skipped (still in trial): ${skippedCount}
 - Errors: ${errorCount}
 - Total revenue: $${totalRevenue.toFixed(2)}
 
@@ -296,7 +310,7 @@ Status: ${errorCount > 0 ? 'COMPLETED WITH ERRORS' : 'SUCCESS'}
         errorCount > 0
       );
 
-      return { success: true, processed: processedCount, revenue: totalRevenue };
+      console.log(`✅ Completed: ${processedCount} renewals, $${totalRevenue.toFixed(2)} revenue`);
     } catch (error: any) {
       console.error('Fatal error:', error);
 
