@@ -531,25 +531,42 @@ Avoid generic statements - be concrete and informative.`
           domain: 'wikipedia.org'
         }]).slice(0, 3);
 
-    // Apply explicit entity stance penalty/bonus
+    // Apply explicit entity stance penalty/bonus and integrate user feedback
     let finalScore = result.score || 50;
+    let keyConflicts = result.keyConflicts || [];
+    let keyAlignments = result.keyAlignments || [];
+
     if (entityStance) {
       if (entityStance.stance === 'OPPOSE') {
         // User explicitly opposes this entity - apply penalty
         const penalty = 25;  // Reduce score by 25 points
         finalScore = Math.max(0, finalScore - penalty);
         console.log(`⚠️ Applied OPPOSE penalty: ${result.score} → ${finalScore} (-${penalty})`);
+
+        // Add user's opposition reason to Friction Points (prepend to show prominence)
+        if (entityStance.reason) {
+          const userFeedback = `User opposition: ${entityStance.reason}`;
+          keyConflicts = [userFeedback, ...keyConflicts];
+        }
       } else if (entityStance.stance === 'SUPPORT') {
         // User explicitly supports this entity - apply bonus
         const bonus = 15;  // Increase score by 15 points
         finalScore = Math.min(100, finalScore + bonus);
         console.log(`✅ Applied SUPPORT bonus: ${result.score} → ${finalScore} (+${bonus})`);
+
+        // Add user's support reason to Resonance Points (prepend to show prominence)
+        if (entityStance.reason) {
+          const userFeedback = `User support: ${entityStance.reason}`;
+          keyAlignments = [userFeedback, ...keyAlignments];
+        }
       }
     }
 
     return {
       ...result,
       score: finalScore,  // Use adjusted score
+      keyConflicts: keyConflicts,  // Include user feedback in conflicts
+      keyAlignments: keyAlignments,  // Include user feedback in alignments
       brandName: result.brandName || entityName,
       reasoning: result.reportSummary,
       sources: sources
