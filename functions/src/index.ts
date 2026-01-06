@@ -321,10 +321,8 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
             skippedPromoCount++;
             continue;
           } else {
-            // Promo expired on this run - clear promo fields and record event
+            // Promo expired - check if user has payment method
             const promoCodeUsed = subData.promoCodeUsed || '';
-
-            // Get user email for event tracking
             let userEmail = '';
             try {
               const userDoc = await db.collection('users').doc(userId).get();
@@ -333,7 +331,34 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
               console.error(`Failed to get email for ${userId}`);
             }
 
-            // Record PROMO_END event
+            // Check for payment method
+            const paymentDoc = await db.collection('payment_methods').doc(userId).get();
+
+            if (!paymentDoc.exists) {
+              // No payment method after promo - cancel subscription
+              console.log(`⚠️  Promo expired, no payment method for ${userId}, canceling`);
+
+              await doc.ref.update({
+                status: 'cancelled',
+                promoExpiresAt: admin.firestore.FieldValue.delete(),
+                promoEndedWithoutPayment: true, // Flag for notification
+                updatedAt: now.toISOString()
+              });
+
+              const historyRef = db.collection('user_subscriptions').doc(userId).collection('history');
+              await historyRef.add({
+                type: 'CANCEL',
+                amount: 0,
+                period: periodString,
+                timestamp: now.toISOString()
+              });
+
+              errors.push(`${userId}: Promo ended, no payment method, auto-canceled`);
+              errorCount++;
+              continue;
+            }
+
+            // Has payment method - record PROMO_END and continue to renewal
             try {
               await db.collection('subscription_events').add({
                 userId,
@@ -354,7 +379,7 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
               promoExpiresAt: admin.firestore.FieldValue.delete(),
               updatedAt: now.toISOString()
             });
-            console.log(`✅ Cleared expired promo for ${userId}`);
+            console.log(`✅ Cleared expired promo for ${userId}, will proceed to renewal`);
           }
         }
 
