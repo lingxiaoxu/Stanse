@@ -205,24 +205,27 @@ export const subscribeToPremium = async (
     periodEnd.setDate(1);
     periodEnd.setHours(0, 0, 0, 0);
 
-    // Determine trial end date
-    // Rule: If originalTrialEndsAt exists and is in the future, still in trial period
+    // Determine trial end date (ONLY if not using promo code)
+    // Rule: Promo and Trial are mutually exclusive
     let trialEndsAt: string | undefined;
     let isStillInTrial = false;
 
-    if (originalTrialEndsAt) {
-      // User has subscribed before - check if still within original trial
-      const originalTrialEnd = new Date(originalTrialEndsAt);
-      if (originalTrialEnd > now) {
-        // Still within original trial period!
-        trialEndsAt = originalTrialEndsAt;
-        isStillInTrial = true;
-        console.log(`✅ User still within original trial period (ends ${originalTrialEndsAt})`);
+    if (!isPromo) {
+      // Only set trial if not using promo code
+      if (originalTrialEndsAt) {
+        // User has subscribed before - check if still within original trial
+        const originalTrialEnd = new Date(originalTrialEndsAt);
+        if (originalTrialEnd > now) {
+          // Still within original trial period!
+          trialEndsAt = originalTrialEndsAt;
+          isStillInTrial = true;
+          console.log(`✅ User still within original trial period (ends ${originalTrialEndsAt})`);
+        }
+      } else if (!hasUsedTrial) {
+        // First time subscriber - set new trial end date
+        const newTrialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        trialEndsAt = newTrialEnd.toISOString();
       }
-    } else if (!hasUsedTrial) {
-      // First time subscriber - set new trial end date
-      const newTrialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      trialEndsAt = newTrialEnd.toISOString();
     }
 
     // Initial billing amount is always $0 during subscription/trial
