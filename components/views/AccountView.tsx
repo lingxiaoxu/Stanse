@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { PixelCard } from '../ui/PixelCard';
-import { Mail, Key, Check, AlertCircle, Crown } from 'lucide-react';
+import { Mail, Key, Check, AlertCircle, Crown, X } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getSubscriptionStatus } from '../../services/subscriptionService';
 import { ManageSubscriptionModal } from '../modals/ManageSubscriptionModal';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 
 export const AccountView: React.FC = () => {
   const { t } = useLanguage();
@@ -14,6 +16,7 @@ export const AccountView: React.FC = () => {
   const [passwordResetStatus, setPasswordResetStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [subscriptionStatus, setSubscriptionStatus] = useState<'active' | 'cancelled' | null>(null);
   const [showManageModal, setShowManageModal] = useState(false);
+  const [showPromoExpiredNotice, setShowPromoExpiredNotice] = useState(false);
 
   // Load subscription status on mount
   useEffect(() => {
@@ -26,6 +29,23 @@ export const AccountView: React.FC = () => {
     if (!user) return;
     const sub = await getSubscriptionStatus(user.uid);
     setSubscriptionStatus(sub?.status || null);
+
+    // Check if promo ended without payment
+    if (sub?.promoEndedWithoutPayment) {
+      setShowPromoExpiredNotice(true);
+    }
+  };
+
+  const handleDismissPromoNotice = async () => {
+    if (!user) return;
+
+    // Clear flag in Firestore
+    const subRef = doc(db, 'user_subscriptions', user.uid);
+    await updateDoc(subRef, {
+      promoEndedWithoutPayment: false
+    });
+
+    setShowPromoExpiredNotice(false);
   };
 
   const handlePasswordReset = async () => {
@@ -156,6 +176,29 @@ export const AccountView: React.FC = () => {
           subscriptionStatus={subscriptionStatus}
           onSubscriptionChange={loadSubscriptionStatus}
         />
+      )}
+
+      {/* Promo Expired Notification */}
+      {showPromoExpiredNotice && (
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white border-4 border-black p-6 max-w-md shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="font-pixel text-xl">Promo Period Ended</h3>
+              <button onClick={handleDismissPromoNotice} className="p-1 hover:bg-gray-200">
+                <X size={20} />
+              </button>
+            </div>
+            <p className="font-mono text-sm mb-6">
+              Your promotional period has ended. Add a payment method to continue enjoying premium features.
+            </p>
+            <button
+              onClick={handleDismissPromoNotice}
+              className="w-full px-4 py-2 bg-black text-white font-mono border-2 border-black hover:bg-gray-800"
+            >
+              GOT IT
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

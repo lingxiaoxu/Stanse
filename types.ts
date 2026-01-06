@@ -282,6 +282,7 @@ export interface UserSubscription {
   originalTrialEndsAt?: string; // ISO date string - NEVER changes, set on first subscription
   promoExpiresAt?: string; // ISO date string - when promo period ends (next month's 1st), cleared after expiry
   promoCodeUsed?: string; // The promo code that was used
+  promoEndedWithoutPayment?: boolean; // Flag: promo ended without payment method, show notification
   updatedAt: string; // ISO date string
 }
 
