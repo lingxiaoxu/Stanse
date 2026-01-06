@@ -137,7 +137,7 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
     setSuccess(null);
 
     try {
-      const result = await cancelSubscription(userId);
+      const result = await cancelSubscription(userId, userEmail);
 
       if (result.success) {
         setSuccess('Subscription cancelled successfully');

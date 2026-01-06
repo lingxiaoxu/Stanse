@@ -188,6 +188,9 @@ exports.processTrialEndCharges = functions.scheduler.onSchedule({
         const totalRevenue = processedCount * MONTHLY_PRICE; // Approximate (actual amounts vary)
         const avgRevenue = processedCount > 0 ? totalRevenue / processedCount : 0;
         const totalSkipped = skippedPromoCount + skippedTrialCount;
+        // Calculate potential revenue and loss
+        const potentialRevenue = (processedCount + skippedPromoCount) * MONTHLY_PRICE;
+        const revenueLoss = skippedPromoCount * MONTHLY_PRICE;
         // Save to revenue collection for reporting
         const periodString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const revenueData = {
@@ -197,8 +200,12 @@ exports.processTrialEndCharges = functions.scheduler.onSchedule({
             totalSubscriptions: snapshot.size,
             chargedCount: processedCount,
             skippedCount: totalSkipped,
+            skippedPromoCount: skippedPromoCount,
+            skippedTrialCount: skippedTrialCount,
             errorCount: errorCount,
             totalRevenue: totalRevenue,
+            potentialRevenue: potentialRevenue,
+            revenueLoss: revenueLoss,
             averageRevenue: avgRevenue
         };
         if (errors.length > 0) {
@@ -317,6 +324,9 @@ exports.processMonthlyRenewals = functions.scheduler.onSchedule({
         const avgRevenue = processedCount > 0 ? totalRevenue / processedCount : 0;
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         const totalSkipped = skippedPromoCount + skippedTrialCount;
+        // Calculate potential revenue and loss
+        const potentialRevenue = (processedCount + skippedPromoCount) * MONTHLY_PRICE;
+        const revenueLoss = skippedPromoCount * MONTHLY_PRICE;
         // Save to revenue collection for reporting
         const revenueData = {
             type: 'MONTHLY_RENEWAL',
@@ -325,8 +335,12 @@ exports.processMonthlyRenewals = functions.scheduler.onSchedule({
             totalSubscriptions: snapshot.size,
             chargedCount: processedCount,
             skippedCount: totalSkipped,
+            skippedPromoCount: skippedPromoCount,
+            skippedTrialCount: skippedTrialCount,
             errorCount: errorCount,
             totalRevenue: totalRevenue,
+            potentialRevenue: potentialRevenue,
+            revenueLoss: revenueLoss,
             averageRevenue: avgRevenue
         };
         if (errors.length > 0) {

@@ -276,6 +276,26 @@ export const subscribeToPremium = async (
       timestamp: new Date().toISOString()
     } as BillingRecord);
 
+    // Record SUBSCRIBE event for analytics
+    try {
+      await addDoc(collection(db, 'subscription_events'), {
+        userId,
+        userEmail,
+        eventType: 'SUBSCRIBE',
+        timestamp: now.toISOString(),
+        metadata: {
+          promoCode: isPromo ? promoCode : undefined,
+          trialEndsAt: trialEndsAt || undefined,
+          promoExpiresAt: isPromo ? periodEnd.toISOString() : undefined,
+          periodStart: now.toISOString(),
+          periodEnd: periodEnd.toISOString()
+        }
+      });
+      console.log(`📊 Event tracked: SUBSCRIBE`);
+    } catch (eventError) {
+      console.error('Failed to record SUBSCRIBE event (non-critical):', eventError);
+    }
+
     console.log(`✅ User ${userId} subscribed successfully. Initial amount: $${initialAmount.toFixed(2)} (Trial active)`);
     return { success: true, amount: initialAmount };
 
@@ -288,27 +308,51 @@ export const subscribeToPremium = async (
 /**
  * Cancel user's subscription
  */
-export const cancelSubscription = async (userId: string): Promise<{ success: boolean; error?: string }> => {
+export const cancelSubscription = async (userId: string, userEmail: string): Promise<{ success: boolean; error?: string }> => {
   try {
+    const now = new Date();
     const subRef = doc(db, 'user_subscriptions', userId);
+
+    // Get current subscription to check if canceling during trial/promo
+    const sub = await getSubscriptionStatus(userId);
+    const canceledDuringTrial = sub?.trialEndsAt ? new Date(sub.trialEndsAt) > now : false;
+    const canceledDuringPromo = sub?.promoExpiresAt ? new Date(sub.promoExpiresAt) > now : false;
 
     // Update master document
     await updateDoc(subRef, {
       status: 'cancelled',
-      updatedAt: new Date().toISOString()
+      updatedAt: now.toISOString()
     });
 
     // Add to billing history
     const historyRef = collection(db, 'user_subscriptions', userId, 'history');
-    const now = new Date();
     const periodString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
     await addDoc(historyRef, {
       type: 'CANCEL',
       amount: 0,
       period: periodString,
-      timestamp: new Date().toISOString()
+      timestamp: now.toISOString()
     } as BillingRecord);
+
+    // Record CANCEL event for analytics
+    try {
+      await addDoc(collection(db, 'subscription_events'), {
+        userId,
+        userEmail,
+        eventType: 'CANCEL',
+        timestamp: now.toISOString(),
+        metadata: {
+          canceledDuringTrial,
+          canceledDuringPromo,
+          trialEndsAt: sub?.trialEndsAt,
+          promoExpiresAt: sub?.promoExpiresAt
+        }
+      });
+      console.log(`📊 Event tracked: CANCEL (trial: ${canceledDuringTrial}, promo: ${canceledDuringPromo})`);
+    } catch (eventError) {
+      console.error('Failed to record CANCEL event (non-critical):', eventError);
+    }
 
     console.log(`✅ User ${userId} cancelled subscription`);
     return { success: true };

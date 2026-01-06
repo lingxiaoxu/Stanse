@@ -159,6 +159,32 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
             timestamp: now.toISOString()
           });
 
+          // Get user email for event tracking
+          let userEmail = '';
+          try {
+            const userDoc = await db.collection('users').doc(userId).get();
+            userEmail = userDoc.data()?.email || '';
+          } catch (e) {
+            console.error(`Failed to get email for ${userId}`);
+          }
+
+          // Record TRIAL_END event
+          try {
+            await db.collection('subscription_events').add({
+              userId,
+              userEmail,
+              eventType: 'TRIAL_END',
+              timestamp: now.toISOString(),
+              metadata: {
+                convertedToActive: true,
+                chargedAmount: proratedAmount
+              }
+            });
+            console.log(`📊 Event tracked: TRIAL_END for ${userId}`);
+          } catch (eventError) {
+            console.error('Failed to record TRIAL_END event (non-critical):', eventError);
+          }
+
           // Clear trialEndsAt
           await doc.ref.update({
             trialEndsAt: admin.firestore.FieldValue.delete(),
@@ -295,7 +321,35 @@ export const processMonthlyRenewals = functions.scheduler.onSchedule(
             skippedPromoCount++;
             continue;
           } else {
-            // Promo expired on this run - clear promo fields
+            // Promo expired on this run - clear promo fields and record event
+            const promoCodeUsed = subData.promoCodeUsed || '';
+
+            // Get user email for event tracking
+            let userEmail = '';
+            try {
+              const userDoc = await db.collection('users').doc(userId).get();
+              userEmail = userDoc.data()?.email || '';
+            } catch (e) {
+              console.error(`Failed to get email for ${userId}`);
+            }
+
+            // Record PROMO_END event
+            try {
+              await db.collection('subscription_events').add({
+                userId,
+                userEmail,
+                eventType: 'PROMO_END',
+                timestamp: now.toISOString(),
+                metadata: {
+                  convertedToActive: true,
+                  promoCodeUsed
+                }
+              });
+              console.log(`📊 Event tracked: PROMO_END for ${userId}`);
+            } catch (eventError) {
+              console.error('Failed to record PROMO_END event (non-critical):', eventError);
+            }
+
             await doc.ref.update({
               promoExpiresAt: admin.firestore.FieldValue.delete(),
               updatedAt: now.toISOString()
