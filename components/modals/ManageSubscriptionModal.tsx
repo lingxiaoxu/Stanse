@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Clock, CreditCard, XCircle, AlertTriangle, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { PixelButton } from '../ui/PixelButton';
+import { PixelCard } from '../ui/PixelCard';
 import { PaymentForm } from '../ui/PaymentForm';
 import { useLanguage } from '../../contexts/LanguageContext';
 import {
@@ -106,8 +107,8 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
       if (result.success) {
         setSuccess(
           promoCode
-            ? 'Promo code activated successfully!'
-            : `Subscription activated! Charged $${result.amount?.toFixed(2)}`
+            ? t('menu', 'promo_activated')
+            : `${t('menu', 'subscription_activated')} $${result.amount?.toFixed(2)}`
         );
         // Reload data and notify parent
         await loadData();
@@ -117,10 +118,10 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
           onClose();
         }, 2000);
       } else {
-        setError(result.error || 'Subscription failed');
+        setError(result.error || t('menu', 'subscription_failed'));
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError(t('menu', 'error_occurred'));
       console.error('Subscription error:', err);
     } finally {
       setIsSubmitting(false);
@@ -128,7 +129,7 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
   };
 
   const handleCancelSubscription = async () => {
-    if (!window.confirm('Are you sure you want to cancel your subscription?')) {
+    if (!window.confirm(t('menu', 'cancel_subscription_question'))) {
       return;
     }
 
@@ -140,7 +141,7 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
       const result = await cancelSubscription(userId, userEmail);
 
       if (result.success) {
-        setSuccess('Subscription cancelled successfully');
+        setSuccess(t('menu', 'subscription_cancelled'));
         // Reload data and notify parent
         await loadData();
         onSubscriptionChange();
@@ -149,10 +150,10 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
           onClose();
         }, 2000);
       } else {
-        setError(result.error || 'Cancellation failed');
+        setError(result.error || t('menu', 'cancellation_failed'));
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError(t('menu', 'error_occurred'));
       console.error('Cancellation error:', err);
     } finally {
       setIsSubmitting(false);
@@ -161,7 +162,20 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
 
   const formatDate = (isoString: string): string => {
     const date = new Date(isoString);
-    return date.toLocaleDateString('en-US', {
+    const { language } = useLanguage();
+
+    // Map language to locale
+    const localeMap: Record<string, string> = {
+      'EN': 'en-US',
+      'ZH': 'zh-CN',
+      'JA': 'ja-JP',
+      'FR': 'fr-FR',
+      'ES': 'es-ES'
+    };
+
+    const locale = localeMap[language] || 'en-US';
+
+    return date.toLocaleDateString(locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -172,36 +186,42 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
     return `$${amount.toFixed(2)}`;
   };
 
+  const formatPeriod = (period: string): string => {
+    // Replace "to" with localized version
+    // Period format is typically "2024-01-01 to 2024-01-31"
+    return period.replace(/ to /i, ` ${t('menu', 'period_to')} `);
+  };
+
   const getStatusBadge = (type: BillingRecord['type']) => {
     switch (type) {
       case 'SUBSCRIBE_SUCCESS':
         return (
           <span className="px-2 py-1 bg-green-100 border border-green-600 text-green-800 font-mono text-xs">
-            SUBSCRIBED
+            {t('menu', 'status_subscribed')}
           </span>
         );
       case 'TRIAL_END_CHARGE':
         return (
           <span className="px-2 py-1 bg-purple-100 border border-purple-600 text-purple-800 font-mono text-xs">
-            TRIAL ENDED
+            {t('menu', 'status_trial_ended')}
           </span>
         );
       case 'PROMO_APPLIED':
         return (
           <span className="px-2 py-1 bg-yellow-100 border border-yellow-600 text-yellow-800 font-mono text-xs">
-            PROMO
+            {t('menu', 'status_promo')}
           </span>
         );
       case 'RENEW':
         return (
           <span className="px-2 py-1 bg-blue-100 border border-blue-600 text-blue-800 font-mono text-xs">
-            RENEWED
+            {t('menu', 'status_renewed')}
           </span>
         );
       case 'CANCEL':
         return (
           <span className="px-2 py-1 bg-red-100 border border-red-600 text-red-800 font-mono text-xs">
-            CANCELLED
+            {t('menu', 'status_cancelled')}
           </span>
         );
       default:
@@ -215,10 +235,10 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
 
   return (
     <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
-      <div className="bg-white border-4 border-black w-full max-w-xl max-h-[90vh] overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col">
+      <PixelCard className="w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col p-0">
         {/* Header */}
         <div className="p-6 border-b-2 border-black bg-gray-50 flex justify-between items-center">
-          <h2 className="font-pixel text-2xl">MANAGE SUBSCRIPTION</h2>
+          <h2 className="font-pixel text-2xl">{t('menu', 'manage_subscription')}</h2>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-200 transition-colors border-2 border-transparent hover:border-black"
@@ -251,7 +271,7 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
             >
               <div className="flex items-center gap-3">
                 <Clock size={20} />
-                <span className="font-mono text-sm font-bold uppercase">Billing History</span>
+                <span className="font-mono text-sm font-bold uppercase">{t('menu', 'billing_history')}</span>
               </div>
               {isSectionExpanded('billing') ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
@@ -260,11 +280,11 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
               <div className="p-6 bg-gray-50 border-t-2 border-black">
                 {isLoadingHistory ? (
                   <div className="text-center py-8 font-mono text-sm text-gray-500">
-                    LOADING...
+                    {t('menu', 'loading_text')}
                   </div>
                 ) : billingHistory.length === 0 ? (
                   <div className="text-center py-8 font-mono text-sm text-gray-500">
-                    No billing history yet
+                    {t('menu', 'no_billing_history')}
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -282,22 +302,22 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
                               </span>
                             </div>
                             <div className="font-mono text-sm">
-                              Period: {record.period}
+                              {t('menu', 'period_label')}: {formatPeriod(record.period)}
                             </div>
                             {record.paymentMethodUsed && (
                               <div className="font-mono text-xs text-gray-600">
-                                Payment: {record.paymentMethodUsed}
+                                {t('menu', 'payment_used')}: {record.paymentMethodUsed}
                               </div>
                             )}
                             {record.promoCode && (
                               <div className="font-mono text-xs text-yellow-600 font-bold">
-                                Promo Code: {record.promoCode}
+                                {t('menu', 'promo_code_label')}: {record.promoCode}
                               </div>
                             )}
                           </div>
                           <div className="font-mono text-lg font-bold">
                             {record.promoCode ? (
-                              <span className="text-yellow-600">$0.00 (PROMO)</span>
+                              <span className="text-yellow-600">$0.00 {t('menu', 'promo_label')}</span>
                             ) : (
                               formatAmount(record.amount)
                             )}
@@ -319,7 +339,7 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
             >
               <div className="flex items-center gap-3">
                 <CreditCard size={20} />
-                <span className="font-mono text-sm font-bold uppercase">Payment Methods</span>
+                <span className="font-mono text-sm font-bold uppercase">{t('menu', 'payment_methods')}</span>
               </div>
               {isSectionExpanded('payment') ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
@@ -329,10 +349,10 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
                 {subscriptionStatus === 'active' && (
                   <div className="bg-yellow-50 border-2 border-yellow-600 p-4 mb-6">
                     <p className="font-mono text-xs text-yellow-900">
-                      You already have an active subscription. You can update your payment method below.
+                      {t('menu', 'active_subscription_note')}
                     </p>
                     <p className="font-mono text-xs text-yellow-900 mt-2 font-bold">
-                      Note: Promotion codes can only be used when first subscribing.
+                      {t('menu', 'promo_first_time_note')}
                     </p>
                   </div>
                 )}
@@ -359,7 +379,7 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
             >
               <div className="flex items-center gap-3">
                 <XCircle size={20} className={subscriptionStatus !== 'active' ? 'text-gray-400' : ''} />
-                <span className="font-mono text-sm font-bold uppercase">Cancel Subscription</span>
+                <span className="font-mono text-sm font-bold uppercase">{t('menu', 'cancel_subscription')}</span>
               </div>
               {subscriptionStatus === 'active' && (
                 isSectionExpanded('cancel') ? <ChevronUp size={20} /> : <ChevronDown size={20} />
@@ -373,22 +393,22 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
                     <AlertTriangle size={24} className="text-alert-red flex-shrink-0 mt-1" />
                     <div className="space-y-2">
                       <p className="font-mono text-sm font-bold">
-                        Are you sure you want to cancel your subscription?
+                        {t('menu', 'cancel_subscription_question')}
                       </p>
                       <p className="font-mono text-xs text-gray-700">
                         {subscription?.trialEndsAt
-                          ? 'Your free trial will end on the date below. No charges will apply.'
+                          ? t('menu', 'trial_end_message')
                           : subscription?.promoExpiresAt
-                          ? 'Your promo period will end on the date below. No charges will apply.'
-                          : 'Your premium features will remain active until the end of your current billing period.'}
+                          ? t('menu', 'promo_end_message')
+                          : t('menu', 'billing_end_message')}
                       </p>
                       {subscription && (
                         <p className="font-mono text-xs font-bold">
                           {subscription.trialEndsAt
-                            ? `Trial ends: ${formatDate(subscription.trialEndsAt)}`
+                            ? `${t('menu', 'trial_ends')}: ${formatDate(subscription.trialEndsAt)}`
                             : subscription.promoExpiresAt
-                            ? `Promo expires: ${formatDate(subscription.promoExpiresAt)}`
-                            : `Current period ends: ${formatDate(subscription.currentPeriodEnd)}`}
+                            ? `${t('menu', 'promo_expires')}: ${formatDate(subscription.promoExpiresAt)}`
+                            : `${t('menu', 'current_period_ends')}: ${formatDate(subscription.currentPeriodEnd)}`}
                         </p>
                       )}
                     </div>
@@ -400,20 +420,20 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
                     isLoading={isSubmitting}
                     className="w-full py-3"
                   >
-                    CONFIRM CANCELLATION
+                    {t('menu', 'cancel_confirm')}
                   </PixelButton>
                 </div>
 
                 <div className="border-2 border-black p-4 bg-gray-50 mt-4">
                   <p className="font-mono text-xs text-gray-600">
-                    After cancellation, you can resubscribe at any time.
+                    {t('menu', 'resubscribe_note')}
                   </p>
                 </div>
               </div>
             )}
           </div>
         </div>
-      </div>
+      </PixelCard>
     </div>
   );
 };

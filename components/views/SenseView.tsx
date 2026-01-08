@@ -87,7 +87,7 @@ export const SenseView: React.FC<SenseViewProps> = ({
     <div className="flex flex-col space-y-8 max-w-lg promax:max-w-xl mx-auto w-full">
       <div className="text-center mb-10">
         <h2 className="font-pixel text-5xl">{t('sense', 'title')}</h2>
-        <p className="font-mono text-xs text-gray-400">
+        <p className="font-mono text-xs text-gray-400 uppercase">
           {t('sense', 'subtitle')}
         </p>
       </div>

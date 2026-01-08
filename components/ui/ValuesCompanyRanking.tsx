@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, ThumbsUp, ThumbsDown, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { PixelCard } from './PixelCard';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -42,27 +42,6 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
 
     fetchRankings();
   }, [userProfile, hasCompletedOnboarding, onRankingsChange]);
-
-  const handleRefresh = async () => {
-    if (!userProfile?.coordinates) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { economic, social, diplomatic } = userProfile.coordinates;
-      // Force refresh by calling with forceRefresh = true
-      const result = await getEnhancedCompanyRankingsForUser(economic, social, diplomatic, true);
-      setRankings(result);
-      // Notify parent component of rankings change
-      onRankingsChange?.(result);
-    } catch (err: any) {
-      console.error('Error refreshing rankings:', err);
-      setError(err.message || 'Failed to refresh');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Show placeholder for new users (like Market Alignment does)
   if (!hasCompletedOnboarding) {
@@ -144,14 +123,6 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
         <span className="font-mono text-[10px] tracking-[0.2em] uppercase">
           {t('feed', 'company_ranking')}
         </span>
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-          title="Refresh rankings"
-        >
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-        </button>
       </div>
 
       {/* Loading State */}
