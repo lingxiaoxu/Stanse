@@ -10,6 +10,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { CompanyRanking } from '../../services/companyRankingCache';
 import { useAppState } from '../../contexts/AppStateContext';
+import { getEnhancedCompanyRankingsForUser } from '../../services/enhancedCompanyRankingService';
 
 // Stock price interface for market alignment display
 interface MarketStock {
@@ -47,6 +48,26 @@ export const FeedView: React.FC = () => {
   // Market alignment stocks (from company rankings)
   const [marketStocks, setMarketStocks] = useState<MarketStock[]>([]);
   const [loadingStocks, setLoadingStocks] = useState(false);
+  const [refreshingRankings, setRefreshingRankings] = useState(false);
+
+  // Refresh rankings handler
+  const handleRefreshRankings = async () => {
+    if (!userProfile?.coordinates) return;
+
+    setRefreshingRankings(true);
+
+    try {
+      const { economic, social, diplomatic } = userProfile.coordinates;
+      // Force refresh by calling with forceRefresh = true
+      const result = await getEnhancedCompanyRankingsForUser(economic, social, diplomatic, true);
+      // Update market stocks with the new rankings
+      await handleRankingsChange(result);
+    } catch (err: any) {
+      console.error('Error refreshing rankings:', err);
+    } finally {
+      setRefreshingRankings(false);
+    }
+  };
 
   // Handle rankings change from ValuesCompanyRanking component
   const handleRankingsChange = useCallback(async (rankings: CompanyRanking) => {
@@ -340,9 +361,32 @@ export const FeedView: React.FC = () => {
 
       {/* SECTION 1: MARKET INDEX (Independent Area) */}
       <div className="mb-12 relative" data-tour-id="market-stocks">
-         <div className="flex items-center justify-center mb-3 gap-2 text-gray-500">
-            <TrendingUp size={14} />
-            <span className="font-mono text-[10px] tracking-[0.2em] uppercase">{t('feed', 'market')}</span>
+         <div className="text-center mb-3">
+           <div className="flex items-center justify-center gap-4">
+             <h2 className="font-pixel text-5xl">{t('feed', 'market_title')}</h2>
+             {hasCompletedOnboarding && (
+               <button
+                 onClick={handleRefreshRankings}
+                 disabled={loadingStocks || refreshingRankings}
+                 className="p-2 border-2 border-black bg-white hover:bg-gray-100 transition-colors disabled:opacity-50"
+                 title="Refresh rankings"
+               >
+                 <RefreshCw size={16} className={(loadingStocks || refreshingRankings) ? 'animate-spin' : ''} />
+               </button>
+             )}
+           </div>
+           <p className="font-mono text-xs text-gray-400">{t('feed', 'market_subtitle')}</p>
+           {userProfile?.coordinates?.label && (
+             <p className="font-mono text-[10px] text-gray-500 mt-1">
+               {t('feed', 'aligned_with')}: {translatedPersona || userProfile.coordinates.label}
+             </p>
+           )}
+           {/* Progress percentage for loading stocks */}
+           {(loadingStocks || refreshingRankings) && (
+             <p className="font-mono text-xs text-gray-500 mt-2">
+               Loading market data...
+             </p>
+           )}
          </div>
 
          {/* CSS Hiding Scrollbars inline for this specific container & Enforcing no vertical scroll */}
@@ -362,6 +406,12 @@ export const FeedView: React.FC = () => {
             `}
          </style>
 
+         {/* Small header above stock card */}
+         <div className="flex items-center justify-center mb-3 gap-2 text-gray-500">
+            <TrendingUp size={14} />
+            <span className="font-mono text-[10px] tracking-[0.2em] uppercase">{t('feed', 'market')}</span>
+         </div>
+
          <PixelCard className="p-0 bg-white/50 backdrop-blur-sm">
              {loadingStocks && marketStocks.length === 0 ? (
                <div className="p-4 text-center">
@@ -376,8 +426,9 @@ export const FeedView: React.FC = () => {
                   {marketStocks.map((stock, i) => (
                       <div key={`${stock.symbol}-${i}`} className={`
                           flex-shrink-0 flex flex-col p-2.5 border-r-2 border-black w-24
-                          ${stock.alignment === 'HIGH' ? 'bg-white' : 'bg-gray-100'}
+                          ${stock.alignment === 'HIGH' ? 'bg-white hover:bg-green-50' : 'bg-gray-100 hover:bg-red-50'}
                           first:pl-2.5 last:border-r-0 snap-start
+                          transition-colors cursor-pointer
                       `}>
                           <div className="flex justify-between items-start gap-1 mb-1">
                               <span className="font-bold font-mono text-xs">{stock.symbol}</span>
@@ -417,7 +468,7 @@ export const FeedView: React.FC = () => {
         <p className="font-mono text-xs text-gray-400">{t('feed', 'subtitle')}</p>
         {userProfile?.coordinates?.label && (
           <p className="font-mono text-[10px] text-gray-500 mt-1">
-            Curated for: {translatedPersona || userProfile.coordinates.label}
+            {t('feed', 'curated_for')}: {translatedPersona || userProfile.coordinates.label}
           </p>
         )}
         {/* Progress percentage */}

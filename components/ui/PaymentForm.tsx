@@ -59,7 +59,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
       const digits = cardNumber.replace(/\D/g, '');
       if (digits.length >= 13) {
         if (!validateCardNumber(cardNumber)) {
-          setCardNumberError('Invalid card number');
+          setCardNumberError(t('menu', 'invalid_card'));
         } else {
           setCardNumberError('');
         }
@@ -70,34 +70,34 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
       setCardType(null);
       setCardNumberError('');
     }
-  }, [cardNumber]);
+  }, [cardNumber, t]);
 
   // Validate expiry on change
   useEffect(() => {
     if (expiry.length === 5) {
       if (!validateExpiry(expiry)) {
-        setExpiryError('Invalid or expired date');
+        setExpiryError(t('menu', 'invalid_expiry'));
       } else {
         setExpiryError('');
       }
     } else {
       setExpiryError('');
     }
-  }, [expiry]);
+  }, [expiry, t]);
 
   // Validate CVV on change
   useEffect(() => {
     if (cvv.length > 0) {
       const expectedLength = cardType === 'Amex' ? 4 : 3;
       if (cvv.length !== expectedLength) {
-        setCvvError(`CVV must be ${expectedLength} digits`);
+        setCvvError(`${t('menu', 'cvv_must_be')} ${expectedLength} ${t('menu', 'cvv_digits')}`);
       } else {
         setCvvError('');
       }
     } else {
       setCvvError('');
     }
-  }, [cvv, cardType]);
+  }, [cvv, cardType, t]);
 
   // Format card number with spaces
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,27 +145,27 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
     if (!usingPromoCode) {
       // If not using promo code, validate all card fields
       if (!cardholderName.trim()) {
-        alert('Please enter cardholder name');
+        alert(t('menu', 'alert_enter_name'));
         return;
       }
       if (!cardNumber || cardNumberError) {
-        alert('Please enter a valid card number');
+        alert(t('menu', 'alert_valid_card'));
         return;
       }
       if (!expiry || expiryError) {
-        alert('Please enter a valid expiry date');
+        alert(t('menu', 'alert_valid_expiry'));
         return;
       }
       if (!cvv || cvvError) {
-        alert('Please enter a valid CVV');
+        alert(t('menu', 'alert_valid_cvv'));
         return;
       }
       if (!billingZip.trim()) {
-        alert('Please enter billing ZIP code');
+        alert(t('menu', 'alert_billing_zip'));
         return;
       }
       if (!cardType) {
-        alert('Unsupported card type');
+        alert(t('menu', 'alert_unsupported_card'));
         return;
       }
     }
@@ -197,14 +197,14 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
         <div className="flex items-center gap-2 mb-2">
           <Tag size={16} className={disablePromoCode ? 'text-gray-400' : ''} />
           <label className="font-mono text-xs font-bold uppercase">
-            Promotion Code {disablePromoCode && '(Only for new subscriptions)'}
+            {t('menu', 'promo_code')} {disablePromoCode && t('menu', 'promo_only_new')}
           </label>
         </div>
         <input
           type="text"
           value={promoCode}
           onChange={(e) => !disablePromoCode && setPromoCode(e.target.value.toUpperCase())}
-          placeholder={disablePromoCode ? "NOT AVAILABLE" : "ENTER CODE"}
+          placeholder={disablePromoCode ? t('menu', 'promo_not_available') : t('menu', 'promo_enter_code')}
           className={`w-full border-2 p-2 font-mono uppercase ${
             disablePromoCode
               ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -215,10 +215,10 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
         />
         <p className="font-mono text-xs text-gray-500 mt-1">
           {disablePromoCode
-            ? 'Promotion codes can only be used when first subscribing'
+            ? t('menu', 'promo_can_only_first')
             : hasPromoCode
-            ? 'Using promo code - card info optional'
-            : 'Leave blank to pay with card'}
+            ? t('menu', 'promo_using_optional')
+            : t('menu', 'promo_leave_blank')}
         </p>
       </div>
 
@@ -227,13 +227,13 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
         <div className="flex items-center gap-2 mb-3">
           <CreditCard size={16} />
           <h3 className="font-mono text-xs font-bold uppercase">
-            {hasPromoCode ? 'Card Information (Optional)' : 'Card Information'}
+            {hasPromoCode ? t('menu', 'card_info_optional') : t('menu', 'card_info')}
           </h3>
         </div>
 
         {/* Cardholder Name */}
         <div className="space-y-2">
-          <label className="font-mono text-xs font-bold block uppercase">Cardholder Name</label>
+          <label className="font-mono text-xs font-bold block uppercase">{t('menu', 'card_name')}</label>
           <input
             type="text"
             value={cardholderName}
@@ -246,7 +246,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 
         {/* Card Number */}
         <div className="space-y-2">
-          <label className="font-mono text-xs font-bold block uppercase">Card Number</label>
+          <label className="font-mono text-xs font-bold block uppercase">{t('menu', 'card_number')}</label>
           <div className="relative">
             <input
               type="text"
@@ -276,7 +276,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
         <div className="grid grid-cols-2 gap-4">
           {/* Expiry Date */}
           <div className="space-y-2">
-            <label className="font-mono text-xs font-bold block uppercase">Expiry (MM/YY)</label>
+            <label className="font-mono text-xs font-bold block uppercase">{t('menu', 'card_expiry')}</label>
             <input
               type="text"
               value={expiry}
@@ -298,7 +298,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           {/* CVV */}
           <div className="space-y-2">
             <label className="font-mono text-xs font-bold block uppercase">
-              CVV {cardType === 'Amex' && '(4 digits)'}
+              {t('menu', 'card_cvv')} {cardType === 'Amex' && t('menu', 'amex_4_digits')}
             </label>
             <input
               type="text"
@@ -321,7 +321,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 
         {/* Billing ZIP */}
         <div className="space-y-2">
-          <label className="font-mono text-xs font-bold block uppercase">Billing ZIP Code</label>
+          <label className="font-mono text-xs font-bold block uppercase">{t('menu', 'billing_zip')}</label>
           <input
             type="text"
             value={billingZip}
@@ -345,7 +345,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
               disabled={isLoading}
             />
             <label htmlFor="savePayment" className="font-mono text-xs">
-              Save payment method for future billing
+              {t('menu', 'save_payment')}
             </label>
           </div>
         )}
@@ -358,12 +358,12 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
         isLoading={isLoading}
         className="w-full py-4 text-lg uppercase"
       >
-        {hasPromoCode ? 'ACTIVATE WITH PROMO CODE' : 'CONFIRM PAYMENT'}
+        {hasPromoCode ? t('menu', 'activate_promo') : t('menu', 'confirm_charge')}
       </PixelButton>
 
       {/* Security Notice */}
       <p className="font-mono text-xs text-gray-500 text-center">
-        Payment is encrypted and secure
+        {t('menu', 'payment_secure')}
       </p>
     </form>
   );

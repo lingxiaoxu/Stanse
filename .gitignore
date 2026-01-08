@@ -73,3 +73,6 @@ __pycache__/
 *.tmp
 *.temp
 .cache/
+
+# Excluded project folders
+stanse---union-duel/
