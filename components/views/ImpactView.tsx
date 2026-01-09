@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { Zap, ArrowUpRight, ShieldCheck, Target, Copy, Activity } from 'lucide-react';
+import { Zap, ArrowUpRight, ShieldCheck, Target, Copy, Activity, Swords } from 'lucide-react';
 import { PixelCard } from '../ui/PixelCard';
 import { Campaign } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import * as PolisAPI from '../../services/polisApi';
 import { LogActionModal } from '../modals/LogActionModal';
+import { DuelModal } from '../modals/DuelModal';
 import { recordUserAction } from '../../services/userActionService';
 
 // Helper function to get the API base URL
@@ -50,6 +51,8 @@ export const UnionView: React.FC = () => {
   const [tps, setTps] = useState(0);
   const [showAllCampaigns, setShowAllCampaigns] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [showDuelModal, setShowDuelModal] = useState(false);
+  const [userCredits, setUserCredits] = useState(100); // Default initial credits
   const { t } = useLanguage();
   const { user, demoMode } = useAuth();
 
@@ -320,6 +323,51 @@ export const UnionView: React.FC = () => {
         </div>
       </PixelCard>
 
+      {/* DUEL ARENA Entry Card */}
+      <PixelCard
+        className="relative bg-white cursor-pointer hover:-translate-y-1 transition-transform group"
+        onClick={() => setShowDuelModal(true)}
+      >
+        <div className="absolute top-3 right-3 flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-full">
+          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          <span className="font-mono text-[10px] font-bold text-green-600 tracking-wider">{t('duel', 'entry_card_live')}</span>
+        </div>
+
+        <div className="flex items-start gap-4 p-6">
+          <div className="p-4 border-2 border-black bg-black text-white flex items-center justify-center">
+            <Swords size={32} strokeWidth={2.5} />
+          </div>
+
+          <div className="flex-1">
+            <h3 className="font-pixel text-2xl mb-1">{t('duel', 'entry_card_title')}</h3>
+            <p className="font-mono text-xs text-gray-500 uppercase mb-3">{t('duel', 'entry_card_subtitle')}</p>
+
+            <div className="flex gap-3 text-[10px] font-mono font-bold uppercase">
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                <span className="text-gray-600">{t('duel', 'entry_card_matched')}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                <span className="text-gray-600">{t('duel', 'entry_card_credits')}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center justify-center bg-black text-white px-4 py-3 border-2 border-black">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest">{t('duel', 'balance')}</span>
+            <span className="font-pixel text-3xl leading-none mt-1">${userCredits}</span>
+          </div>
+        </div>
+
+        <div className="border-t-2 border-black px-6 py-3 bg-gray-50 group-hover:bg-black group-hover:text-white transition-colors">
+          <div className="flex items-center justify-center gap-2 font-mono text-sm font-bold uppercase">
+            <span>{t('duel', 'enter_duel')}</span>
+            <ArrowUpRight size={16} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </div>
+        </div>
+      </PixelCard>
+
       {/* Active Campaigns Section */}
       <div className="space-y-4">
         <div className="flex justify-between items-end px-1">
@@ -453,6 +501,18 @@ export const UnionView: React.FC = () => {
           campaign={selectedCampaign}
           onClose={() => setSelectedCampaign(null)}
           onSubmit={handleActionSubmit}
+        />
+      )}
+
+      {/* DUEL Modal */}
+      {showDuelModal && user && (
+        <DuelModal
+          isOpen={showDuelModal}
+          onClose={() => setShowDuelModal(false)}
+          userCredits={userCredits}
+          userPersonaLabel={user.displayName || 'Unknown'}
+          userStanceType={'moderate-centrist'} // TODO: Get from user profile
+          onCreditsChange={(newBalance: number) => setUserCredits(newBalance)}
         />
       )}
     </div>
