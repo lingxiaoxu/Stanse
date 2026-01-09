@@ -361,3 +361,119 @@ export interface SubscriptionEvent {
     promoCodeUsed?: string;
   };
 }
+
+// ==================== DUEL Arena (PvP) Types ====================
+
+export enum DuelState {
+  LOBBY = 'LOBBY',
+  MATCHING = 'MATCHING',
+  PRE_MATCH_CHECK = 'PRE_MATCH_CHECK',
+  GAMEPLAY = 'GAMEPLAY',
+  CASH_ANIMATION = 'CASH_ANIMATION',
+  RESULTS = 'RESULTS',
+  ERROR = 'ERROR'
+}
+
+export interface DuelConfig {
+  entryFee: number; // 1-20 USD
+  duration: 30 | 45; // seconds
+  safetyBelt: boolean; // Only if entryFee >= 18
+  difficultyStrategy: 'FLAT' | 'ASCENDING' | 'DESCENDING';
+}
+
+export interface DuelPlayer {
+  id: string;
+  personaLabel: string;
+  stanceType: string; // coreStanceType for matchmaking
+  ping: number; // Network latency in ms
+  score: number;
+}
+
+export enum QuestionDifficulty {
+  EASY = 'EASY',
+  MEDIUM = 'MEDIUM',
+  HARD = 'HARD'
+}
+
+export interface Question {
+  id: string;
+  stem: string; // The noun/concept question
+  choices: string[]; // 4 Image URLs
+  correctIndex: number; // 0-3
+  difficulty: QuestionDifficulty;
+}
+
+export interface DuelMatch {
+  id: string;
+  playerA: DuelPlayer; // Self
+  playerB: DuelPlayer; // Opponent
+  config: DuelConfig;
+  questions: Question[];
+  currentQuestionIndex: number;
+  winner: 'A' | 'B' | 'DRAW' | null;
+  earnings: number; // Net change for current player
+  createdAt: string; // ISO date string
+  finishedAt?: string; // ISO date string
+}
+
+// Firebase/Firestore structure for duel matches
+export interface FirestoreDuelMatch {
+  matchId: string;
+  createdAt: string;
+  status: 'matching' | 'ready' | 'in_progress' | 'finished' | 'cancelled';
+
+  gameType: 'picture_trivia_v1';
+  durationSec: 30 | 45;
+
+  players: {
+    A: { userId: string; stanceType: string; personaLabel: string; pingMs: number };
+    B: { userId: string; stanceType: string; personaLabel: string; pingMs: number };
+  };
+
+  entry: {
+    A: { fee: number; safetyBelt: boolean; safetyFee: number };
+    B: { fee: number; safetyBelt: boolean; safetyFee: number };
+  };
+
+  holds: {
+    A: number; // Total credits frozen
+    B: number;
+  };
+
+  result: {
+    winner: 'A' | 'B' | 'draw' | null;
+    scoreA: number;
+    scoreB: number;
+    victoryReward: number; // feeA + feeB
+    deductionA: number; // Amount deducted from A
+    deductionB: number; // Amount deducted from B
+    settledAt?: string;
+  };
+
+  questionSequenceRef: string; // Reference to question sequence doc
+  audit: {
+    version: 'v1';
+    notes?: string;
+  };
+}
+
+// Credit ledger for user transactions
+export interface CreditLedgerEvent {
+  type: 'GRANT' | 'HOLD' | 'RELEASE' | 'DEDUCT' | 'REWARD';
+  amount: number; // Always in cents (1 credit = 100 cents = $1.00)
+  matchId?: string;
+  timestamp: string; // ISO date string
+  metadata?: {
+    description?: string;
+    balanceBefore?: number;
+    balanceAfter?: number;
+  };
+}
+
+// User credits balance (stored in users/{userId}/credits document)
+export interface UserCredits {
+  balance: number; // In credits (1 credit = $1.00 representation)
+  updatedAt: string; // ISO date string
+  initialGrant?: number; // Initial credits granted (e.g., 100)
+  grantedAt?: string; // When initial credits were granted
+}
