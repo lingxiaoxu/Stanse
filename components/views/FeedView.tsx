@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Scale, TrendingUp, TrendingDown, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles } from 'lucide-react';
+import { TrendingUp, TrendingDown, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Sparkles, ThumbsUp, ThumbsDown, Info } from 'lucide-react';
 import { PixelCard } from '../ui/PixelCard';
 import { PixelButton } from '../ui/PixelButton';
 import { ValuesCompanyRanking } from '../ui/ValuesCompanyRanking';
@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { CompanyRanking } from '../../services/companyRankingCache';
 import { useAppState } from '../../contexts/AppStateContext';
 import { getEnhancedCompanyRankingsForUser } from '../../services/enhancedCompanyRankingService';
+import { generateTodayAnalysis, MarketAnalysisResult } from '../../services/marketAnalysisService';
 
 import { Language } from '../../types';
 
@@ -89,14 +90,22 @@ export const FeedView: React.FC = () => {
   // Market alignment stocks (from company rankings)
   const [marketStocks, setMarketStocks] = useState<MarketStock[]>([]);
   const [loadingStocks, setLoadingStocks] = useState(false);
+  const [marketProgress, setMarketProgress] = useState(0);
   const [refreshingRankings, setRefreshingRankings] = useState(false);
   const [marketUpdatedAt, setMarketUpdatedAt] = useState<Date | null>(null);
+
+  // Company rankings for REPRESENTATIVE POSITIONS section
+  const [rankings, setRankings] = useState<CompanyRanking | null>(null);
+
+  // WHY TODAY? analysis state
+  const [todayAnalysis, setTodayAnalysis] = useState<MarketAnalysisResult | null>(null);
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
 
   // Hover state for market stocks auto-scroll
   const [isStocksHovered, setIsStocksHovered] = useState(false);
 
   // Click-based tooltip state
-  const [activeTooltip, setActiveTooltip] = useState<'portfolio' | 'return' | null>(null);
+  const [activeTooltip, setActiveTooltip] = useState<'support' | 'oppose' | 'performance' | 'persona' | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const stocksContainerRef = useRef<HTMLDivElement>(null);
   const stocksScrollRef = useRef<HTMLDivElement>(null);
@@ -125,44 +134,53 @@ export const FeedView: React.FC = () => {
   };
 
   // Handle rankings change from ValuesCompanyRanking component
-  const handleRankingsChange = useCallback(async (rankings: CompanyRanking) => {
+  const handleRankingsChange = useCallback(async (newRankings: CompanyRanking) => {
     console.log('Rankings changed, updating market stocks...');
     setLoadingStocks(true);
+    setMarketProgress(0);
+    setRankings(newRankings); // Store rankings for REPRESENTATIVE POSITIONS section
 
     try {
       // Combine support and oppose companies
       const allCompanies = [
-        ...rankings.supportCompanies.map(c => ({ ...c, alignment: 'HIGH' as const })),
-        ...rankings.opposeCompanies.map(c => ({ ...c, alignment: 'LOW' as const }))
+        ...newRankings.supportCompanies.map(c => ({ ...c, alignment: 'HIGH' as const })),
+        ...newRankings.opposeCompanies.map(c => ({ ...c, alignment: 'LOW' as const }))
       ];
 
       console.log('Companies for market alignment:', allCompanies.map(c => c.symbol));
 
       // Fetch real stock prices using Polygon.io API
       const polygonApiKey = process.env.POLYGON_API_KEY;
+      const companiesToFetch = allCompanies.slice(0, 10);
+      const totalSteps = companiesToFetch.length + 1; // +1 for WHY TODAY analysis
+      let completedSteps = 0;
 
-      const stocksWithPrices: MarketStock[] = await Promise.all(
-        allCompanies.slice(0, 10).map(async (company) => {
-          // Fallback function for mock prices
-          const getMockPrice = () => {
-            const hashCode = company.symbol.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0);
-            const basePrice = 50 + Math.abs(hashCode % 300);
-            const change = ((hashCode % 100) - 50) / 10;
-            return {
-              symbol: company.symbol,
-              name: company.name,
-              price: Math.round(basePrice * 100) / 100,
-              change: Math.round(change * 100) / 100,
-              alignment: company.alignment
-            };
+      const stocksWithPrices: MarketStock[] = [];
+
+      for (let i = 0; i < companiesToFetch.length; i++) {
+        const company = companiesToFetch[i];
+
+        // Fallback function for mock prices
+        const getMockPrice = () => {
+          const hashCode = company.symbol.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0);
+          const basePrice = 50 + Math.abs(hashCode % 300);
+          const change = ((hashCode % 100) - 50) / 10;
+          return {
+            symbol: company.symbol,
+            name: company.name,
+            price: Math.round(basePrice * 100) / 100,
+            change: Math.round(change * 100) / 100,
+            alignment: company.alignment
           };
+        };
 
-          // If no API key, use mock data
-          if (!polygonApiKey) {
-            console.warn('No Polygon API key configured, using mock prices');
-            return getMockPrice();
-          }
+        let stockData: MarketStock;
 
+        // If no API key, use mock data
+        if (!polygonApiKey) {
+          console.warn('No Polygon API key configured, using mock prices');
+          stockData = getMockPrice();
+        } else {
           try {
             // Polygon.io Snapshot API - get current price and day-over-day change
             const response = await fetch(
@@ -178,33 +196,61 @@ export const FeedView: React.FC = () => {
                 const currentPrice = ticker.day?.c || ticker.lastTrade?.p || ticker.prevDay?.c || 100;
                 const todaysChangePercent = ticker.todaysChangePerc || 0;
 
-                return {
+                stockData = {
                   symbol: company.symbol,
                   name: company.name,
                   price: Math.round(currentPrice * 100) / 100,
                   change: Math.round(todaysChangePercent * 100) / 100,
                   alignment: company.alignment
                 };
+              } else {
+                stockData = getMockPrice();
               }
+            } else {
+              stockData = getMockPrice();
             }
           } catch (e) {
             console.warn(`Failed to fetch price for ${company.symbol}:`, e);
+            stockData = getMockPrice();
           }
+        }
 
-          // Fallback to mock price
-          return getMockPrice();
-        })
-      );
+        stocksWithPrices.push(stockData);
+
+        // Update progress (stocks are 90% of total progress, analysis is 10%)
+        completedSteps++;
+        setMarketProgress(Math.round((completedSteps / totalSteps) * 90));
+      }
 
       console.log('Market stocks updated:', stocksWithPrices.map(s => s.symbol));
       setMarketStocks(stocksWithPrices);
       setMarketUpdatedAt(new Date());
+
+      // Generate WHY TODAY? analysis after stocks are loaded
+      if (stocksWithPrices.length > 0 && userProfile?.coordinates?.label) {
+        setLoadingAnalysis(true);
+        try {
+          const personaLabel = translatedPersona || userProfile.coordinates.label;
+          const nationalityPrefix = userProfile.coordinates.nationalityPrefix;
+          const politicalPersona = extractPoliticalPersona(personaLabel, nationalityPrefix);
+
+          const analysis = await generateTodayAnalysis(stocksWithPrices, politicalPersona, language);
+          setTodayAnalysis(analysis);
+        } catch (error) {
+          console.error('Error generating today analysis:', error);
+        } finally {
+          setLoadingAnalysis(false);
+          setMarketProgress(100); // Analysis complete
+        }
+      } else {
+        setMarketProgress(100); // No analysis needed, mark as complete
+      }
     } catch (error) {
       console.error('Error fetching market stocks:', error);
     } finally {
       setLoadingStocks(false);
     }
-  }, []);
+  }, [userProfile?.coordinates?.label, userProfile?.coordinates?.nationalityPrefix, translatedPersona, language]);
 
   // Auto-scroll effect for stock ticker
   useEffect(() => {
@@ -554,8 +600,8 @@ export const FeedView: React.FC = () => {
   return (
     <div className="max-w-md mx-auto w-full pb-20">
 
-      {/* SECTION 1: MARKET INDEX (Independent Area) */}
-      <div className="mb-12 relative" data-tour-id="market-stocks">
+      {/* VALUES MARKET ALIGNMENT - Combined Sections */}
+      <div className="mb-12 relative" data-tour-id="market-signal">
          <div className="text-center mb-3">
            <div className="flex items-center justify-center gap-4">
              <h2 className="font-pixel text-5xl">{t('feed', 'market_title')}</h2>
@@ -576,12 +622,14 @@ export const FeedView: React.FC = () => {
                {t('feed', 'aligned_with')}: {translatedPersona || userProfile.coordinates.label}
              </p>
            )}
-           {/* Progress percentage for loading stocks */}
-           {(loadingStocks || refreshingRankings) && (
-             <p className="font-mono text-xs text-gray-500 mt-2">
-               Loading market data...
-             </p>
-           )}
+           {/* Progress percentage for loading stocks - fixed height to prevent layout jump */}
+           <div className="h-5 mt-2">
+             {(loadingStocks || refreshingRankings) && marketProgress > 0 && marketProgress < 100 && (
+               <p className="font-mono text-xs text-gray-500">
+                 {marketProgress}%
+               </p>
+             )}
+           </div>
          </div>
 
          {/* CSS Hiding Scrollbars inline for this specific container & Enforcing no vertical scroll */}
@@ -601,12 +649,6 @@ export const FeedView: React.FC = () => {
             `}
          </style>
 
-         {/* Small header above stock card */}
-         <div className="flex items-center justify-center mb-3 gap-2 text-gray-500">
-            <TrendingUp size={14} />
-            <span className="font-mono text-[10px] tracking-[0.2em] uppercase">{t('feed', 'market')}</span>
-         </div>
-
          <PixelCard className="p-0 bg-white/50 backdrop-blur-sm">
              {loadingStocks && marketStocks.length === 0 ? (
                <div className="p-4 text-center">
@@ -618,61 +660,82 @@ export const FeedView: React.FC = () => {
                </div>
              ) : (
                <>
-               {/* Index title bar - shows political persona + "Portfolio Index" */}
-               <div className="bg-black text-white px-3 py-2 flex items-center gap-2 group relative" ref={activeTooltip === 'portfolio' ? tooltipRef : null}>
-                 <Scale size={12} className="flex-shrink-0" />
-                 <span className="font-mono text-[10px] tracking-wider uppercase flex-1 leading-relaxed">
+               {/* MARKET SIGNAL Section Header */}
+               <div className="px-3 py-2 border-b-2 border-black bg-white">
+                 <span className="font-mono text-xs font-bold tracking-wider">
+                   - {t('feed', 'market_signal')}
+                 </span>
+               </div>
+
+               {/* Persona label bar */}
+               <div className="bg-black text-white px-3 py-2 flex items-center gap-2 relative" ref={activeTooltip === 'persona' ? tooltipRef : null}>
+                 <span className="font-mono text-[10px] tracking-wider uppercase flex-1">
                    {(() => {
                      const label = translatedPersona || userProfile?.coordinates?.label || 'Your Values';
                      const nationalityPrefix = userProfile?.coordinates?.nationalityPrefix;
-                     const politicalPersona = extractPoliticalPersona(label, nationalityPrefix);
-                     return (
-                       <>
-                         {politicalPersona}<br />
-                         {t('feed', 'portfolio_index')}
-                       </>
-                     );
+                     return extractPoliticalPersona(label, nationalityPrefix);
                    })()}
                  </span>
                  <Info
                    size={12}
                    className="text-gray-400 hover:text-white cursor-pointer flex-shrink-0"
-                   onClick={() => setActiveTooltip(activeTooltip === 'portfolio' ? null : 'portfolio')}
+                   onClick={() => setActiveTooltip(activeTooltip === 'persona' ? null : 'persona')}
                  />
-                 {/* Portfolio tooltip popup */}
-                 {activeTooltip === 'portfolio' && (
-                   <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[280px]">
-                     <p className="font-mono text-[10px] leading-relaxed">{t('feed', 'portfolio_index_tooltip')}</p>
+                 {activeTooltip === 'persona' && (
+                   <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[250px]">
+                     <p className="font-mono text-[10px] leading-relaxed">
+                       {t('feed', 'persona_tooltip')}
+                     </p>
                    </div>
                  )}
                </div>
-               <div className="bg-black text-white px-3 py-2 flex items-center gap-2 border-t border-gray-700 relative" ref={activeTooltip === 'return' ? tooltipRef : null}>
-                 <TrendingUp size={12} />
-                 <span className="font-mono text-[10px] tracking-wider uppercase flex-1">
-                   {t('feed', 'index_return')}: {(() => {
+               {/* Performance bar */}
+               <div className="bg-black text-white px-3 py-2 border-t border-gray-700 relative" ref={activeTooltip === 'performance' ? tooltipRef : null}>
+                 <div className="flex items-center gap-2 mb-1">
+                   {(() => {
                      // Calculate portfolio return: long first 5 (support), short last 5 (oppose), equal weight
-                     if (marketStocks.length < 10) return '...';
-                     const supportStocks = marketStocks.slice(0, 5); // Long position
-                     const opposeStocks = marketStocks.slice(5, 10); // Short position
-                     // Long return: gains when stock goes up
+                     if (marketStocks.length < 10) return <></>;
+                     const supportStocks = marketStocks.slice(0, 5);
+                     const opposeStocks = marketStocks.slice(5, 10);
                      const longReturn = supportStocks.reduce((sum, s) => sum + (s.change || 0), 0) / 5;
-                     // Short return: gains when stock goes down (invert the change)
                      const shortReturn = opposeStocks.reduce((sum, s) => sum - (s.change || 0), 0) / 5;
-                     // Equal weight: 50% long, 50% short
                      const portfolioReturn = (longReturn + shortReturn) / 2;
-                     const sign = portfolioReturn >= 0 ? '+' : '';
-                     return `${sign}${portfolioReturn.toFixed(2)}%`;
+                     const isOutperforming = portfolioReturn > 0;
+
+                     return (
+                       <>
+                         {isOutperforming ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                         <span className="font-mono text-sm font-bold tracking-wider uppercase">
+                           {isOutperforming ? t('feed', 'outperforming') : t('feed', 'underperforming')}
+                         </span>
+                       </>
+                     );
                    })()}
-                 </span>
-                 <Info
-                   size={12}
-                   className="text-gray-400 hover:text-white cursor-pointer"
-                   onClick={() => setActiveTooltip(activeTooltip === 'return' ? null : 'return')}
-                 />
-                 {/* Return tooltip popup */}
-                 {activeTooltip === 'return' && (
-                   <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[280px]">
-                     <p className="font-mono text-[10px] leading-relaxed">{t('feed', 'index_return_tooltip')}</p>
+                 </div>
+                 <div className="flex items-center gap-2">
+                   <span className="font-mono text-xs flex-1">
+                     {(() => {
+                       if (marketStocks.length < 10) return '...';
+                       const supportStocks = marketStocks.slice(0, 5);
+                       const opposeStocks = marketStocks.slice(5, 10);
+                       const longReturn = supportStocks.reduce((sum, s) => sum + (s.change || 0), 0) / 5;
+                       const shortReturn = opposeStocks.reduce((sum, s) => sum - (s.change || 0), 0) / 5;
+                       const portfolioReturn = (longReturn + shortReturn) / 2;
+                       const sign = portfolioReturn >= 0 ? '+' : '';
+                       return `${sign}${portfolioReturn.toFixed(2)}% ${t('feed', 'today_long_short')}`;
+                     })()}
+                   </span>
+                   <Info
+                     size={12}
+                     className="text-gray-400 hover:text-white cursor-pointer flex-shrink-0"
+                     onClick={() => setActiveTooltip(activeTooltip === 'performance' ? null : 'performance')}
+                   />
+                 </div>
+                 {activeTooltip === 'performance' && (
+                   <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[250px]">
+                     <p className="font-mono text-[10px] leading-relaxed">
+                       {t('feed', 'performance_tooltip')}
+                     </p>
                    </div>
                  )}
                </div>
@@ -752,24 +815,249 @@ export const FeedView: React.FC = () => {
                     </div>
                   </div>
                </div>
+
+               {/* VALUES POSITIONING - Three axes visualization */}
+               <div className="border-t-2 border-black px-4 py-3 bg-white">
+                 <div className="space-y-3">
+                   {/* Economic Axis */}
+                   <div>
+                     <div className="flex justify-between items-center mb-1">
+                       <span className="font-mono text-[9px] text-gray-500 uppercase">{t('feed', 'economic_axis')}</span>
+                       <span className="font-mono text-[9px] font-bold">
+                         {userProfile?.coordinates?.economic !== undefined
+                           ? `${userProfile.coordinates.economic > 0 ? t('feed', 'right') : t('feed', 'left')} ${Math.abs(userProfile.coordinates.economic)}`
+                           : ''}
+                       </span>
+                     </div>
+                     {/* Bar with black/gray split indicating position - black portion represents the value */}
+                     <div className="h-2 flex">
+                       <div
+                         className="bg-black h-full"
+                         style={{
+                           width: `${((userProfile?.coordinates?.economic ?? 0) + 100) / 2}%`
+                         }}
+                       />
+                       <div
+                         className="bg-gray-300 h-full"
+                         style={{
+                           width: `${100 - ((userProfile?.coordinates?.economic ?? 0) + 100) / 2}%`
+                         }}
+                       />
+                     </div>
+                     <div className="flex justify-between mt-0.5">
+                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'left')}</span>
+                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'right')} →</span>
+                     </div>
+                   </div>
+
+                   {/* Social Axis */}
+                   <div>
+                     <div className="flex justify-between items-center mb-1">
+                       <span className="font-mono text-[9px] text-gray-500 uppercase">{t('feed', 'social_axis')}</span>
+                       <span className="font-mono text-[9px] font-bold">
+                         {userProfile?.coordinates?.social !== undefined
+                           ? `${userProfile.coordinates.social > 0 ? t('feed', 'progressive') : t('feed', 'conservative')} ${Math.abs(userProfile.coordinates.social)}`
+                           : ''}
+                       </span>
+                     </div>
+                     <div className="h-2 flex">
+                       <div
+                         className="bg-black h-full"
+                         style={{
+                           width: `${(-(userProfile?.coordinates?.social ?? 0) + 100) / 2}%`
+                         }}
+                       />
+                       <div
+                         className="bg-gray-300 h-full"
+                         style={{
+                           width: `${100 - (-(userProfile?.coordinates?.social ?? 0) + 100) / 2}%`
+                         }}
+                       />
+                     </div>
+                     <div className="flex justify-between mt-0.5">
+                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'progressive')}</span>
+                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'conservative')} →</span>
+                     </div>
+                   </div>
+
+                   {/* Diplomatic Axis */}
+                   <div>
+                     <div className="flex justify-between items-center mb-1">
+                       <span className="font-mono text-[9px] text-gray-500 uppercase">{t('feed', 'diplomatic_axis')}</span>
+                       <span className="font-mono text-[9px] font-bold">
+                         {userProfile?.coordinates?.diplomatic !== undefined
+                           ? `${userProfile.coordinates.diplomatic > 0 ? t('feed', 'global') : t('feed', 'national')} ${Math.abs(userProfile.coordinates.diplomatic)}`
+                           : ''}
+                       </span>
+                     </div>
+                     <div className="h-2 flex">
+                       <div
+                         className="bg-black h-full"
+                         style={{
+                           width: `${(-(userProfile?.coordinates?.diplomatic ?? 0) + 100) / 2}%`
+                         }}
+                       />
+                       <div
+                         className="bg-gray-300 h-full"
+                         style={{
+                           width: `${100 - (-(userProfile?.coordinates?.diplomatic ?? 0) + 100) / 2}%`
+                         }}
+                       />
+                     </div>
+                     <div className="flex justify-between mt-0.5">
+                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'global')}</span>
+                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'national')} →</span>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               {/* REPRESENTATIVE POSITIONS Section Header */}
+               <div className="px-3 py-2 border-t-2 border-black bg-white">
+                 <span className="font-mono text-xs font-bold tracking-wider">
+                   - {t('feed', 'representative_positions')}
+                 </span>
+               </div>
+
+               {/* REPRESENTATIVE POSITIONS Content */}
+               {!rankings ? (
+                 <div className="p-4 text-center">
+                   <div className="font-mono text-xs text-gray-500">Loading positions...</div>
+                 </div>
+               ) : (
+                 <div className="flex">
+                   {/* LONG (Aligned) Column */}
+                   <div className="flex-1 border-r border-black">
+                     <div className="bg-black text-white px-3 py-2 flex items-center gap-2 relative" ref={activeTooltip === 'support' ? tooltipRef : null}>
+                       <ThumbsUp size={12} />
+                       <span className="font-mono text-[10px] tracking-wider uppercase font-bold flex-1">
+                         {t('feed', 'long_aligned')}
+                       </span>
+                       <Info
+                         size={12}
+                         className="text-gray-400 hover:text-white cursor-pointer"
+                         onClick={() => setActiveTooltip(activeTooltip === 'support' ? null : 'support')}
+                       />
+                       {activeTooltip === 'support' && (
+                         <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[200px]">
+                           <p className="font-mono text-[10px] leading-relaxed">{t('feed', 'support_companies_tooltip')}</p>
+                         </div>
+                       )}
+                     </div>
+                     <div className="divide-y divide-gray-100">
+                       {rankings.supportCompanies.slice(0, 5).map((company, i) => {
+                         const stock = marketStocks.find(s => s.symbol === company.symbol);
+                         return (
+                           <div key={`long-${i}`} className="p-2 hover:bg-green-50 transition-colors cursor-pointer">
+                             <div className="flex items-center justify-between gap-2">
+                               <div className="flex items-center gap-1 flex-1 min-w-0">
+                                 <span className="font-mono font-bold text-xs">+</span>
+                                 <div>
+                                   <div className="font-mono font-bold text-xs">{company.symbol}</div>
+                                   <div className="text-[8px] text-gray-500 uppercase truncate">{company.sector}</div>
+                                 </div>
+                               </div>
+                               <div className="text-right">
+                                 <div className="font-mono text-xs font-bold">
+                                   ${stock?.price.toFixed(2) || '...'}
+                                 </div>
+                                 <div className={`text-[8px] font-mono font-bold ${(stock?.change || 0) >= 0 ? 'text-black' : 'text-gray-400'}`}>
+                                   {stock?.change !== undefined ? `${stock.change >= 0 ? '+' : ''}${stock.change.toFixed(1)}%` : '...'}
+                                 </div>
+                               </div>
+                             </div>
+                           </div>
+                         );
+                       })}
+                     </div>
+                   </div>
+
+                   {/* SHORT (Opposed) Column */}
+                   <div className="flex-1">
+                     <div className="bg-gray-100 text-black px-3 py-2 flex items-center gap-2 relative" ref={activeTooltip === 'oppose' ? tooltipRef : null}>
+                       <ThumbsDown size={12} />
+                       <span className="font-mono text-[10px] tracking-wider uppercase font-bold flex-1">
+                         {t('feed', 'short_opposed')}
+                       </span>
+                       <Info
+                         size={12}
+                         className="text-gray-500 hover:text-black cursor-pointer"
+                         onClick={() => setActiveTooltip(activeTooltip === 'oppose' ? null : 'oppose')}
+                       />
+                       {activeTooltip === 'oppose' && (
+                         <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[200px]">
+                           <p className="font-mono text-[10px] leading-relaxed">{t('feed', 'oppose_companies_tooltip')}</p>
+                         </div>
+                       )}
+                     </div>
+                     <div className="divide-y divide-gray-100">
+                       {rankings.opposeCompanies.slice(0, 5).map((company, i) => {
+                         const stock = marketStocks.find(s => s.symbol === company.symbol);
+                         return (
+                           <div key={`short-${i}`} className="p-2 hover:bg-red-50 transition-colors cursor-pointer">
+                             <div className="flex items-center justify-between gap-2">
+                               <div className="flex items-center gap-1 flex-1 min-w-0">
+                                 <span className="font-mono font-bold text-xs">-</span>
+                                 <div>
+                                   <div className="font-mono font-bold text-xs">{company.symbol}</div>
+                                   <div className="text-[8px] text-gray-500 uppercase truncate">{company.sector}</div>
+                                 </div>
+                               </div>
+                               <div className="text-right">
+                                 <div className="font-mono text-xs font-bold">
+                                   ${stock?.price.toFixed(2) || '...'}
+                                 </div>
+                                 <div className={`text-[8px] font-mono font-bold ${(stock?.change || 0) >= 0 ? 'text-black' : 'text-gray-400'}`}>
+                                   {stock?.change !== undefined ? `${stock.change >= 0 ? '+' : ''}${stock.change.toFixed(1)}%` : '...'}
+                                 </div>
+                               </div>
+                             </div>
+                           </div>
+                         );
+                       })}
+                     </div>
+                   </div>
+                 </div>
+               )}
+
+               {/* WHY TODAY? Section Header */}
+               <div className="px-3 py-2 border-t-2 border-black bg-white">
+                 <span className="font-mono text-xs font-bold tracking-wider">
+                   - {t('feed', 'why_today')}
+                 </span>
+               </div>
+
+               {/* WHY TODAY? Content */}
+               <div className="bg-black text-white px-4 py-3">
+                 {loadingAnalysis ? (
+                   <p className="font-mono text-xs text-gray-400">{t('feed', 'analyzing_market')}</p>
+                 ) : todayAnalysis ? (
+                   <p className="font-mono text-xs leading-relaxed">
+                     {todayAnalysis.explanation}
+                   </p>
+                 ) : (
+                   <p className="font-mono text-xs text-gray-400">{t('feed', 'analysis_placeholder')}</p>
+                 )}
+               </div>
+
                {/* Footer with update time */}
                <div className="border-t-2 border-black px-3 py-1 bg-gray-50">
                  <p className="font-mono text-[8px] text-gray-400 text-center">
-                   {t('feed', 'updated')}: {marketUpdatedAt?.toLocaleString(LOCALE_MAP[language])}
+                   Updated: {marketUpdatedAt?.toLocaleString(LOCALE_MAP[language])}
                  </p>
                </div>
                </>
              )}
          </PixelCard>
-      </div>
 
-      {/* SECTION 1.5: VALUES COMPANY RANKING */}
-      <div data-tour-id="company-rankings">
-        <ValuesCompanyRanking onRankingsChange={handleRankingsChange} />
+        {/* Hidden ValuesCompanyRanking component - still needed to fetch rankings */}
+        <div className="hidden">
+          <ValuesCompanyRanking onRankingsChange={handleRankingsChange} />
+        </div>
       </div>
 
       {/* SECTION 2: THE FEED */}
-      <div className="text-center mb-10" data-tour-id="news-feed">
+      <div className="text-center mb-4" data-tour-id="news-feed">
         <div className="flex items-center justify-center gap-4">
           <h2 className="font-pixel text-5xl">{t('feed', 'title')}</h2>
           {hasCompletedOnboarding && (
@@ -789,12 +1077,14 @@ export const FeedView: React.FC = () => {
             {t('feed', 'curated_for')}: {translatedPersona || userProfile.coordinates.label}
           </p>
         )}
-        {/* Progress percentage */}
-        {feedLoading && feedProgress > 0 && feedProgress < 100 && (
-          <p className="font-mono text-xs text-gray-500 mt-2">
-            {feedProgress}%
-          </p>
-        )}
+        {/* Progress percentage - fixed height to prevent layout jump */}
+        <div className="h-5 mt-2">
+          {feedLoading && feedProgress > 0 && feedProgress < 100 && (
+            <p className="font-mono text-xs text-gray-500">
+              {feedProgress}%
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Not onboarded message */}

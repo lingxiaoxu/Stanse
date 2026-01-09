@@ -273,14 +273,14 @@ export const UnionView: React.FC = () => {
           <div className="flex items-center gap-2">
             <Activity size={14} className="text-green-400" />
             <div>
-              <div className="text-gray-400 text-[9px] uppercase">Network</div>
+              <div className="text-gray-400 text-[9px] uppercase">{t('union', 'network')}</div>
               <div className="font-bold">{tps} TPS • #{blockHeight}</div>
             </div>
           </div>
           {userDID && (
             <div className="flex items-center gap-2 justify-end">
               <div className="text-right">
-                <div className="text-gray-400 text-[9px] uppercase">Your DID</div>
+                <div className="text-gray-400 text-[9px] uppercase">{t('union', 'your_did')}</div>
                 <div className="font-bold">{userDID.slice(0, 12)}...</div>
               </div>
               <button
