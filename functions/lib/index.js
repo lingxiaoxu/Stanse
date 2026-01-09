@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
+exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -469,6 +469,142 @@ Status: ${errorCount > 0 ? 'COMPLETED WITH ERRORS' : 'SUCCESS'}
         console.error('Fatal error:', error);
         await sendEmailNotification('[Stanse] Monthly Renewal - FAILED', `Fatal error occurred:\n\n${error.message}\n\n${error.stack}`, true);
         throw error;
+    }
+});
+// ==================== DUEL Arena Cloud Functions ====================
+const matchmaking_1 = require("./duel/matchmaking");
+const settlement_1 = require("./duel/settlement");
+const creditManager_1 = require("./duel/creditManager");
+/**
+ * Matchmaking Scheduler - Runs every 2 minutes
+ * Matches waiting users based on stance type, ping, and entry fee
+ */
+exports.runDuelMatchmaking = functions.scheduler.onSchedule({
+    schedule: 'every 2 minutes',
+    timeZone: 'UTC',
+    region: 'us-central1'
+}, async () => {
+    await (0, matchmaking_1.processMatchmakingQueue)();
+});
+/**
+ * Join Matchmaking Queue (HTTP Callable)
+ */
+exports.joinDuelQueue = functions.https.onCall(async (request) => {
+    const { auth, data } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    try {
+        const queueId = await (0, matchmaking_1.joinMatchmakingQueue)({
+            userId: auth.uid,
+            stanceType: data.stanceType,
+            personaLabel: data.personaLabel,
+            pingMs: data.pingMs,
+            entryFee: data.entryFee,
+            safetyBelt: data.safetyBelt,
+            duration: data.duration
+        });
+        return { success: true, queueId };
+    }
+    catch (error) {
+        console.error('Error joining queue:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Leave Matchmaking Queue (HTTP Callable)
+ */
+exports.leaveDuelQueue = functions.https.onCall(async (request) => {
+    const { auth } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    try {
+        await (0, matchmaking_1.leaveMatchmakingQueue)(auth.uid);
+        return { success: true };
+    }
+    catch (error) {
+        console.error('Error leaving queue:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Get User Credits (HTTP Callable)
+ */
+exports.getDuelCredits = functions.https.onCall(async (request) => {
+    const { auth } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    try {
+        const credits = await (0, creditManager_1.getUserCredits)(auth.uid);
+        return { success: true, credits };
+    }
+    catch (error) {
+        console.error('Error getting credits:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Get Credit History (HTTP Callable)
+ */
+exports.getDuelCreditHistory = functions.https.onCall(async (request) => {
+    const { auth, data } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    try {
+        const limit = data?.limit || 50;
+        const history = await (0, creditManager_1.getCreditHistory)(auth.uid, limit);
+        return { success: true, history };
+    }
+    catch (error) {
+        console.error('Error getting credit history:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Submit Gameplay Event (HTTP Callable)
+ * Records each question answered during match
+ */
+exports.submitDuelAnswer = functions.https.onCall(async (request) => {
+    const { auth, data } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    try {
+        await (0, settlement_1.submitGameplayEvent)({
+            matchId: data.matchId,
+            userId: auth.uid,
+            questionId: data.questionId,
+            questionOrder: data.questionOrder,
+            answerIndex: data.answerIndex,
+            timestamp: data.timestamp,
+            timeElapsed: data.timeElapsed
+        });
+        return { success: true };
+    }
+    catch (error) {
+        console.error('Error submitting answer:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Finalize Match (HTTP Callable)
+ * Called when match time expires
+ */
+exports.finalizeDuelMatch = functions.https.onCall(async (request) => {
+    const { auth, data } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    try {
+        await (0, settlement_1.finalizeMatch)(data.matchId);
+        return { success: true };
+    }
+    catch (error) {
+        console.error('Error finalizing match:', error);
+        throw new functions.https.HttpsError('internal', error.message);
     }
 });
 //# sourceMappingURL=index.js.map

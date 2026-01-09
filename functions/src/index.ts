@@ -519,3 +519,171 @@ Status: ${errorCount > 0 ? 'COMPLETED WITH ERRORS' : 'SUCCESS'}
     }
   }
 );
+
+// ==================== DUEL Arena Cloud Functions ====================
+
+import { processMatchmakingQueue, joinMatchmakingQueue, leaveMatchmakingQueue } from './duel/matchmaking';
+import { submitGameplayEvent, finalizeMatch } from './duel/settlement';
+import { getUserCredits, getCreditHistory } from './duel/creditManager';
+
+/**
+ * Matchmaking Scheduler - Runs every 2 minutes
+ * Matches waiting users based on stance type, ping, and entry fee
+ */
+export const runDuelMatchmaking = functions.scheduler.onSchedule(
+  {
+    schedule: 'every 2 minutes',
+    timeZone: 'UTC',
+    region: 'us-central1'
+  },
+  async () => {
+    await processMatchmakingQueue();
+  }
+);
+
+/**
+ * Join Matchmaking Queue (HTTP Callable)
+ */
+export const joinDuelQueue = functions.https.onCall(
+  async (request) => {
+    const { auth, data } = request;
+
+    if (!auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    try {
+      const queueId = await joinMatchmakingQueue({
+        userId: auth.uid,
+        stanceType: data.stanceType,
+        personaLabel: data.personaLabel,
+        pingMs: data.pingMs,
+        entryFee: data.entryFee,
+        safetyBelt: data.safetyBelt,
+        duration: data.duration
+      });
+
+      return { success: true, queueId };
+    } catch (error: any) {
+      console.error('Error joining queue:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  }
+);
+
+/**
+ * Leave Matchmaking Queue (HTTP Callable)
+ */
+export const leaveDuelQueue = functions.https.onCall(
+  async (request) => {
+    const { auth } = request;
+
+    if (!auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    try {
+      await leaveMatchmakingQueue(auth.uid);
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error leaving queue:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  }
+);
+
+/**
+ * Get User Credits (HTTP Callable)
+ */
+export const getDuelCredits = functions.https.onCall(
+  async (request) => {
+    const { auth } = request;
+
+    if (!auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    try {
+      const credits = await getUserCredits(auth.uid);
+      return { success: true, credits };
+    } catch (error: any) {
+      console.error('Error getting credits:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  }
+);
+
+/**
+ * Get Credit History (HTTP Callable)
+ */
+export const getDuelCreditHistory = functions.https.onCall(
+  async (request) => {
+    const { auth, data } = request;
+
+    if (!auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    try {
+      const limit = data?.limit || 50;
+      const history = await getCreditHistory(auth.uid, limit);
+      return { success: true, history };
+    } catch (error: any) {
+      console.error('Error getting credit history:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  }
+);
+
+/**
+ * Submit Gameplay Event (HTTP Callable)
+ * Records each question answered during match
+ */
+export const submitDuelAnswer = functions.https.onCall(
+  async (request) => {
+    const { auth, data } = request;
+
+    if (!auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    try {
+      await submitGameplayEvent({
+        matchId: data.matchId,
+        userId: auth.uid,
+        questionId: data.questionId,
+        questionOrder: data.questionOrder,
+        answerIndex: data.answerIndex,
+        timestamp: data.timestamp,
+        timeElapsed: data.timeElapsed
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error submitting answer:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  }
+);
+
+/**
+ * Finalize Match (HTTP Callable)
+ * Called when match time expires
+ */
+export const finalizeDuelMatch = functions.https.onCall(
+  async (request) => {
+    const { auth, data } = request;
+
+    if (!auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    try {
+      await finalizeMatch(data.matchId);
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error finalizing match:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  }
+);

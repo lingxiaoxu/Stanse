@@ -1,18 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { DuelState, DuelConfig, DuelPlayer, DuelMatch } from '../../types';
+import { DuelState, DuelConfig, DuelPlayer, DuelMatch, Question } from '../../types';
 import {
   validateEntry,
-  findOpponent,
-  validatePingDifference,
-  initMatch,
   calculateResults,
   formatCredits,
   measurePing,
   SAFETY_BELT_COST,
   SAFETY_BELT_THRESHOLD
 } from '../../services/duelService';
+import {
+  joinMatchmaking,
+  leaveMatchmaking,
+  listenForMatch,
+  getQuestionSequence,
+  submitAnswer,
+  finalizeMatch as finalizeMatchFirebase
+} from '../../services/duelFirebaseService';
 import { Shield, X, AlertTriangle, Trophy, Skull } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface DuelModalProps {
   isOpen: boolean;
@@ -66,6 +72,7 @@ export const DuelModal: React.FC<DuelModalProps> = ({
   onCreditsChange
 }) => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [gameState, setGameState] = useState<DuelState>(DuelState.LOBBY);
   const [config, setConfig] = useState<DuelConfig>({
     entryFee: 10,
@@ -77,12 +84,14 @@ export const DuelModal: React.FC<DuelModalProps> = ({
   const matchRef = useRef<DuelMatch | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [userPing, setUserPing] = useState(30);
+  const matchListenerRef = useRef<(() => void) | null>(null);
 
   // Gameplay state
   const timerRef = useRef<number | null>(null);
   const opponentTimerRef = useRef<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [roundState, setRoundState] = useState<'ACTIVE' | 'OPPONENT_WON' | 'USER_ANSWERED'>('ACTIVE');
+  const matchStartTimeRef = useRef<number>(0);
 
   // Sync match ref
   useEffect(() => {

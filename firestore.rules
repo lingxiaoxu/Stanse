@@ -293,6 +293,67 @@ service cloud.firestore {
       }
     }
 
+    // ==================== DUEL Arena System ====================
+
+    // User Credits - Main document with current balance + history subcollection
+    // Structure: user_credits/{userId} with history/{timestamp} for all transactions
+    // Pattern: Main document auto-updates from latest history record
+    match /user_credits/{userId} {
+      // Users can read their own credits
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Only Cloud Functions can write to main document
+      allow write: if false;
+
+      // Credit history - append-only ledger
+      match /history/{eventId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create: if false; // Only Cloud Functions can create
+        allow update, delete: if false; // History is immutable
+      }
+    }
+
+    // DUEL Questions - Public read only, Cloud Functions/scripts write
+    match /duel_questions/{questionId} {
+      allow read: if true;
+      allow write: if false; // Only backend scripts can populate
+    }
+
+    // DUEL Question Sequences - Pre-assembled sequences for matches
+    match /duel_sequences/{sequenceId} {
+      allow read: if true;
+      allow write: if false; // Only backend scripts can populate
+    }
+
+    // DUEL Matchmaking Queue - Users can read/write their own queue entry
+    match /duel_matchmaking_queue/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // DUEL Matches - Detailed match records with gameplay tracking
+    // Structure: duel_matches/{matchId} with gameplay_events subcollection
+    match /duel_matches/{matchId} {
+      // Players can read their own matches
+      allow read: if request.auth != null
+                  && (resource.data.players.A.userId == request.auth.uid
+                   || resource.data.players.B.userId == request.auth.uid);
+      // Only Cloud Functions can create/update matches
+      allow write: if false;
+
+      // Gameplay events - detailed record of each question answered
+      match /gameplay_events/{eventId} {
+        allow read: if request.auth != null
+                    && (get(/databases/$(database)/documents/duel_matches/$(matchId)).data.players.A.userId == request.auth.uid
+                     || get(/databases/$(database)/documents/duel_matches/$(matchId)).data.players.B.userId == request.auth.uid);
+        allow write: if false; // Only Cloud Functions
+      }
+    }
+
+    // DUEL Platform Revenue - Track house earnings
+    match /duel_platform_revenue/{recordId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only Cloud Functions
+    }
+
     // Public read for certain collections
     match /public_data/{document=**} {
       allow read: if true;
