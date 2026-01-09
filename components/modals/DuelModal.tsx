@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DuelState, DuelConfig, DuelPlayer, DuelMatch, Question } from '../../types';
 import {
   validateEntry,
+  findOpponent,
+  validatePingDifference,
+  initMatch,
   calculateResults,
   formatCredits,
   measurePing,
