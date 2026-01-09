@@ -337,69 +337,69 @@ export const UnionView: React.FC = () => {
           <div className="bg-green-500 text-white px-2 py-0.5 font-mono text-xs font-bold">${userCredits}</div>
         </div>
 
-        {/* Main Content */}
-        <div className="pt-12 pb-6 px-6">
-          <div className="flex items-center justify-between gap-6">
+        {/* Main Content - Compact (25% shorter) */}
+        <div className="pt-10 pb-3 px-5">
+          <div className="flex items-center justify-between gap-4 mb-2">
             {/* Left: Title */}
             <div className="flex-1">
-              <h2 className="font-pixel text-5xl leading-none mb-2">DUEL</h2>
-              <h2 className="font-pixel text-5xl leading-none mb-4">MODE</h2>
+              <h2 className="font-pixel text-3xl leading-none mb-1">DUEL</h2>
+              <h2 className="font-pixel text-3xl leading-none mb-2">MODE</h2>
 
               {/* Preview Button */}
-              <button className="bg-gray-600 text-white px-4 py-1.5 font-mono text-xs font-bold uppercase mb-4">
+              <button className="bg-gray-600 text-white px-3 py-1 font-mono text-[10px] font-bold uppercase mb-2">
                 Preview
               </button>
 
               {/* Description */}
-              <p className="font-mono text-sm text-gray-700 leading-relaxed mb-4">
+              <p className="font-mono text-[11px] text-gray-700 leading-tight">
                 Skill-based picture trivia. Challenge opposing personas. Win rewards.
               </p>
             </div>
 
             {/* Right: Icon */}
-            <div className="w-20 h-20 border-2 border-black flex items-center justify-center bg-white shrink-0">
-              <Swords size={48} strokeWidth={2} className="text-black" />
+            <div className="w-14 h-14 border-2 border-black flex items-center justify-center bg-white shrink-0">
+              <Swords size={32} strokeWidth={2} className="text-black" />
             </div>
           </div>
 
           {/* Feature Tags - 3 boxes */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="border-2 border-black p-3 text-center bg-white">
-              <Zap size={20} className="mx-auto mb-1" strokeWidth={2} />
-              <div className="font-mono text-xs font-bold uppercase">FAST</div>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="border-2 border-black p-1.5 text-center bg-white">
+              <Zap size={14} className="mx-auto mb-0.5" strokeWidth={2} />
+              <div className="font-mono text-[9px] font-bold uppercase">FAST</div>
             </div>
-            <div className="border-2 border-black p-3 text-center bg-white">
-              <Target size={20} className="mx-auto mb-1" strokeWidth={2} />
-              <div className="font-mono text-xs font-bold uppercase">GLOBAL</div>
+            <div className="border-2 border-black p-1.5 text-center bg-white">
+              <Target size={14} className="mx-auto mb-0.5" strokeWidth={2} />
+              <div className="font-mono text-[9px] font-bold uppercase">GLOBAL</div>
             </div>
-            <div className="border-2 border-black p-3 text-center bg-white">
-              <Shield size={20} className="mx-auto mb-1" strokeWidth={2} />
-              <div className="font-mono text-xs font-bold uppercase">SAFE</div>
+            <div className="border-2 border-black p-1.5 text-center bg-white">
+              <Shield size={14} className="mx-auto mb-0.5" strokeWidth={2} />
+              <div className="font-mono text-[9px] font-bold uppercase">SAFE</div>
             </div>
           </div>
 
-          {/* ENTER ARENA Button */}
+          {/* ENTER ARENA Button - Smaller */}
           <button
             onClick={() => setShowDuelModal(true)}
-            className="w-full bg-black text-white hover:bg-gray-800 transition-colors py-4 font-mono text-lg font-bold uppercase tracking-widest border-2 border-black shadow-pixel mb-3"
+            className="w-full bg-black text-white hover:bg-gray-800 transition-colors py-2.5 font-mono text-sm font-bold uppercase tracking-wide border-2 border-black shadow-pixel mb-2"
           >
             ENTER ARENA
           </button>
 
           {/* Deposit and Withdraw Buttons */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setShowWalletModal(true)}
-              className="border-2 border-black bg-white hover:bg-gray-100 transition-colors py-3 flex items-center justify-center gap-2 font-mono text-sm font-bold uppercase"
+              className="border-2 border-black bg-white hover:bg-gray-100 transition-colors py-2 flex items-center justify-center gap-1 font-mono text-xs font-bold uppercase"
             >
-              <ArrowUpRight size={14} className="rotate-180" />
+              <ArrowUpRight size={12} className="rotate-180" />
               Deposit
             </button>
             <button
               onClick={() => setShowWalletModal(true)}
-              className="border-2 border-black bg-white hover:bg-gray-100 transition-colors py-3 flex items-center justify-center gap-2 font-mono text-sm font-bold uppercase"
+              className="border-2 border-black bg-white hover:bg-gray-100 transition-colors py-2 flex items-center justify-center gap-1 font-mono text-xs font-bold uppercase"
             >
-              <ArrowUpRight size={14} />
+              <ArrowUpRight size={12} />
               Withdraw
             </button>
           </div>
