@@ -1,11 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, ThumbsUp, ThumbsDown } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { TrendingUp, TrendingDown, ThumbsUp, ThumbsDown, Info } from 'lucide-react';
 import { PixelCard } from './PixelCard';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getEnhancedCompanyRankingsForUser } from '../../services/enhancedCompanyRankingService';
 import { RankedCompany, CompanyRanking } from '../../services/companyRankingCache';
 import { recordUserAction } from '../../services/userActionService';
+import { Language } from '../../types';
+
+// Locale mapping for date formatting
+const LOCALE_MAP: Record<Language, string> = {
+  [Language.EN]: 'en-US',
+  [Language.ZH]: 'zh-CN',
+  [Language.JA]: 'ja-JP',
+  [Language.FR]: 'fr-FR',
+  [Language.ES]: 'es-ES'
+};
 
 interface ValuesCompanyRankingProps {
   className?: string;
@@ -13,11 +23,29 @@ interface ValuesCompanyRankingProps {
 }
 
 export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ className = '', onRankingsChange }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, userProfile, hasCompletedOnboarding } = useAuth();
   const [rankings, setRankings] = useState<CompanyRanking | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Click-based tooltip state
+  const [activeTooltip, setActiveTooltip] = useState<'support' | 'oppose' | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+        setActiveTooltip(null);
+      }
+    };
+
+    if (activeTooltip) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [activeTooltip]);
 
   useEffect(() => {
     const fetchRankings = async () => {
@@ -146,12 +174,23 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
         <PixelCard className="p-0 bg-white/50 backdrop-blur-sm overflow-hidden">
           <div className="flex">
             {/* Support Column */}
-            <div className="flex-1 border-r-2 border-black">
-              <div className="bg-black text-white px-3 py-2 flex items-center gap-2">
+            <div className="flex-1 border-l-2 border-r-2 border-black">
+              <div className="bg-black text-white px-3 py-2 flex items-center gap-2 border-t-2 border-b-2 border-black relative" ref={activeTooltip === 'support' ? tooltipRef : null}>
                 <ThumbsUp size={12} />
-                <span className="font-mono text-[10px] tracking-wider uppercase">
+                <span className="font-mono text-[10px] tracking-wider uppercase flex-1">
                   {t('feed', 'support_companies')}
                 </span>
+                <Info
+                  size={12}
+                  className="text-gray-400 hover:text-white cursor-pointer"
+                  onClick={() => setActiveTooltip(activeTooltip === 'support' ? null : 'support')}
+                />
+                {/* Support tooltip popup */}
+                {activeTooltip === 'support' && (
+                  <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[200px]">
+                    <p className="font-mono text-[10px] leading-relaxed">{t('feed', 'support_companies_tooltip')}</p>
+                  </div>
+                )}
               </div>
               <div className="divide-y divide-gray-100">
                 {rankings.supportCompanies.map((company, i) => (
@@ -161,12 +200,23 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
             </div>
 
             {/* Oppose Column */}
-            <div className="flex-1">
-              <div className="bg-gray-100 text-black px-3 py-2 flex items-center gap-2 border-b-2 border-black">
+            <div className="flex-1 border-r-2 border-black">
+              <div className="bg-gray-100 text-black px-3 py-2 flex items-center gap-2 border-t-2 border-b-2 border-black relative" ref={activeTooltip === 'oppose' ? tooltipRef : null}>
                 <ThumbsDown size={12} />
-                <span className="font-mono text-[10px] tracking-wider uppercase">
+                <span className="font-mono text-[10px] tracking-wider uppercase flex-1">
                   {t('feed', 'oppose_companies')}
                 </span>
+                <Info
+                  size={12}
+                  className="text-gray-500 hover:text-black cursor-pointer"
+                  onClick={() => setActiveTooltip(activeTooltip === 'oppose' ? null : 'oppose')}
+                />
+                {/* Oppose tooltip popup */}
+                {activeTooltip === 'oppose' && (
+                  <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[200px]">
+                    <p className="font-mono text-[10px] leading-relaxed">{t('feed', 'oppose_companies_tooltip')}</p>
+                  </div>
+                )}
               </div>
               <div className="divide-y divide-gray-100">
                 {rankings.opposeCompanies.map((company, i) => (
@@ -179,7 +229,7 @@ export const ValuesCompanyRanking: React.FC<ValuesCompanyRankingProps> = ({ clas
           {/* Footer with update time */}
           <div className="border-t-2 border-black px-3 py-1 bg-gray-50">
             <p className="font-mono text-[8px] text-gray-400 text-center">
-              Updated: {rankings.updatedAt.toLocaleString()}
+              {t('feed', 'updated')}: {rankings.updatedAt.toLocaleString(LOCALE_MAP[language])}
             </p>
           </div>
         </PixelCard>

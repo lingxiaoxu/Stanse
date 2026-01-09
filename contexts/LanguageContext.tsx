@@ -160,7 +160,9 @@ const TRANSLATIONS = {
         curated_for: "Curated for",
         company_ranking: "Values Company Ranking",
         support_companies: "SUPPORT",
+        support_companies_tooltip: "Top Aligned Stocks · Buy to Support Your Values",
         oppose_companies: "OPPOSE",
+        oppose_companies_tooltip: "Most Opposed Stocks · Avoid or Short These",
         loading_rankings: "ANALYZING COMPANIES...",
         onboarding_required_market: "Complete onboarding to see aligned stocks",
         onboarding_required_rankings: "Complete onboarding to see aligned companies",
@@ -172,7 +174,12 @@ const TRANSLATIONS = {
         loading_lens: "REFRACTING PERSPECTIVES...",
         support: "SUPPORT",
         neutral: "NEUTRAL",
-        oppose: "OPPOSE"
+        oppose: "OPPOSE",
+        index_return: "Today's Return (Long/Short Equity)",
+        index_return_tooltip: "Long Top 5 Aligned · Short Bottom 5 Opposed · Equal Weight",
+        updated: "Updated",
+        portfolio_index: "Political Values Index",
+        portfolio_index_tooltip: "Selected via ESG · News Sentiment · Lobbying · Executive Donations aligned to your Economic · Social · Diplomatic stance"
     },
     fingerprint: {
         title: "YOUR STANCE",
@@ -415,7 +422,9 @@ const TRANSLATIONS = {
         curated_for: "为您筛选",
         company_ranking: "价值观公司排名",
         support_companies: "支持",
+        support_companies_tooltip: "价值观最匹配 · 买入支持理念",
         oppose_companies: "抵制",
+        oppose_companies_tooltip: "价值观最对立 · 回避或做空",
         loading_rankings: "正在分析公司...",
         onboarding_required_market: "完成入职问卷以查看匹配股票",
         onboarding_required_rankings: "完成入职问卷以查看匹配公司",
@@ -427,7 +436,12 @@ const TRANSLATIONS = {
         loading_lens: "正在折射视角...",
         support: "支持",
         neutral: "中立",
-        oppose: "反对"
+        oppose: "反对",
+        index_return: "今日回报（多空股票）",
+        index_return_tooltip: "做多前5支持 · 做空后5反对 · 等权配置",
+        updated: "更新时间",
+        portfolio_index: "政治价值观指数",
+        portfolio_index_tooltip: "基于 ESG · 新闻情绪 · 游说记录 · 高管捐款，匹配您的经济 · 社会 · 外交立场"
     },
     fingerprint: {
         title: "你的立场",
@@ -670,7 +684,9 @@ const TRANSLATIONS = {
         curated_for: "キュレーション",
         company_ranking: "価値観企業ランキング",
         support_companies: "支持",
+        support_companies_tooltip: "価値観最一致 · 買いで理念支持",
         oppose_companies: "反対",
+        oppose_companies_tooltip: "価値観最対立 · 回避またはショート",
         loading_rankings: "企業を分析中...",
         onboarding_required_market: "オンボーディングを完了して適合銘柄を表示",
         onboarding_required_rankings: "オンボーディングを完了して適合企業を表示",
@@ -682,7 +698,12 @@ const TRANSLATIONS = {
         loading_lens: "視点を屈折中...",
         support: "支持",
         neutral: "中立",
-        oppose: "反対"
+        oppose: "反対",
+        index_return: "本日リターン（ロングショート）",
+        index_return_tooltip: "上位5銘柄ロング · 下位5銘柄ショート · 等ウェイト",
+        updated: "更新日時",
+        portfolio_index: "政治価値観指数",
+        portfolio_index_tooltip: "ESG · ニュース感情 · ロビー活動 · 役員献金に基づき、経済 · 社会 · 外交の立場に合致"
     },
     fingerprint: {
         title: "あなたのスタンス",
@@ -925,7 +946,9 @@ const TRANSLATIONS = {
         curated_for: "Sélectionné pour",
         company_ranking: "Classement des Entreprises selon les Valeurs",
         support_companies: "SOUTENIR",
+        support_companies_tooltip: "Actions les Plus Alignées · Achat pour Soutenir",
         oppose_companies: "S'OPPOSER",
+        oppose_companies_tooltip: "Actions les Plus Opposées · Éviter ou Vendre",
         loading_rankings: "ANALYSE DES ENTREPRISES...",
         onboarding_required_market: "Complétez l'intégration pour voir les actions alignées",
         onboarding_required_rankings: "Complétez l'intégration pour voir les entreprises alignées",
@@ -937,7 +960,12 @@ const TRANSLATIONS = {
         loading_lens: "RÉFRACTION DES PERSPECTIVES...",
         support: "POUR",
         neutral: "NEUTRE",
-        oppose: "CONTRE"
+        oppose: "CONTRE",
+        index_return: "Rendement du Jour (Long/Short)",
+        index_return_tooltip: "Long Top 5 Alignées · Short Bottom 5 Opposées · Pondération Égale",
+        updated: "Mis à jour",
+        portfolio_index: "Indice Valeurs Politiques",
+        portfolio_index_tooltip: "Sélection via ESG · Sentiment Médias · Lobbying · Dons Dirigeants selon vos axes Économique · Social · Diplomatique"
     },
     fingerprint: {
         title: "VOTRE POSITION",
@@ -1180,7 +1208,9 @@ const TRANSLATIONS = {
         curated_for: "Seleccionado para",
         company_ranking: "Clasificación de Empresas por Valores",
         support_companies: "APOYAR",
+        support_companies_tooltip: "Acciones Más Alineadas · Comprar para Apoyar",
         oppose_companies: "OPONERSE",
+        oppose_companies_tooltip: "Acciones Más Opuestas · Evitar o Vender",
         loading_rankings: "ANALIZANDO EMPRESAS...",
         onboarding_required_market: "Complete la incorporación para ver acciones alineadas",
         onboarding_required_rankings: "Complete la incorporación para ver empresas alineadas",
@@ -1192,7 +1222,12 @@ const TRANSLATIONS = {
         loading_lens: "REFRACTANDO PERSPECTIVAS...",
         support: "APOYO",
         neutral: "NEUTRO",
-        oppose: "CONTRA"
+        oppose: "CONTRA",
+        index_return: "Rendimiento del Día (Long/Short)",
+        index_return_tooltip: "Long Top 5 Alineadas · Short Bottom 5 Opuestas · Peso Igual",
+        updated: "Actualizado",
+        portfolio_index: "Índice Valores Políticos",
+        portfolio_index_tooltip: "Selección via ESG · Sentimiento Noticias · Lobbying · Donaciones Ejecutivos según ejes Económico · Social · Diplomático"
     },
     fingerprint: {
         title: "TU POSTURA",

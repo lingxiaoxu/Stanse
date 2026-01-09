@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Layers, TrendingUp, TrendingDown, RefreshCw, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Scale, TrendingUp, TrendingDown, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles } from 'lucide-react';
 import { PixelCard } from '../ui/PixelCard';
 import { PixelButton } from '../ui/PixelButton';
 import { ValuesCompanyRanking } from '../ui/ValuesCompanyRanking';
@@ -12,6 +12,17 @@ import { CompanyRanking } from '../../services/companyRankingCache';
 import { useAppState } from '../../contexts/AppStateContext';
 import { getEnhancedCompanyRankingsForUser } from '../../services/enhancedCompanyRankingService';
 
+import { Language } from '../../types';
+
+// Locale mapping for date formatting
+const LOCALE_MAP: Record<Language, string> = {
+  [Language.EN]: 'en-US',
+  [Language.ZH]: 'zh-CN',
+  [Language.JA]: 'ja-JP',
+  [Language.FR]: 'fr-FR',
+  [Language.ES]: 'es-ES'
+};
+
 // Stock price interface for market alignment display
 interface MarketStock {
   symbol: string;
@@ -20,6 +31,36 @@ interface MarketStock {
   change: number;
   alignment: 'HIGH' | 'LOW';
 }
+
+// Extract political persona type from full label (removes nationality prefix)
+// Works for all languages by counting words in the English nationalityPrefix
+const extractPoliticalPersona = (label: string, nationalityPrefix?: string): string => {
+  // For English: if label starts with nationalityPrefix, just remove it
+  if (nationalityPrefix && label.startsWith(nationalityPrefix)) {
+    return label.slice(nationalityPrefix.length).trim();
+  }
+
+  // For translated labels: count how many space-separated parts are in the nationality
+  // English nationalityPrefix examples:
+  // - "Spanish-American" (1 word with hyphen) -> skip 1 word in translation
+  // - "Chinese American" (2 words) -> skip 2 words in translation
+  // - "American" (1 word) -> skip 1 word in translation
+  if (nationalityPrefix) {
+    const prefixWordCount = nationalityPrefix.split(' ').length;
+    const labelParts = label.split(' ');
+    if (labelParts.length > prefixWordCount) {
+      return labelParts.slice(prefixWordCount).join(' ');
+    }
+  }
+
+  // Fallback for English labels with hyphenated nationality
+  const parts = label.split(' ');
+  if (parts.length > 1 && parts[0].includes('-')) {
+    return parts.slice(1).join(' ');
+  }
+
+  return label;
+};
 
 export const FeedView: React.FC = () => {
   const [activePrism, setActivePrism] = useState<string | null>(null);
@@ -49,6 +90,20 @@ export const FeedView: React.FC = () => {
   const [marketStocks, setMarketStocks] = useState<MarketStock[]>([]);
   const [loadingStocks, setLoadingStocks] = useState(false);
   const [refreshingRankings, setRefreshingRankings] = useState(false);
+  const [marketUpdatedAt, setMarketUpdatedAt] = useState<Date | null>(null);
+
+  // Hover state for market stocks auto-scroll
+  const [isStocksHovered, setIsStocksHovered] = useState(false);
+
+  // Click-based tooltip state
+  const [activeTooltip, setActiveTooltip] = useState<'portfolio' | 'return' | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const stocksContainerRef = useRef<HTMLDivElement>(null);
+  const stocksScrollRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef(0);
+  const animationRef = useRef<number | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
   // Refresh rankings handler
   const handleRefreshRankings = async () => {
@@ -109,25 +164,25 @@ export const FeedView: React.FC = () => {
           }
 
           try {
-            // Polygon.io Previous Close API - get previous day's close and current day's open
+            // Polygon.io Snapshot API - get current price and day-over-day change
             const response = await fetch(
-              `https://api.polygon.io/v2/aggs/ticker/${company.symbol}/prev?adjusted=true&apiKey=${polygonApiKey}`
+              `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${company.symbol}?apiKey=${polygonApiKey}`
             );
 
             if (response.ok) {
               const data = await response.json();
-              const result = data.results?.[0];
+              const ticker = data.ticker;
 
-              if (result) {
-                const closePrice = result.c || 100; // close price
-                const openPrice = result.o || closePrice; // open price
-                const change = openPrice > 0 ? ((closePrice - openPrice) / openPrice) * 100 : 0;
+              if (ticker) {
+                // day contains current day's aggregates, prevDay contains previous day's aggregates
+                const currentPrice = ticker.day?.c || ticker.lastTrade?.p || ticker.prevDay?.c || 100;
+                const todaysChangePercent = ticker.todaysChangePerc || 0;
 
                 return {
                   symbol: company.symbol,
                   name: company.name,
-                  price: Math.round(closePrice * 100) / 100,
-                  change: Math.round(change * 100) / 100,
+                  price: Math.round(currentPrice * 100) / 100,
+                  change: Math.round(todaysChangePercent * 100) / 100,
                   alignment: company.alignment
                 };
               }
@@ -143,12 +198,138 @@ export const FeedView: React.FC = () => {
 
       console.log('Market stocks updated:', stocksWithPrices.map(s => s.symbol));
       setMarketStocks(stocksWithPrices);
+      setMarketUpdatedAt(new Date());
     } catch (error) {
       console.error('Error fetching market stocks:', error);
     } finally {
       setLoadingStocks(false);
     }
   }, []);
+
+  // Auto-scroll effect for stock ticker
+  useEffect(() => {
+    const scrollContainer = stocksScrollRef.current;
+    if (!scrollContainer || marketStocks.length === 0) return;
+
+    const stockWidth = 79.3; // Width of each stock card
+    const totalWidth = stockWidth * marketStocks.length;
+    const speed = 0.5; // pixels per frame (~30px per second at 60fps)
+
+    const animate = () => {
+      if (!isStocksHovered && scrollContainer) {
+        scrollPositionRef.current += speed;
+        // Reset when we've scrolled through the first set
+        if (scrollPositionRef.current >= totalWidth) {
+          scrollPositionRef.current = 0;
+        }
+        scrollContainer.style.transform = `translateX(-${scrollPositionRef.current}px)`;
+        updateScrollIndicators();
+      }
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [marketStocks.length, isStocksHovered]);
+
+  // Update scroll indicators based on current position
+  const updateScrollIndicators = useCallback(() => {
+    const stockWidth = 79.3;
+    const totalWidth = stockWidth * marketStocks.length;
+    const containerWidth = stocksContainerRef.current?.clientWidth || 400;
+
+    // Can scroll left if not at start
+    setCanScrollLeft(scrollPositionRef.current > 0);
+    // Can scroll right if not at end of first set
+    setCanScrollRight(scrollPositionRef.current < totalWidth - containerWidth);
+  }, [marketStocks.length]);
+
+  // Manual scroll animation refs
+  const manualScrollRef = useRef<number | null>(null);
+  const isHoldingRef = useRef(false);
+
+  // Smooth scroll animation function
+  const smoothScrollTo = useCallback((targetPosition: number, duration: number = 300) => {
+    const startPosition = scrollPositionRef.current;
+    const distance = targetPosition - startPosition;
+    const startTime = performance.now();
+
+    const animateScroll = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic for smooth deceleration
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+
+      scrollPositionRef.current = startPosition + distance * easeOut;
+      if (stocksScrollRef.current) {
+        stocksScrollRef.current.style.transform = `translateX(-${scrollPositionRef.current}px)`;
+      }
+      updateScrollIndicators();
+
+      if (progress < 1) {
+        manualScrollRef.current = requestAnimationFrame(animateScroll);
+      }
+    };
+
+    if (manualScrollRef.current) {
+      cancelAnimationFrame(manualScrollRef.current);
+    }
+    manualScrollRef.current = requestAnimationFrame(animateScroll);
+  }, [updateScrollIndicators]);
+
+  // Continuous scroll for hold (mobile touch)
+  const startContinuousScroll = useCallback((direction: 'left' | 'right') => {
+    isHoldingRef.current = true;
+    const stockWidth = 79.3;
+    const totalWidth = stockWidth * marketStocks.length;
+    const speed = 2; // pixels per frame
+
+    const scroll = () => {
+      if (!isHoldingRef.current) return;
+
+      if (direction === 'left') {
+        scrollPositionRef.current = Math.max(0, scrollPositionRef.current - speed);
+      } else {
+        scrollPositionRef.current = Math.min(totalWidth - 1, scrollPositionRef.current + speed);
+      }
+
+      if (stocksScrollRef.current) {
+        stocksScrollRef.current.style.transform = `translateX(-${scrollPositionRef.current}px)`;
+      }
+      updateScrollIndicators();
+
+      manualScrollRef.current = requestAnimationFrame(scroll);
+    };
+
+    manualScrollRef.current = requestAnimationFrame(scroll);
+  }, [marketStocks.length, updateScrollIndicators]);
+
+  const stopContinuousScroll = useCallback(() => {
+    isHoldingRef.current = false;
+    if (manualScrollRef.current) {
+      cancelAnimationFrame(manualScrollRef.current);
+      manualScrollRef.current = null;
+    }
+  }, []);
+
+  // Click handlers for desktop (smooth scroll by 2 cards)
+  const handleScrollLeft = useCallback(() => {
+    const stockWidth = 79.3;
+    const targetPosition = Math.max(0, scrollPositionRef.current - stockWidth * 2);
+    smoothScrollTo(targetPosition);
+  }, [smoothScrollTo]);
+
+  const handleScrollRight = useCallback(() => {
+    const stockWidth = 79.3;
+    const totalWidth = stockWidth * marketStocks.length;
+    const targetPosition = Math.min(totalWidth - 1, scrollPositionRef.current + stockWidth * 2);
+    smoothScrollTo(targetPosition);
+  }, [marketStocks.length, smoothScrollTo]);
 
   // Cache version - increment this to invalidate stale cached data
   const CACHE_VERSION = 'v5'; // Now using Gemini Imagen + curated Unsplash images
@@ -261,6 +442,20 @@ export const FeedView: React.FC = () => {
       fetchNews(0, false);
     }
   }, [getStanceHash, lastStanceHash, fetchNews]);
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+        setActiveTooltip(null);
+      }
+    };
+
+    if (activeTooltip) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [activeTooltip]);
 
   // Translate persona label when language changes - with localStorage caching
   useEffect(() => {
@@ -422,25 +617,148 @@ export const FeedView: React.FC = () => {
                  <div className="font-pixel text-sm animate-pulse uppercase">{t('feed', 'onboarding_required_market')}</div>
                </div>
              ) : (
-               <div className="flex overflow-x-auto no-scrollbar snap-x horizontal-snap">
-                  {marketStocks.map((stock, i) => (
-                      <div key={`${stock.symbol}-${i}`} className={`
-                          flex-shrink-0 flex flex-col p-2.5 border-r-2 border-black w-24
-                          ${stock.alignment === 'HIGH' ? 'bg-white hover:bg-green-50' : 'bg-gray-100 hover:bg-red-50'}
-                          first:pl-2.5 last:border-r-0 snap-start
-                          transition-colors cursor-pointer
-                      `}>
-                          <div className="flex justify-between items-start gap-1 mb-1">
-                              <span className="font-bold font-mono text-xs">{stock.symbol}</span>
-                              {stock.change >= 0 ? <TrendingUp size={12} className="text-black"/> : <TrendingDown size={12} className="text-gray-500"/>}
-                          </div>
-                          <div className="font-pixel text-xl leading-none mb-0.5">${stock.price}</div>
-                          <div className={`text-[9px] font-mono font-bold ${stock.change >= 0 ? 'text-black' : 'text-gray-400'}`}>
-                              {stock.change >= 0 ? '+' : ''}{stock.change}%
-                          </div>
-                      </div>
-                  ))}
+               <>
+               {/* Index title bar - shows political persona + "Portfolio Index" */}
+               <div className="bg-black text-white px-3 py-2 flex items-center gap-2 group relative" ref={activeTooltip === 'portfolio' ? tooltipRef : null}>
+                 <Scale size={12} className="flex-shrink-0" />
+                 <span className="font-mono text-[10px] tracking-wider uppercase flex-1 leading-relaxed">
+                   {(() => {
+                     const label = translatedPersona || userProfile?.coordinates?.label || 'Your Values';
+                     const nationalityPrefix = userProfile?.coordinates?.nationalityPrefix;
+                     const politicalPersona = extractPoliticalPersona(label, nationalityPrefix);
+                     return (
+                       <>
+                         {politicalPersona}<br />
+                         {t('feed', 'portfolio_index')}
+                       </>
+                     );
+                   })()}
+                 </span>
+                 <Info
+                   size={12}
+                   className="text-gray-400 hover:text-white cursor-pointer flex-shrink-0"
+                   onClick={() => setActiveTooltip(activeTooltip === 'portfolio' ? null : 'portfolio')}
+                 />
+                 {/* Portfolio tooltip popup */}
+                 {activeTooltip === 'portfolio' && (
+                   <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[280px]">
+                     <p className="font-mono text-[10px] leading-relaxed">{t('feed', 'portfolio_index_tooltip')}</p>
+                   </div>
+                 )}
                </div>
+               <div className="bg-black text-white px-3 py-2 flex items-center gap-2 border-t border-gray-700 relative" ref={activeTooltip === 'return' ? tooltipRef : null}>
+                 <TrendingUp size={12} />
+                 <span className="font-mono text-[10px] tracking-wider uppercase flex-1">
+                   {t('feed', 'index_return')}: {(() => {
+                     // Calculate portfolio return: long first 5 (support), short last 5 (oppose), equal weight
+                     if (marketStocks.length < 10) return '...';
+                     const supportStocks = marketStocks.slice(0, 5); // Long position
+                     const opposeStocks = marketStocks.slice(5, 10); // Short position
+                     // Long return: gains when stock goes up
+                     const longReturn = supportStocks.reduce((sum, s) => sum + (s.change || 0), 0) / 5;
+                     // Short return: gains when stock goes down (invert the change)
+                     const shortReturn = opposeStocks.reduce((sum, s) => sum - (s.change || 0), 0) / 5;
+                     // Equal weight: 50% long, 50% short
+                     const portfolioReturn = (longReturn + shortReturn) / 2;
+                     const sign = portfolioReturn >= 0 ? '+' : '';
+                     return `${sign}${portfolioReturn.toFixed(2)}%`;
+                   })()}
+                 </span>
+                 <Info
+                   size={12}
+                   className="text-gray-400 hover:text-white cursor-pointer"
+                   onClick={() => setActiveTooltip(activeTooltip === 'return' ? null : 'return')}
+                 />
+                 {/* Return tooltip popup */}
+                 {activeTooltip === 'return' && (
+                   <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[280px]">
+                     <p className="font-mono text-[10px] leading-relaxed">{t('feed', 'index_return_tooltip')}</p>
+                   </div>
+                 )}
+               </div>
+               {/* Auto-scrolling stock ticker with manual controls */}
+               <div
+                 className="relative"
+                 onMouseEnter={() => setIsStocksHovered(true)}
+                 onMouseLeave={() => setIsStocksHovered(false)}
+               >
+                  {/* Left scroll arrow - visible when hovered and can scroll left */}
+                  {isStocksHovered && canScrollLeft && (
+                    <button
+                      onClick={handleScrollLeft}
+                      onTouchStart={() => startContinuousScroll('left')}
+                      onTouchEnd={stopContinuousScroll}
+                      onTouchCancel={stopContinuousScroll}
+                      className="absolute left-0 top-0 bottom-0 z-10 w-8 bg-gradient-to-r from-white/90 to-transparent flex items-center justify-start pl-1 hover:from-white"
+                    >
+                      <ChevronLeft size={16} className="text-black animate-pulse" />
+                    </button>
+                  )}
+
+                  {/* Right scroll arrow - visible when hovered and can scroll right */}
+                  {isStocksHovered && canScrollRight && (
+                    <button
+                      onClick={handleScrollRight}
+                      onTouchStart={() => startContinuousScroll('right')}
+                      onTouchEnd={stopContinuousScroll}
+                      onTouchCancel={stopContinuousScroll}
+                      className="absolute right-0 top-0 bottom-0 z-10 w-8 bg-gradient-to-l from-white/90 to-transparent flex items-center justify-end pr-1 hover:from-white"
+                    >
+                      <ChevronRight size={16} className="text-black animate-pulse" />
+                    </button>
+                  )}
+
+                  <div ref={stocksContainerRef} className="overflow-hidden">
+                    <div
+                      ref={stocksScrollRef}
+                      className="flex"
+                      style={{ width: 'fit-content' }}
+                    >
+                      {/* First set of stocks */}
+                      {marketStocks.map((stock, i) => (
+                          <div key={`${stock.symbol}-${i}`} className={`
+                              flex-shrink-0 flex flex-col p-2 border-r-2 border-black w-[79.3px]
+                              ${stock.alignment === 'HIGH' ? 'bg-white hover:bg-green-50' : 'bg-gray-100 hover:bg-red-50'}
+                              ${i === 0 ? 'border-l-2' : ''}
+                              transition-colors cursor-pointer
+                          `}>
+                              <div className="flex justify-between items-start gap-1 mb-1">
+                                  <span className="font-bold font-mono text-xs">{stock.symbol}</span>
+                                  {stock.change >= 0 ? <TrendingUp size={12} className="text-black"/> : <TrendingDown size={12} className="text-gray-500"/>}
+                              </div>
+                              <div className="font-pixel text-xl leading-none mb-0.5">${stock.price}</div>
+                              <div className={`text-[9px] font-mono font-bold ${stock.change >= 0 ? 'text-black' : 'text-gray-400'}`}>
+                                  {stock.change >= 0 ? '+' : ''}{stock.change}%
+                              </div>
+                          </div>
+                      ))}
+                      {/* Duplicate set for seamless loop */}
+                      {marketStocks.map((stock, i) => (
+                          <div key={`${stock.symbol}-dup-${i}`} className={`
+                              flex-shrink-0 flex flex-col p-2 border-r-2 border-black w-[79.3px]
+                              ${stock.alignment === 'HIGH' ? 'bg-white hover:bg-green-50' : 'bg-gray-100 hover:bg-red-50'}
+                              transition-colors cursor-pointer
+                          `}>
+                              <div className="flex justify-between items-start gap-1 mb-1">
+                                  <span className="font-bold font-mono text-xs">{stock.symbol}</span>
+                                  {stock.change >= 0 ? <TrendingUp size={12} className="text-black"/> : <TrendingDown size={12} className="text-gray-500"/>}
+                              </div>
+                              <div className="font-pixel text-xl leading-none mb-0.5">${stock.price}</div>
+                              <div className={`text-[9px] font-mono font-bold ${stock.change >= 0 ? 'text-black' : 'text-gray-400'}`}>
+                                  {stock.change >= 0 ? '+' : ''}{stock.change}%
+                              </div>
+                          </div>
+                      ))}
+                    </div>
+                  </div>
+               </div>
+               {/* Footer with update time */}
+               <div className="border-t-2 border-black px-3 py-1 bg-gray-50">
+                 <p className="font-mono text-[8px] text-gray-400 text-center">
+                   {t('feed', 'updated')}: {marketUpdatedAt?.toLocaleString(LOCALE_MAP[language])}
+                 </p>
+               </div>
+               </>
              )}
          </PixelCard>
       </div>
@@ -554,7 +872,7 @@ export const FeedView: React.FC = () => {
                       className="text-xs px-3 py-1 flex items-center gap-2"
                       onClick={() => handlePrismClick(newsItem)}
                       >
-                      <Layers size={14} />
+                      <Sparkles size={14} />
                       {activePrism === newsItem.id ? t('feed', 'close_lens') : t('feed', 'lens')}
                       </PixelButton>
                   </div>

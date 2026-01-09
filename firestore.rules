@@ -269,6 +269,30 @@ service cloud.firestore {
       allow update, delete: if false; // Events are immutable
     }
 
+    // User Locations - users can read/write only their own location data
+    // Structure: userLocations/{userId} with history subcollection
+    // Pattern: Main document stores current state, history/{timestamp} stores all changes
+    match /userLocations/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // History subcollection - users can read/write their own location history
+      match /history/{historyId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // User Notifications - users can read/write only their own notification data
+    // Structure: userNotifications/{userId} with history subcollection
+    // Pattern: Main document stores current state, history/{timestamp} stores all changes
+    match /userNotifications/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // History subcollection - users can read/write their own notification history
+      match /history/{historyId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
     // Public read for certain collections
     match /public_data/{document=**} {
       allow read: if true;
