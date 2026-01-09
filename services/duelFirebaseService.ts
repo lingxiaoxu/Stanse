@@ -162,9 +162,11 @@ export function listenForMatch(
   onError?: (error: Error) => void
 ): Unsubscribe {
   // Listen to duel_matches where user is participant
+  // Using only array-contains to simplify query and avoid compound index issues
+  // Filter by status client-side to avoid permission issues
   const matchesQuery = query(
     collection(db, 'duel_matches'),
-    where('status', 'in', ['ready', 'in_progress'])
+    where('participantIds', 'array-contains', userId)
   );
 
   return onSnapshot(
@@ -173,12 +175,8 @@ export function listenForMatch(
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added' || change.type === 'modified') {
           const matchData = change.doc.data() as FirestoreDuelMatch;
-
-          // Check if user is in this match
-          if (
-            matchData.players.A.userId === userId ||
-            matchData.players.B.userId === userId
-          ) {
+          // Filter by status client-side
+          if (matchData.status === 'ready' || matchData.status === 'in_progress') {
             onMatch(matchData);
           }
         }

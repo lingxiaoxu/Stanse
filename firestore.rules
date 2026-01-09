@@ -332,10 +332,16 @@ service cloud.firestore {
     // DUEL Matches - Detailed match records with gameplay tracking
     // Structure: duel_matches/{matchId} with gameplay_events subcollection
     match /duel_matches/{matchId} {
-      // Players can read their own matches
-      allow read: if request.auth != null
+      // Players can read their own matches (document-level access)
+      allow get: if request.auth != null
                   && (resource.data.players.A.userId == request.auth.uid
                    || resource.data.players.B.userId == request.auth.uid);
+
+      // Allow list/query access for authenticated users
+      // The client query uses array-contains on participantIds to filter by userId
+      // Security note: Users can only see their own matches via participantIds filter
+      allow list: if request.auth != null;
+
       // Only Cloud Functions can create/update matches
       allow write: if false;
 

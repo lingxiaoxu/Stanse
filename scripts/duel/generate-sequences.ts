@@ -1,46 +1,65 @@
 /**
  * Generate Pre-Assembled Question Sequences for DUEL Arena
  *
- * Creates 12 sequences:
- * - 6 sequences for 30s matches (60 questions each)
- * - 6 sequences for 45s matches (90 questions each)
+ * Uses Question Sequencing Agent to create 12 sequences:
+ * - 6 sequences for 30s matches (40 questions each - allows repeats)
+ * - 6 sequences for 45s matches (60 questions each - allows repeats)
  *
  * Each duration has 2 sequences per strategy:
- * - FLAT: Mixed difficulty
- * - ASCENDING: Easy → Medium → Hard
- * - DESCENDING: Hard → Medium → Easy
+ * - FLAT: Mixed difficulty (30% easy, 40% medium, 30% hard)
+ * - ASCENDING: Easy → Medium → Hard progression
+ * - DESCENDING: Hard → Medium → Easy progression
+ *
+ * 使用 150 个现有问题，允许重复以确保快速玩家不会耗尽题目
  *
  * Usage:
  *   npx ts-node scripts/duel/generate-sequences.ts
  */
 
-import { initializeApp, cert } from 'firebase-admin/app';
+import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialize Firebase Admin
 const serviceAccountPath = path.join(__dirname, '../../service-account-key.json');
-if (fs.existsSync(serviceAccountPath)) {
-  initializeApp({
-    credential: cert(serviceAccountPath)
-  });
-} else {
-  initializeApp();
+try {
+  if (fs.existsSync(serviceAccountPath)) {
+    initializeApp({
+      credential: cert(serviceAccountPath),
+      projectId: 'stanseproject'
+    });
+  } else {
+    initializeApp({
+      credential: applicationDefault(),
+      projectId: 'stanseproject'
+    });
+  }
+  console.log('✅ Firebase Admin initialized\n');
+} catch (error) {
+  console.error('❌ Failed to initialize Firebase Admin');
+  process.exit(1);
 }
 
 const db = getFirestore();
 
+type DifficultyLevel = 'EASY' | 'MEDIUM' | 'HARD';
+type SequenceStrategy = 'FLAT' | 'ASCENDING' | 'DESCENDING';
+
 interface QuestionRef {
   questionId: string;
   order: number;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  difficulty: DifficultyLevel;
 }
 
 interface SequenceDocument {
   sequenceId: string;
   duration: 30 | 45;
-  difficultyStrategy: 'FLAT' | 'ASCENDING' | 'DESCENDING';
+  difficultyStrategy: SequenceStrategy;
   questionCount: number;
   questions: QuestionRef[];
   createdAt: string;
@@ -48,28 +67,41 @@ interface SequenceDocument {
     easyCount: number;
     mediumCount: number;
     hardCount: number;
+    allowsRepeats: boolean;
+    generatedBy: string;
   };
 }
 
+// Sequence configuration - 允许重复使用 150 个问题
+const SEQUENCE_CONFIG = {
+  QUESTIONS_30S: 40,  // 30s + 10 buffer (1 question per second max speed)
+  QUESTIONS_45S: 60,  // 45s + 15 buffer
+  DISTRIBUTIONS: {
+    FLAT: { EASY: 0.30, MEDIUM: 0.40, HARD: 0.30 },
+    ASCENDING: { EASY: 0.40, MEDIUM: 0.40, HARD: 0.20 },
+    DESCENDING: { EASY: 0.20, MEDIUM: 0.40, HARD: 0.40 }
+  }
+};
+
 /**
- * Fetch all questions from Firestore
+ * Fetch all questions from Firestore duel_questions collection
  */
 async function fetchAllQuestions(): Promise<Array<{
   questionId: string;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  difficulty: DifficultyLevel;
 }>> {
   const snapshot = await db.collection('duel_questions').get();
 
   if (snapshot.empty) {
-    throw new Error('No questions found! Run generate-questions-with-ai-images.ts first');
+    throw new Error('No questions found! Run upload-complete-questions.mjs first');
   }
 
-  const questions: Array<{ questionId: string; difficulty: 'EASY' | 'MEDIUM' | 'HARD' }> = [];
+  const questions: Array<{ questionId: string; difficulty: DifficultyLevel }> = [];
   snapshot.forEach(doc => {
     const data = doc.data();
     questions.push({
       questionId: data.questionId,
-      difficulty: data.difficulty
+      difficulty: data.difficulty as DifficultyLevel
     });
   });
 
@@ -78,84 +110,75 @@ async function fetchAllQuestions(): Promise<Array<{
 }
 
 /**
+ * Select questions with repeats to meet count requirement
+ * 允许重复使用问题以确保足够的题目数量
+ */
+function selectQuestionsWithRepeats(
+  available: Array<{ questionId: string; difficulty: DifficultyLevel }>,
+  needed: number
+): Array<{ questionId: string; difficulty: DifficultyLevel }> {
+  const selected: Array<{ questionId: string; difficulty: DifficultyLevel }> = [];
+  const shuffled = shuffleArray(available);
+
+  while (selected.length < needed) {
+    const index = selected.length % shuffled.length;
+    selected.push({ ...shuffled[index] });
+  }
+
+  return selected;
+}
+
+/**
  * Create a sequence with specified strategy
+ * 使用 SEQUENCE_CONFIG 配置，允许重复问题
  */
 function createSequence(
   sequenceId: string,
   duration: 30 | 45,
-  strategy: 'FLAT' | 'ASCENDING' | 'DESCENDING',
-  availableQuestions: Array<{ questionId: string; difficulty: 'EASY' | 'MEDIUM' | 'HARD' }>
+  strategy: SequenceStrategy,
+  availableQuestions: Array<{ questionId: string; difficulty: DifficultyLevel }>
 ): SequenceDocument {
-  const questionCount = duration === 30 ? 60 : 90;
+  const questionCount = duration === 30 ? SEQUENCE_CONFIG.QUESTIONS_30S : SEQUENCE_CONFIG.QUESTIONS_45S;
+  const distribution = SEQUENCE_CONFIG.DISTRIBUTIONS[strategy];
 
   // Separate questions by difficulty
   const easyQuestions = availableQuestions.filter(q => q.difficulty === 'EASY');
   const mediumQuestions = availableQuestions.filter(q => q.difficulty === 'MEDIUM');
   const hardQuestions = availableQuestions.filter(q => q.difficulty === 'HARD');
 
-  console.log(`  📊 Available: ${easyQuestions.length} easy, ${mediumQuestions.length} medium, ${hardQuestions.length} hard`);
+  console.log(`  📊 Pool: ${easyQuestions.length} easy, ${mediumQuestions.length} medium, ${hardQuestions.length} hard`);
 
-  let selectedQuestions: QuestionRef[] = [];
+  // Calculate needed counts based on distribution
+  const needEasy = Math.floor(questionCount * distribution.EASY);
+  const needMedium = Math.floor(questionCount * distribution.MEDIUM);
+  const needHard = questionCount - needEasy - needMedium;
+
+  // Select questions with repeats allowed
+  const selectedEasy = selectQuestionsWithRepeats(easyQuestions, needEasy);
+  const selectedMedium = selectQuestionsWithRepeats(mediumQuestions, needMedium);
+  const selectedHard = selectQuestionsWithRepeats(hardQuestions, needHard);
+
+  let orderedQuestions: Array<{ questionId: string; difficulty: DifficultyLevel }>;
 
   if (strategy === 'FLAT') {
-    // Mix all difficulties evenly
-    // Ratio: 40% medium, 30% easy, 30% hard
-    const needEasy = Math.floor(questionCount * 0.3);
-    const needMedium = Math.floor(questionCount * 0.4);
-    const needHard = questionCount - needEasy - needMedium;
-
-    const selected = [
-      ...shuffleArray(easyQuestions).slice(0, needEasy),
-      ...shuffleArray(mediumQuestions).slice(0, needMedium),
-      ...shuffleArray(hardQuestions).slice(0, needHard)
-    ];
-
-    // Shuffle to mix difficulties
-    selectedQuestions = shuffleArray(selected).map((q, idx) => ({
-      questionId: q.questionId,
-      order: idx,
-      difficulty: q.difficulty
-    }));
+    // Mix all difficulties randomly
+    orderedQuestions = shuffleArray([...selectedEasy, ...selectedMedium, ...selectedHard]);
   } else if (strategy === 'ASCENDING') {
     // Easy → Medium → Hard progression
-    const needEasy = Math.floor(questionCount * 0.4);
-    const needMedium = Math.floor(questionCount * 0.4);
-    const needHard = questionCount - needEasy - needMedium;
-
-    const selected = [
-      ...shuffleArray(easyQuestions).slice(0, needEasy),
-      ...shuffleArray(mediumQuestions).slice(0, needMedium),
-      ...shuffleArray(hardQuestions).slice(0, needHard)
-    ];
-
-    selectedQuestions = selected.map((q, idx) => ({
-      questionId: q.questionId,
-      order: idx,
-      difficulty: q.difficulty
-    }));
+    orderedQuestions = [...selectedEasy, ...selectedMedium, ...selectedHard];
   } else {
     // DESCENDING: Hard → Medium → Easy
-    const needHard = Math.floor(questionCount * 0.4);
-    const needMedium = Math.floor(questionCount * 0.4);
-    const needEasy = questionCount - needHard - needMedium;
-
-    const selected = [
-      ...shuffleArray(hardQuestions).slice(0, needHard),
-      ...shuffleArray(mediumQuestions).slice(0, needMedium),
-      ...shuffleArray(easyQuestions).slice(0, needEasy)
-    ];
-
-    selectedQuestions = selected.map((q, idx) => ({
-      questionId: q.questionId,
-      order: idx,
-      difficulty: q.difficulty
-    }));
+    orderedQuestions = [...selectedHard, ...selectedMedium, ...selectedEasy];
   }
 
-  // Calculate metadata
-  const easyCount = selectedQuestions.filter(q => q.difficulty === 'EASY').length;
-  const mediumCount = selectedQuestions.filter(q => q.difficulty === 'MEDIUM').length;
-  const hardCount = selectedQuestions.filter(q => q.difficulty === 'HARD').length;
+  // Create question refs with order
+  const selectedQuestions: QuestionRef[] = orderedQuestions.map((q, idx) => ({
+    questionId: q.questionId,
+    order: idx,
+    difficulty: q.difficulty
+  }));
+
+  console.log(`     → Created ${selectedQuestions.length} questions (E:${needEasy} M:${needMedium} H:${needHard})`);
 
   return {
     sequenceId,
@@ -165,9 +188,11 @@ function createSequence(
     questions: selectedQuestions,
     createdAt: new Date().toISOString(),
     metadata: {
-      easyCount,
-      mediumCount,
-      hardCount
+      easyCount: needEasy,
+      mediumCount: needMedium,
+      hardCount: needHard,
+      allowsRepeats: true,
+      generatedBy: 'QuestionSequencingAgent'
     }
   };
 }
@@ -250,7 +275,5 @@ async function main() {
   }
 }
 
-// Run if executed directly
-if (require.main === module) {
-  main();
-}
+// Run directly
+main();

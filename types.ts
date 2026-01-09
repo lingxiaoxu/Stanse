@@ -414,6 +414,9 @@ export interface DuelMatch {
   earnings: number; // Net change for current player
   createdAt: string; // ISO date string
   finishedAt?: string; // ISO date string
+  // Firebase integration fields
+  firestoreMatchId?: string; // Reference to duel_matches document
+  isPlayerA?: boolean; // Whether current user is player A
 }
 
 // Firebase/Firestore structure for duel matches
@@ -424,6 +427,9 @@ export interface FirestoreDuelMatch {
 
   gameType: 'picture_trivia_v1';
   durationSec: 30 | 45;
+
+  // For client-side queries (array-contains)
+  participantIds: string[];
 
   players: {
     A: { userId: string; stanceType: string; personaLabel: string; pingMs: number };

@@ -39,10 +39,10 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
-      id: 'market-stocks',
-      target: 'market-stocks',
-      title: 'Market Alignment',
-      description: 'Real-time stock prices for companies aligned with your values.',
+      id: 'market-signal',
+      target: 'market-signal',
+      title: 'Market Signal',
+      description: 'Discover politically-aligned companies and market insights.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -50,7 +50,7 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       id: 'company-rankings',
       target: 'company-rankings',
       title: 'Values-Based Rankings',
-      description: 'Top companies to support or oppose based on FEC data, ESG scores, news, and executive statements.',
+      description: 'Top companies ranked by your political values.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -96,6 +96,14 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'UNION'
     },
     {
+      id: 'duel-arena',
+      target: 'duel-arena',
+      title: 'DUEL Arena',
+      description: 'PvP trivia battles. Win credits!',
+      position: 'top',
+      requiredTab: 'UNION'
+    },
+    {
       id: 'menu',
       target: 'menu-button',
       title: 'Menu',
@@ -129,18 +137,18 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
-      id: 'market-stocks',
-      target: 'market-stocks',
-      title: '市场对齐',
-      description: '价值观一致公司的实时股价。',
+      id: 'market-signal',
+      target: 'market-signal',
+      title: '市场信号',
+      description: '发现与您价值观一致的公司。',
       position: 'top',
       requiredTab: 'FEED'
     },
     {
       id: 'company-rankings',
       target: 'company-rankings',
-      title: '基于价值观的排名',
-      description: '基于 FEC 数据、ESG 评分、新闻和高管声明的公司排名。',
+      title: '价值观排名',
+      description: '基于政治立场的公司排名。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -186,6 +194,14 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'UNION'
     },
     {
+      id: 'duel-arena',
+      target: 'duel-arena',
+      title: 'DUEL 竞技场',
+      description: 'PvP 知识对战，赢取积分！',
+      position: 'top',
+      requiredTab: 'UNION'
+    },
+    {
       id: 'menu',
       target: 'menu-button',
       title: '菜单',
@@ -219,18 +235,18 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
-      id: 'market-stocks',
-      target: 'market-stocks',
-      title: '市場アライメント',
-      description: '価値観一致企業の株価。',
+      id: 'market-signal',
+      target: 'market-signal',
+      title: 'マーケットシグナル',
+      description: '価値観に合った企業を発見。',
       position: 'top',
       requiredTab: 'FEED'
     },
     {
       id: 'company-rankings',
       target: 'company-rankings',
-      title: '価値観ベースのランキング',
-      description: 'FECデータ、ESGスコア、ニュース、経営陣の声明に基づく企業ランキング。',
+      title: '価値観ランキング',
+      description: '政治的立場に基づく企業ランキング。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -276,6 +292,14 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'UNION'
     },
     {
+      id: 'duel-arena',
+      target: 'duel-arena',
+      title: 'DUEL アリーナ',
+      description: 'PvPトリビアバトル。賞金を獲得！',
+      position: 'top',
+      requiredTab: 'UNION'
+    },
+    {
       id: 'menu',
       target: 'menu-button',
       title: 'メニュー',
@@ -309,18 +333,18 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
-      id: 'market-stocks',
-      target: 'market-stocks',
-      title: 'Alignement du Marché',
-      description: 'Prix actions alignées valeurs.',
+      id: 'market-signal',
+      target: 'market-signal',
+      title: 'Signal Marché',
+      description: 'Entreprises alignées avec vos valeurs.',
       position: 'top',
       requiredTab: 'FEED'
     },
     {
       id: 'company-rankings',
       target: 'company-rankings',
-      title: 'Classements Basés sur les Valeurs',
-      description: 'Entreprises classées selon données FEC, scores ESG, actualités et déclarations des dirigeants.',
+      title: 'Classements Valeurs',
+      description: 'Entreprises classées selon position politique.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -366,6 +390,14 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'UNION'
     },
     {
+      id: 'duel-arena',
+      target: 'duel-arena',
+      title: 'Arène DUEL',
+      description: 'Batailles trivia PvP. Gagnez des crédits!',
+      position: 'top',
+      requiredTab: 'UNION'
+    },
+    {
       id: 'menu',
       target: 'menu-button',
       title: 'Menu',
@@ -399,18 +431,18 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
-      id: 'market-stocks',
-      target: 'market-stocks',
-      title: 'Alineación del Mercado',
-      description: 'Precios acciones alineadas valores.',
+      id: 'market-signal',
+      target: 'market-signal',
+      title: 'Señal de Mercado',
+      description: 'Empresas alineadas con tus valores.',
       position: 'top',
       requiredTab: 'FEED'
     },
     {
       id: 'company-rankings',
       target: 'company-rankings',
-      title: 'Clasificaciones Basadas en Valores',
-      description: 'Empresas clasificadas según datos FEC, puntajes ESG, noticias y declaraciones ejecutivas.',
+      title: 'Ranking de Valores',
+      description: 'Empresas por posición política.',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -452,6 +484,14 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       target: 'active-allies',
       title: 'Aliados Activos',
       description: 'Recuento usuarios alineando consumo.',
+      position: 'top',
+      requiredTab: 'UNION'
+    },
+    {
+      id: 'duel-arena',
+      target: 'duel-arena',
+      title: 'Arena DUEL',
+      description: 'Batallas trivia PvP. ¡Gana créditos!',
       position: 'top',
       requiredTab: 'UNION'
     },
