@@ -180,7 +180,6 @@ async function generateAllQuestions() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   const apiKey = await getGeminiApiKey();
-  const ai = new GoogleGenAI({ apiKey });
 
   let questionId = 1;
   let totalGenerated = 0;

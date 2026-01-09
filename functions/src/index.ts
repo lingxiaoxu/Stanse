@@ -525,6 +525,7 @@ Status: ${errorCount > 0 ? 'COMPLETED WITH ERRORS' : 'SUCCESS'}
 import { processMatchmakingQueue, joinMatchmakingQueue, leaveMatchmakingQueue } from './duel/matchmaking';
 import { submitGameplayEvent, finalizeMatch } from './duel/settlement';
 import { getUserCredits, getCreditHistory } from './duel/creditManager';
+import { populateQuestions } from './duel/questionPopulator';
 
 /**
  * Matchmaking Scheduler - Runs every 2 minutes
@@ -683,6 +684,28 @@ export const finalizeDuelMatch = functions.https.onCall(
       return { success: true };
     } catch (error: any) {
       console.error('Error finalizing match:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  }
+);
+
+/**
+ * Populate Questions (HTTP Callable - Admin Only)
+ * One-time function to populate 150 questions to Firestore
+ */
+export const populateDuelQuestions = functions.https.onCall(
+  async (request) => {
+    const { auth } = request;
+
+    if (!auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    try {
+      const result = await populateQuestions();
+      return result;
+    } catch (error: any) {
+      console.error('Error populating questions:', error);
       throw new functions.https.HttpsError('internal', error.message);
     }
   }
