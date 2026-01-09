@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Zap, ArrowUpRight, ShieldCheck, Target, Copy, Activity, Swords } from 'lucide-react';
+import { Zap, ArrowUpRight, ShieldCheck, Target, Copy, Activity, Swords, Shield } from 'lucide-react';
 import { PixelCard } from '../ui/PixelCard';
 import { Campaign } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -323,55 +323,87 @@ export const UnionView: React.FC = () => {
         </div>
       </PixelCard>
 
-      {/* DUEL ARENA Entry Card - Matching THE MARKET style */}
-      <PixelCard className="p-0 bg-white/50 backdrop-blur-sm">
-        {/* Section Header with Icon */}
-        <div className="px-3 py-2 border-b-2 border-black bg-white flex items-center justify-between">
+      {/* DUEL ARENA Entry Card - Exactly matching wireframe design */}
+      <PixelCard className="p-0 border-4 border-black bg-white">
+        {/* Top Bar: PVP ARENA + BALANCE */}
+        <div className="px-4 py-2 bg-white border-b-2 border-black flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Swords size={14} strokeWidth={2.5} />
-            <span className="font-mono text-xs font-bold tracking-wider">- {t('duel', 'entry_card_title')}</span>
+            <div className="w-3 h-3 bg-red-500"></div>
+            <span className="font-mono text-xs font-bold tracking-widest uppercase">PVP ARENA</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-            <span className="font-mono text-[9px] font-bold text-green-600 tracking-wider">{t('duel', 'entry_card_live')}</span>
-          </div>
-        </div>
-
-        {/* Subtitle Bar */}
-        <div className="bg-black text-white px-3 py-2 flex items-center gap-2">
-          <span className="font-mono text-[10px] tracking-wider uppercase flex-1">
-            {t('duel', 'entry_card_subtitle')}
-          </span>
-        </div>
-
-        {/* Balance Bar */}
-        <div className="bg-black text-white px-3 py-2 border-t border-gray-700">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-xs uppercase tracking-wider">{t('duel', 'balance')}</span>
-            <span className="font-pixel text-2xl">${userCredits}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs font-bold uppercase">BALANCE:</span>
+            <div className="bg-green-500 text-white px-2 py-0.5 font-mono text-sm font-bold">${userCredits}</div>
           </div>
         </div>
 
-        {/* Tags Bar */}
-        <div className="px-3 py-2 bg-white border-t-2 border-black flex gap-3">
-          <div className="flex items-center gap-1 text-[9px] font-mono font-bold uppercase text-gray-600">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-            {t('duel', 'entry_card_matched')}
+        {/* Main Content Area */}
+        <div className="p-6 flex items-center justify-between gap-6">
+          {/* Left: Title */}
+          <div className="flex-1">
+            <h2 className="font-pixel text-5xl leading-none mb-2">DUEL</h2>
+            <h2 className="font-pixel text-5xl leading-none">MODE</h2>
           </div>
-          <div className="flex items-center gap-1 text-[9px] font-mono font-bold uppercase text-gray-600">
-            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-            {t('duel', 'entry_card_credits')}
+
+          {/* Right: Icon */}
+          <div className="w-20 h-20 border-2 border-black flex items-center justify-center bg-white">
+            <Swords size={48} strokeWidth={2} className="text-black" />
           </div>
         </div>
 
-        {/* Enter Button - Full Width */}
+        {/* Preview Button */}
+        <div className="px-6 pb-4">
+          <button className="bg-gray-600 text-white px-4 py-1.5 font-mono text-xs font-bold uppercase">
+            Preview
+          </button>
+        </div>
+
+        {/* Description */}
+        <div className="px-6 pb-4">
+          <p className="font-mono text-sm text-gray-700 leading-relaxed">
+            Skill-based picture trivia. Challenge opposing personas. Win rewards.
+          </p>
+        </div>
+
+        {/* Feature Tags - 3 boxes */}
+        <div className="px-6 pb-6 grid grid-cols-3 gap-3">
+          <div className="border-2 border-black p-3 text-center bg-white">
+            <Zap size={20} className="mx-auto mb-1" strokeWidth={2} />
+            <div className="font-mono text-xs font-bold uppercase">FAST</div>
+          </div>
+          <div className="border-2 border-black p-3 text-center bg-white">
+            <Target size={20} className="mx-auto mb-1" strokeWidth={2} />
+            <div className="font-mono text-xs font-bold uppercase">GLOBAL</div>
+          </div>
+          <div className="border-2 border-black p-3 text-center bg-white">
+            <Shield size={20} className="mx-auto mb-1" strokeWidth={2} />
+            <div className="font-mono text-xs font-bold uppercase">SAFE</div>
+          </div>
+        </div>
+
+        {/* ENTER ARENA Button */}
         <div className="border-t-2 border-black">
           <button
             onClick={() => setShowDuelModal(true)}
-            className="w-full bg-gray-50 hover:bg-black hover:text-white transition-colors px-4 py-3 flex items-center justify-center gap-2 font-mono text-sm font-bold uppercase group"
+            className="w-full bg-black text-white hover:bg-gray-800 transition-colors py-4 font-mono text-lg font-bold uppercase tracking-widest"
           >
-            <span>{t('duel', 'enter_duel')}</span>
-            <ArrowUpRight size={16} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            ENTER ARENA
+          </button>
+        </div>
+
+        {/* Deposit and Withdraw Buttons */}
+        <div className="border-t-2 border-black flex">
+          <button
+            className="flex-1 border-r border-black bg-white hover:bg-gray-100 transition-colors py-3 flex items-center justify-center gap-2 font-mono text-sm font-bold uppercase"
+          >
+            <ArrowUpRight size={14} className="rotate-180" />
+            Deposit
+          </button>
+          <button
+            className="flex-1 bg-white hover:bg-gray-100 transition-colors py-3 flex items-center justify-center gap-2 font-mono text-sm font-bold uppercase"
+          >
+            <ArrowUpRight size={14} />
+            Withdraw
           </button>
         </div>
       </PixelCard>
