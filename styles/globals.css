@@ -39,6 +39,15 @@
   100% { transform: translateX(0); }
 }
 
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee linear infinite;
+}
+
 body {
   background-color: #e5e5e5;
   font-family: 'Space Mono', 'DotGothic16', monospace;
