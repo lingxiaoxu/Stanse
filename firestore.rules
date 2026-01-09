@@ -312,16 +312,16 @@ service cloud.firestore {
       }
     }
 
-    // DUEL Questions - Public read only, Cloud Functions/scripts write
+    // DUEL Questions - Public read, authenticated write (TEMPORARY for population)
     match /duel_questions/{questionId} {
       allow read: if true;
-      allow write: if false; // Only backend scripts can populate
+      allow write: if request.auth != null; // TEMP: Allow auth users to populate
     }
 
     // DUEL Question Sequences - Pre-assembled sequences for matches
     match /duel_sequences/{sequenceId} {
       allow read: if true;
-      allow write: if false; // Only backend scripts can populate
+      allow write: if request.auth != null; // TEMP: Allow auth users to populate
     }
 
     // DUEL Matchmaking Queue - Users can read/write their own queue entry
