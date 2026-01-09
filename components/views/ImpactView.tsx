@@ -323,60 +323,56 @@ export const UnionView: React.FC = () => {
         </div>
       </PixelCard>
 
-      {/* DUEL ARENA Entry Card */}
-      <PixelCard className="relative bg-white overflow-hidden">
-        {/* Top Section with Icon and Info */}
-        <div className="p-6 pb-4">
-          <div className="flex items-start gap-4">
-            <div className="p-4 border-2 border-black bg-black text-white flex items-center justify-center shrink-0">
-              <Swords size={32} strokeWidth={2.5} />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <h3 className="font-pixel text-2xl leading-tight">{t('duel', 'entry_card_title')}</h3>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 border border-gray-200 rounded-full shrink-0">
-                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                  <span className="font-mono text-[9px] font-bold text-green-600 tracking-wider">{t('duel', 'entry_card_live')}</span>
-                </div>
-              </div>
-
-              <p className="font-mono text-xs text-gray-500 uppercase mb-3">{t('duel', 'entry_card_subtitle')}</p>
-
-              <div className="flex flex-wrap gap-2 text-[9px] font-mono font-bold uppercase">
-                <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 border border-gray-200">
-                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                  <span className="text-gray-600">{t('duel', 'entry_card_matched')}</span>
-                </div>
-                <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 border border-gray-200">
-                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-                  <span className="text-gray-600">{t('duel', 'entry_card_credits')}</span>
-                </div>
-              </div>
-            </div>
+      {/* DUEL ARENA Entry Card - Matching THE MARKET style */}
+      <PixelCard className="p-0 bg-white/50 backdrop-blur-sm">
+        {/* Section Header with Icon */}
+        <div className="px-3 py-2 border-b-2 border-black bg-white flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Swords size={14} strokeWidth={2.5} />
+            <span className="font-mono text-xs font-bold tracking-wider">- {t('duel', 'entry_card_title')}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+            <span className="font-mono text-[9px] font-bold text-green-600 tracking-wider">{t('duel', 'entry_card_live')}</span>
           </div>
         </div>
 
-        {/* Balance and Enter Section */}
-        <div className="border-t-2 border-black">
-          <div className="flex items-stretch">
-            <div className="flex-1 bg-black text-white px-4 py-3 flex items-center justify-center border-r-2 border-white">
-              <div className="text-center">
-                <span className="block text-[9px] font-mono font-bold uppercase tracking-widest text-gray-400">{t('duel', 'balance')}</span>
-                <span className="font-pixel text-3xl leading-none block mt-1">${userCredits}</span>
-              </div>
-            </div>
-            <button
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                setShowDuelModal(true);
-              }}
-              className="flex-1 bg-gray-50 hover:bg-black hover:text-white transition-colors px-4 py-3 flex items-center justify-center gap-2 font-mono text-sm font-bold uppercase group"
-            >
-              <span>{t('duel', 'enter_duel')}</span>
-              <ArrowUpRight size={16} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </button>
+        {/* Subtitle Bar */}
+        <div className="bg-black text-white px-3 py-2 flex items-center gap-2">
+          <span className="font-mono text-[10px] tracking-wider uppercase flex-1">
+            {t('duel', 'entry_card_subtitle')}
+          </span>
+        </div>
+
+        {/* Balance Bar */}
+        <div className="bg-black text-white px-3 py-2 border-t border-gray-700">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs uppercase tracking-wider">{t('duel', 'balance')}</span>
+            <span className="font-pixel text-2xl">${userCredits}</span>
           </div>
+        </div>
+
+        {/* Tags Bar */}
+        <div className="px-3 py-2 bg-white border-t-2 border-black flex gap-3">
+          <div className="flex items-center gap-1 text-[9px] font-mono font-bold uppercase text-gray-600">
+            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+            {t('duel', 'entry_card_matched')}
+          </div>
+          <div className="flex items-center gap-1 text-[9px] font-mono font-bold uppercase text-gray-600">
+            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+            {t('duel', 'entry_card_credits')}
+          </div>
+        </div>
+
+        {/* Enter Button - Full Width */}
+        <div className="border-t-2 border-black">
+          <button
+            onClick={() => setShowDuelModal(true)}
+            className="w-full bg-gray-50 hover:bg-black hover:text-white transition-colors px-4 py-3 flex items-center justify-center gap-2 font-mono text-sm font-bold uppercase group"
+          >
+            <span>{t('duel', 'enter_duel')}</span>
+            <ArrowUpRight size={16} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </button>
         </div>
       </PixelCard>
 
