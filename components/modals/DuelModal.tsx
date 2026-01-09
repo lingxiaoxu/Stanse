@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { DuelState, DuelConfig, DuelPlayer, DuelMatch, Question } from '../../types';
+import { DuelState, DuelConfig, DuelMatch } from '../../types';
 import {
   validateEntry,
-  findOpponent,
-  validatePingDifference,
-  initMatch,
   calculateResults,
   formatCredits,
   measurePing,
@@ -19,7 +16,7 @@ import {
   submitAnswer,
   finalizeMatch as finalizeMatchFirebase
 } from '../../services/duelFirebaseService';
-import { Shield, X, AlertTriangle, Trophy, Skull } from 'lucide-react';
+import { Shield, X, AlertTriangle, Trophy, Skull, Sparkles, Zap, Scale } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -101,7 +98,7 @@ export const DuelModal: React.FC<DuelModalProps> = ({
     matchRef.current = match;
   }, [match]);
 
-  // Reset on open
+  // Reset on open and cleanup on close
   useEffect(() => {
     if (isOpen) {
       setGameState(DuelState.LOBBY);
@@ -110,9 +107,19 @@ export const DuelModal: React.FC<DuelModalProps> = ({
       setError(null);
       // Measure user ping
       measurePing().then(ping => setUserPing(ping));
+    } else {
+      // Cleanup when modal closes
+      if (matchListenerRef.current) {
+        matchListenerRef.current();
+        matchListenerRef.current = null;
+      }
+      // Leave matchmaking queue if still in matching state
+      if (user && gameState === DuelState.MATCHING) {
+        leaveMatchmaking().catch(console.error);
+      }
     }
     return () => clearTimers();
-  }, [isOpen]);
+  }, [isOpen, user, gameState]);
 
   const clearTimers = () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -120,6 +127,12 @@ export const DuelModal: React.FC<DuelModalProps> = ({
   };
 
   const handleStartMatchmaking = async () => {
+    // Check authentication first
+    if (!user) {
+      setError('Please log in to play DUEL Arena');
+      return;
+    }
+
     const validation = validateEntry(userCredits, config);
     if (!validation.valid) {
       setError(validation.error || "Error");
@@ -130,38 +143,105 @@ export const DuelModal: React.FC<DuelModalProps> = ({
     setError(null);
 
     try {
-      const opponent = await findOpponent(userStanceType, userPing);
-
-      const selfPlayer: DuelPlayer = {
-        id: 'user_self',
-        personaLabel: userPersonaLabel,
+      // Join real matchmaking queue via Cloud Function
+      console.log('[DuelModal] Joining matchmaking queue...');
+      const joined = await joinMatchmaking({
         stanceType: userStanceType,
-        ping: userPing,
-        score: 0
-      };
+        personaLabel: userPersonaLabel,
+        pingMs: userPing,
+        entryFee: config.entryFee,
+        safetyBelt: config.safetyBelt,
+        duration: config.duration
+      });
 
-      // Pre-match check
-      setGameState(DuelState.PRE_MATCH_CHECK);
+      if (!joined) {
+        throw new Error('Failed to join matchmaking queue');
+      }
 
-      const newMatch = await initMatch(selfPlayer, opponent, config);
-      setMatch(newMatch);
+      console.log('[DuelModal] Joined queue, listening for match...');
 
-      // Wait for pre-match visualization
-      setTimeout(() => {
-        // Validate ping difference
-        if (!validatePingDifference(selfPlayer.ping, opponent.ping)) {
-          setError(t('duel', 'ping_mismatch'));
-          setGameState(DuelState.MATCHING);
-          return;
+      // Listen for match (server will create match when found or after 30s AI timeout)
+      matchListenerRef.current = listenForMatch(
+        user.uid,
+        async (firestoreMatch) => {
+          console.log('[DuelModal] Match found!', firestoreMatch);
+
+          // Cleanup listener
+          if (matchListenerRef.current) {
+            matchListenerRef.current();
+            matchListenerRef.current = null;
+          }
+
+          // Determine if user is player A or B
+          const isPlayerA = firestoreMatch.players.A.userId === user.uid;
+          const playerAData = firestoreMatch.players.A;
+          const playerBData = firestoreMatch.players.B;
+
+          // Fetch questions from the sequence
+          const questions = await getQuestionSequence(firestoreMatch.questionSequenceRef);
+
+          if (questions.length === 0) {
+            throw new Error('No questions found in sequence');
+          }
+
+          // Convert to local match format
+          const localMatch: DuelMatch = {
+            id: firestoreMatch.matchId,
+            playerA: {
+              id: playerAData.userId,
+              personaLabel: playerAData.personaLabel,
+              stanceType: playerAData.stanceType,
+              ping: playerAData.pingMs,
+              score: 0
+            },
+            playerB: {
+              id: playerBData.userId,
+              personaLabel: playerBData.personaLabel,
+              stanceType: playerBData.stanceType,
+              ping: playerBData.pingMs,
+              score: 0
+            },
+            config: {
+              entryFee: isPlayerA ? firestoreMatch.entry.A.fee : firestoreMatch.entry.B.fee,
+              duration: firestoreMatch.durationSec as 30 | 45,
+              safetyBelt: isPlayerA ? firestoreMatch.entry.A.safetyBelt : firestoreMatch.entry.B.safetyBelt,
+              difficultyStrategy: 'ASCENDING'
+            },
+            questions,
+            currentQuestionIndex: 0,
+            winner: null,
+            earnings: 0,
+            createdAt: firestoreMatch.createdAt,
+            firestoreMatchId: firestoreMatch.matchId,
+            isPlayerA
+          };
+
+          setMatch(localMatch);
+          setGameState(DuelState.PRE_MATCH_CHECK);
+
+          // Start gameplay after pre-match visualization
+          setTimeout(() => {
+            setGameState(DuelState.GAMEPLAY);
+            matchStartTimeRef.current = Date.now();
+            startGameLoop();
+          }, 4000);
+        },
+        (error) => {
+          console.error('[DuelModal] Match listener error:', error);
+          setError('Connection error. Please try again.');
+          setGameState(DuelState.LOBBY);
         }
-
-        // Start gameplay
-        setGameState(DuelState.GAMEPLAY);
-        startGameLoop();
-      }, 4000);
-    } catch (e) {
-      setError(t('duel', 'matchmaking_failed'));
+      );
+    } catch (e: any) {
+      console.error('[DuelModal] Matchmaking error:', e);
+      setError(e?.message || t('duel', 'matchmaking_failed'));
       setGameState(DuelState.LOBBY);
+
+      // Cleanup listener if exists
+      if (matchListenerRef.current) {
+        matchListenerRef.current();
+        matchListenerRef.current = null;
+      }
     }
   };
 
@@ -213,21 +293,48 @@ export const DuelModal: React.FC<DuelModalProps> = ({
     }, 1500);
   };
 
-  const handleUserAnswer = (index: number) => {
-    if (!match || gameState !== DuelState.GAMEPLAY || roundState !== 'ACTIVE') return;
+  const handleUserAnswer = async (index: number) => {
+    if (!match || !user || gameState !== DuelState.GAMEPLAY || roundState !== 'ACTIVE') return;
 
     if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
 
     setRoundState('USER_ANSWERED');
-    const isCorrect = index === match.questions[match.currentQuestionIndex].correctIndex;
+    const currentQuestion = match.questions[match.currentQuestionIndex];
+    const isCorrect = index === currentQuestion.correctIndex;
 
+    // Update local score
     setMatch(prev => {
       if (!prev) return null;
-      return {
-        ...prev,
-        playerA: { ...prev.playerA, score: prev.playerA.score + (isCorrect ? 1 : -1) }
-      };
+      // Update correct player based on isPlayerA
+      if (prev.isPlayerA) {
+        return {
+          ...prev,
+          playerA: { ...prev.playerA, score: prev.playerA.score + (isCorrect ? 1 : -1) }
+        };
+      } else {
+        return {
+          ...prev,
+          playerB: { ...prev.playerB, score: prev.playerB.score + (isCorrect ? 1 : -1) }
+        };
+      }
     });
+
+    // Submit answer to Firestore via Cloud Function (if real match)
+    if (match.firestoreMatchId) {
+      try {
+        await submitAnswer({
+          matchId: match.firestoreMatchId,
+          questionId: currentQuestion.id,
+          questionOrder: match.currentQuestionIndex,
+          answerIndex: index,
+          timestamp: new Date().toISOString(),
+          timeElapsed: Date.now() - matchStartTimeRef.current
+        });
+        console.log('[DuelModal] Answer submitted to Firestore');
+      } catch (e) {
+        console.error('[DuelModal] Failed to submit answer:', e);
+      }
+    }
 
     setTimeout(() => {
       nextQuestion();
@@ -249,7 +356,7 @@ export const DuelModal: React.FC<DuelModalProps> = ({
     startRound();
   };
 
-  const endGame = () => {
+  const endGame = async () => {
     clearTimers();
 
     const currentMatch = matchRef.current;
@@ -261,14 +368,27 @@ export const DuelModal: React.FC<DuelModalProps> = ({
 
     const finishedMatch = { ...currentMatch, winner, finishedAt: new Date().toISOString() };
     const { netChangeA } = calculateResults(finishedMatch);
-    finishedMatch.earnings = netChangeA;
+
+    // Adjust earnings based on whether user is player A or B
+    const userEarnings = currentMatch.isPlayerA ? netChangeA : -netChangeA;
+    finishedMatch.earnings = userEarnings;
 
     setMatch(finishedMatch);
     setGameState(DuelState.CASH_ANIMATION);
 
+    // Finalize match in Firestore via Cloud Function
+    if (currentMatch.firestoreMatchId) {
+      try {
+        await finalizeMatchFirebase(currentMatch.firestoreMatchId);
+        console.log('[DuelModal] Match finalized in Firestore');
+      } catch (e) {
+        console.error('[DuelModal] Failed to finalize match:', e);
+      }
+    }
+
     // Update credits and show results
     setTimeout(() => {
-      onCreditsChange(userCredits + netChangeA);
+      onCreditsChange(userCredits + userEarnings);
       setGameState(DuelState.RESULTS);
     }, 3000);
   };
@@ -559,27 +679,106 @@ export const DuelModal: React.FC<DuelModalProps> = ({
 
       {/* CASH ANIMATION - FULL SCREEN OVERLAY (outside modal) */}
       {gameState === DuelState.CASH_ANIMATION && match && (
-        <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden">
+          {/* Scanline effect */}
+          <div className="duel-scanline" />
+
           {match.winner === 'A' ? (
-            <div className="text-center w-full px-4 animate-bounce">
-              <div className="font-pixel text-[12rem] leading-none text-green-500 drop-shadow-[8px_8px_0_rgba(0,0,0,0.5)]">
-                +${Math.abs(match.earnings)}
+            /* ========== VICTORY ANIMATION ========== */
+            <div className="relative w-full h-full bg-gradient-to-b from-black via-green-950 to-black flex flex-col items-center justify-center">
+              {/* Decorative corner sparkles */}
+              <Sparkles className="absolute top-8 left-8 text-yellow-400 duel-spark" size={32} style={{ animationDelay: '0.2s' }} />
+              <Sparkles className="absolute top-8 right-8 text-yellow-400 duel-spark" size={32} style={{ animationDelay: '0.4s' }} />
+              <Sparkles className="absolute bottom-8 left-8 text-yellow-400 duel-spark" size={32} style={{ animationDelay: '0.6s' }} />
+              <Sparkles className="absolute bottom-8 right-8 text-yellow-400 duel-spark" size={32} style={{ animationDelay: '0.8s' }} />
+
+              {/* Trophy icon */}
+              <Trophy className="text-yellow-500 mb-4 drop-shadow-[0_0_30px_rgba(255,215,0,0.5)] duel-victory-text" size={80} strokeWidth={1.5} />
+
+              {/* VICTORY text with glitch effect */}
+              <div className="font-pixel text-8xl md:text-[10rem] text-yellow-400 uppercase tracking-wider duel-victory-text">
+                {t('duel', 'victory')}
               </div>
-              <div className="text-white font-mono uppercase tracking-[0.5em] text-2xl mt-12">{t('duel', 'victory_reward')}</div>
+
+              {/* Money amount with counter animation */}
+              <div className="mt-8 flex flex-col items-center duel-victory-amount">
+                <div className="font-pixel text-7xl md:text-[8rem] text-green-400 leading-none drop-shadow-[4px_4px_0_rgba(0,0,0,0.8)]">
+                  +${Math.abs(match.earnings)}
+                </div>
+                <div className="text-green-300 font-mono uppercase tracking-[0.3em] text-lg mt-4 border-t border-green-500/30 pt-4">
+                  {t('duel', 'victory_reward')}
+                </div>
+              </div>
+
+              {/* Decorative lines */}
+              <div className="absolute left-0 right-0 top-1/4 h-px bg-gradient-to-r from-transparent via-yellow-500/30 to-transparent" />
+              <div className="absolute left-0 right-0 bottom-1/4 h-px bg-gradient-to-r from-transparent via-yellow-500/30 to-transparent" />
             </div>
           ) : match.winner === 'B' ? (
-            <div className="text-center w-full px-4">
-              <div className="font-pixel text-[12rem] leading-none text-red-600 drop-shadow-[8px_8px_0_rgba(0,0,0,0.5)] animate-[ping_1s_ease-in-out_infinite]">
-                -${Math.abs(match.earnings)}
+            /* ========== DEFEAT ANIMATION ========== */
+            <div className="relative w-full h-full bg-gradient-to-b from-black via-red-950 to-black flex flex-col items-center justify-center">
+              {/* Crack overlay effect */}
+              <div className="absolute inset-0 duel-crack-overlay">
+                <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <path d="M50,0 L48,20 L52,25 L47,40 L55,50 L45,60 L53,75 L48,85 L50,100"
+                        stroke="rgba(255,0,0,0.3)" strokeWidth="0.5" fill="none" />
+                  <path d="M50,50 L30,45 L20,50 L10,48 L0,50"
+                        stroke="rgba(255,0,0,0.3)" strokeWidth="0.5" fill="none" />
+                  <path d="M50,50 L70,55 L80,50 L90,52 L100,50"
+                        stroke="rgba(255,0,0,0.3)" strokeWidth="0.5" fill="none" />
+                </svg>
               </div>
-              <div className="text-white font-mono uppercase tracking-[0.5em] text-2xl mt-16">{t('duel', 'funds_deducted')}</div>
+
+              {/* Zap icons for impact */}
+              <Zap className="absolute top-1/4 left-1/4 text-red-500/50 rotate-12" size={48} />
+              <Zap className="absolute bottom-1/4 right-1/4 text-red-500/50 -rotate-12" size={48} />
+
+              {/* Skull icon */}
+              <Skull className="text-red-500 mb-4 drop-shadow-[0_0_20px_rgba(255,0,0,0.5)] duel-defeat-text" size={80} strokeWidth={1.5} />
+
+              {/* DEFEAT text with shake effect */}
+              <div className="font-pixel text-8xl md:text-[10rem] text-red-600 uppercase tracking-wider duel-defeat-text">
+                {t('duel', 'defeat')}
+              </div>
+
+              {/* Money amount with drain animation */}
+              <div className="mt-8 flex flex-col items-center duel-defeat-amount">
+                <div className="font-pixel text-7xl md:text-[8rem] text-red-500 leading-none drop-shadow-[4px_4px_0_rgba(0,0,0,0.8)]">
+                  -${Math.abs(match.earnings)}
+                </div>
+                <div className="text-red-400 font-mono uppercase tracking-[0.3em] text-lg mt-4 border-t border-red-500/30 pt-4">
+                  {t('duel', 'funds_deducted')}
+                </div>
+              </div>
+
+              {/* Decorative danger stripes */}
+              <div className="absolute left-0 right-0 top-0 h-2 bg-[repeating-linear-gradient(90deg,#000,#000_20px,#dc2626_20px,#dc2626_40px)]" />
+              <div className="absolute left-0 right-0 bottom-0 h-2 bg-[repeating-linear-gradient(90deg,#000,#000_20px,#dc2626_20px,#dc2626_40px)]" />
             </div>
           ) : (
-            <div className="text-center w-full px-4">
-              <div className="font-pixel text-[12rem] leading-none text-gray-500 drop-shadow-[8px_8px_0_rgba(0,0,0,0.5)]">
-                $0
+            /* ========== DRAW ANIMATION ========== */
+            <div className="relative w-full h-full bg-gradient-to-b from-black via-gray-900 to-black flex flex-col items-center justify-center">
+              {/* Scale icon for balance */}
+              <Scale className="text-gray-400 mb-4 duel-draw-text" size={80} strokeWidth={1.5} />
+
+              {/* DRAW text */}
+              <div className="font-pixel text-8xl md:text-[10rem] text-gray-400 uppercase tracking-wider duel-draw-text">
+                {t('duel', 'draw')}
               </div>
-              <div className="text-white font-mono uppercase tracking-[0.5em] text-2xl mt-12">{t('duel', 'draw_refunded')}</div>
+
+              {/* Refund amount */}
+              <div className="mt-8 flex flex-col items-center duel-draw-text" style={{ animationDelay: '0.3s' }}>
+                <div className="font-pixel text-6xl md:text-[6rem] text-gray-500 leading-none">
+                  $0
+                </div>
+                <div className="text-gray-500 font-mono uppercase tracking-[0.3em] text-lg mt-4 border-t border-gray-600/30 pt-4">
+                  {t('duel', 'draw_refunded')}
+                </div>
+              </div>
+
+              {/* Decorative balanced lines */}
+              <div className="absolute left-1/4 right-1/4 top-1/3 h-px bg-gray-700" />
+              <div className="absolute left-1/4 right-1/4 bottom-1/3 h-px bg-gray-700" />
             </div>
           )}
         </div>

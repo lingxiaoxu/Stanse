@@ -1,0 +1,1202 @@
+[
+  {
+    "id": "q001",
+    "stem": "Flag of the United States",
+    "correct": "American flag with 50 white stars on blue canton and 13 alternating red and white horizontal stripes",
+    "distractors": ["Flag of Liberia with 11 red and white stripes and single white star on blue square", "Flag of Malaysia with 14 red and white stripes and yellow crescent moon with star on blue", "Flag of Chile with white star on blue square in top left, white and red horizontal stripes"],
+    "difficulty": "EASY",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q002",
+    "stem": "Flag of Japan",
+    "correct": "Japanese flag with large red circle centered on plain white background",
+    "distractors": ["Flag of Bangladesh with red circle offset to the left on green background", "Flag of Palau with yellow circle offset to left on light blue background", "Flag of Greenland with white and red circle split horizontally"],
+    "difficulty": "EASY",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q003",
+    "stem": "Flag of Canada",
+    "correct": "Canadian flag with red maple leaf centered on white square flanked by red vertical bands",
+    "distractors": ["Flag of Peru with red and white vertical stripes and coat of arms", "Flag of Austria with red white red horizontal stripes", "Flag of Lebanon with red horizontal stripes and green cedar tree in center"],
+    "difficulty": "EASY",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q004",
+    "stem": "Flag of the United Kingdom",
+    "correct": "British Union Jack flag with red cross of St George, white border, red diagonal crosses on blue background",
+    "distractors": ["Flag of Australia with Union Jack in canton and Southern Cross stars on blue", "Flag of New Zealand with Union Jack in canton and four red stars on blue", "Flag of Fiji with Union Jack and coat of arms on light blue"],
+    "difficulty": "EASY",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q005",
+    "stem": "Flag of China",
+    "correct": "Chinese flag with five yellow stars on solid red background, one large star and four smaller stars",
+    "distractors": ["Flag of Vietnam with single large yellow star centered on red background", "Flag of Morocco with green pentagram star on red background", "Flag of Turkey with white crescent moon and star on red background"],
+    "difficulty": "EASY",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q006",
+    "stem": "Flag of Germany",
+    "correct": "German flag with three equal horizontal stripes: black on top, red in middle, yellow on bottom",
+    "distractors": ["Flag of Belgium with three equal vertical stripes: black, yellow, red", "Flag of Lithuania with three horizontal stripes: yellow, green, red", "Flag of Armenia with three horizontal stripes: red, blue, orange"],
+    "difficulty": "EASY",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q007",
+    "stem": "Flag of France",
+    "correct": "French tricolor flag with three equal vertical stripes: blue, white, red from left to right",
+    "distractors": ["Flag of Netherlands with three horizontal stripes: red, white, blue from top", "Flag of Russia with three horizontal stripes: white, blue, red from top", "Flag of Luxembourg with three horizontal stripes: red, white, light blue"],
+    "difficulty": "EASY",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q008",
+    "stem": "Flag of Italy",
+    "correct": "Italian flag with three equal vertical stripes: green, white, red from left to right",
+    "distractors": ["Flag of Mexico with green white red vertical stripes and eagle coat of arms in center", "Flag of Ireland with three vertical stripes: green, white, orange", "Flag of Hungary with three horizontal stripes: red, white, green"],
+    "difficulty": "EASY",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q009",
+    "stem": "Flag of Brazil",
+    "correct": "Brazilian flag with green field, large yellow diamond, blue globe with white stars and curved white banner",
+    "distractors": ["Flag of Portugal with green and red vertical stripes and coat of arms on border", "Flag of Bolivia with horizontal red yellow green stripes and coat of arms", "Flag of Senegal with green yellow red vertical stripes and green star"],
+    "difficulty": "EASY",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q010",
+    "stem": "Flag of South Korea",
+    "correct": "South Korean flag with white background, red and blue yin-yang symbol in center, four black trigrams in corners",
+    "distractors": ["Flag of North Korea with red star on white circle, red and blue horizontal stripes", "Flag of Mongolia with vertical blue red blue stripes and golden soyombo symbol", "Flag of Kazakhstan with light blue background, yellow sun and eagle in center"],
+    "difficulty": "EASY",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q011",
+    "stem": "Eiffel Tower in Paris",
+    "correct": "Eiffel Tower - iconic iron lattice tower in Paris with three observation levels, brown metal structure",
+    "distractors": ["Tokyo Tower - red and white communications tower in Japan similar shape", "Blackpool Tower - Victorian iron lattice tower in England", "Berlin TV Tower - tall concrete tower with sphere observation deck"],
+    "difficulty": "EASY",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q012",
+    "stem": "Statue of Liberty",
+    "correct": "Statue of Liberty - green copper statue of robed woman holding torch and tablet, standing on pedestal in New York Harbor",
+    "distractors": ["Christ the Redeemer - white concrete statue with outstretched arms in Rio de Janeiro", "Motherland Calls statue - silver female figure with raised sword in Volgograd", "Statue of Unity - bronze statue of standing man in India"],
+    "difficulty": "EASY",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q013",
+    "stem": "Great Wall of China",
+    "correct": "Great Wall of China - long ancient stone fortification winding through mountains with watchtowers",
+    "distractors": ["Hadrian's Wall - low stone wall stretching across English countryside", "Berlin Wall - concrete barrier with graffiti in urban setting", "Western Wall - ancient limestone wall in Jerusalem with people praying"],
+    "difficulty": "EASY",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q014",
+    "stem": "Taj Mahal",
+    "correct": "Taj Mahal - white marble domed mausoleum with four minarets reflected in long pool garden in India",
+    "distractors": ["Sheikh Zayed Mosque - white mosque with multiple domes in Abu Dhabi", "Blue Mosque - mosque with blue tiles and six minarets in Istanbul", "Lotus Temple - white lotus flower shaped temple in New Delhi"],
+    "difficulty": "EASY",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q015",
+    "stem": "Big Ben Clock Tower",
+    "correct": "Big Ben - Gothic Revival clock tower with four clock faces at Palace of Westminster in London",
+    "distractors": ["Prague Astronomical Clock - medieval clock with astronomical dial on old town hall", "Zytglogge - medieval clock tower with astronomical clock in Bern Switzerland", "Spasskaya Tower - red brick tower with clock at Moscow Kremlin"],
+    "difficulty": "EASY",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q016",
+    "stem": "Sydney Opera House",
+    "correct": "Sydney Opera House - modern building with white sail-shaped roof shells on harbor in Sydney Australia",
+    "distractors": ["Lotus Temple - white lotus flower shaped building in Delhi", "Walt Disney Concert Hall - silver curved metal building in Los Angeles", "Guggenheim Museum Bilbao - titanium curved building in Spain"],
+    "difficulty": "EASY",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q017",
+    "stem": "Colosseum in Rome",
+    "correct": "Roman Colosseum - ancient oval amphitheater with arched facade, partially ruined stone structure in Rome",
+    "distractors": ["Arena di Verona - Roman amphitheater with complete oval structure in Verona", "Nimes Arena - well preserved Roman amphitheater in France", "Pula Arena - Roman amphitheater with complete outer wall in Croatia"],
+    "difficulty": "EASY",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q018",
+    "stem": "Mount Fuji",
+    "correct": "Mount Fuji - symmetrical snow-capped volcanic cone rising above clouds and lakes in Japan",
+    "distractors": ["Mount Rainier - glacier-covered stratovolcano in Washington State USA", "Mount Kilimanjaro - flat-topped snow mountain in Tanzania Africa", "Mount Erebus - Antarctic volcano with visible steam and snow"],
+    "difficulty": "EASY",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q019",
+    "stem": "Pyramids of Giza",
+    "correct": "Great Pyramids of Giza - three ancient stone pyramids in desert with Sphinx, Egypt",
+    "distractors": ["Mayan pyramids at Chichen Itza - stepped stone pyramid with stairs in jungle Mexico", "Pyramid of the Sun - large stone pyramid in Teotihuacan Mexico", "Nubian pyramids - smaller steeper pyramids in Sudan desert"],
+    "difficulty": "EASY",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q020",
+    "stem": "Golden Gate Bridge",
+    "correct": "Golden Gate Bridge - orange-red suspension bridge with two towers spanning bay in San Francisco",
+    "distractors": ["Brooklyn Bridge - brown stone tower suspension bridge in New York", "Tower Bridge - blue and white bascule bridge with two towers in London", "Sydney Harbour Bridge - gray steel arch bridge in Australia"],
+    "difficulty": "EASY",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q021",
+    "stem": "African Elephant",
+    "correct": "African elephant - large gray mammal with very large ears, long curved tusks, and wrinkled skin",
+    "distractors": ["Asian elephant - smaller gray elephant with smaller ears and smoother forehead", "Woolly mammoth - extinct elephant with brown fur and curved tusks", "African forest elephant - smaller elephant with straighter downward tusks"],
+    "difficulty": "EASY",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q022",
+    "stem": "Giant Panda",
+    "correct": "Giant panda - black and white bear eating bamboo with distinctive black eye patches",
+    "distractors": ["Red panda - small reddish-brown mammal with striped tail in tree", "Spectacled bear - black bear with beige face markings from South America", "Sloth bear - shaggy black bear with white chest mark from India"],
+    "difficulty": "EASY",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q023",
+    "stem": "Bengal Tiger",
+    "correct": "Bengal tiger - large orange cat with black stripes, white chest and face markings",
+    "distractors": ["Siberian tiger - lighter orange tiger with thicker fur in snow", "Lion - golden maned big cat without stripes", "Leopard - spotted yellow cat with rosette pattern"],
+    "difficulty": "EASY",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q024",
+    "stem": "Emperor Penguin",
+    "correct": "Emperor penguin - tall black and white penguin with yellow-orange neck patches on ice",
+    "distractors": ["King penguin - similar penguin with brighter orange patches, smaller size", "Adelie penguin - smaller all black and white penguin with white eye ring", "Gentoo penguin - penguin with white stripe across head and orange beak"],
+    "difficulty": "EASY",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q025",
+    "stem": "Red Kangaroo",
+    "correct": "Red kangaroo - large reddish-brown marsupial standing upright with powerful hind legs and long tail",
+    "distractors": ["Grey kangaroo - similar shaped marsupial with gray fur", "Wallaby - smaller version of kangaroo in forest setting", "Wallaroo - medium-sized dark colored kangaroo on rocky terrain"],
+    "difficulty": "EASY",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q026",
+    "stem": "Bald Eagle",
+    "correct": "Bald eagle - large brown bird of prey with distinctive white head and yellow hooked beak",
+    "distractors": ["Golden eagle - all brown eagle with golden nape feathers", "African fish eagle - white headed eagle with chestnut body", "White-tailed eagle - brown eagle with pale head and white tail"],
+    "difficulty": "EASY",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q027",
+    "stem": "Great White Shark",
+    "correct": "Great white shark - large gray shark with white underside, conical snout and triangular dorsal fin",
+    "distractors": ["Tiger shark - striped gray shark with blunt nose", "Bull shark - stocky gray shark with small eyes", "Whale shark - spotted enormous shark with flat head"],
+    "difficulty": "EASY",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q028",
+    "stem": "King Cobra",
+    "correct": "King cobra - large olive-brown snake with expanded hood showing chevron patterns, raised strike pose",
+    "distractors": ["Indian cobra - smaller hooded snake with spectacle marking on hood", "Black mamba - long gray snake without hood", "Rattlesnake - coiled brown snake with rattle tail"],
+    "difficulty": "EASY",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q029",
+    "stem": "Polar Bear",
+    "correct": "Polar bear - large white furred bear walking on Arctic sea ice",
+    "distractors": ["Grizzly bear - brown furred bear with shoulder hump", "Spirit bear - white colored black bear in forest", "Kodiak bear - large brown bear from Alaska"],
+    "difficulty": "EASY",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q030",
+    "stem": "Bottlenose Dolphin",
+    "correct": "Bottlenose dolphin - gray marine mammal with elongated snout jumping out of blue water",
+    "distractors": ["Orca killer whale - black and white large dolphin relative", "Porpoise - smaller gray cetacean with rounded snout", "Pilot whale - black dolphin with bulbous forehead"],
+    "difficulty": "EASY",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q031",
+    "stem": "Pizza Margherita",
+    "correct": "Pizza Margherita - round flatbread with red tomato sauce, white mozzarella, and green basil leaves",
+    "distractors": ["Focaccia - rectangular Italian bread with olive oil and herbs", "Calzone - folded pizza pocket with filling", "Pita bread with toppings - round flatbread with various toppings"],
+    "difficulty": "EASY",
+    "category": "FOOD"
+  },
+  {
+    "id": "q032",
+    "stem": "Sushi Nigiri",
+    "correct": "Sushi nigiri - hand-pressed rice topped with raw fish slice, typically salmon or tuna",
+    "distractors": ["Sashimi - sliced raw fish without rice", "Maki roll - rice and fish rolled in seaweed", "Onigiri - triangular rice ball wrapped in seaweed"],
+    "difficulty": "EASY",
+    "category": "FOOD"
+  },
+  {
+    "id": "q033",
+    "stem": "Hamburger",
+    "correct": "Classic hamburger - beef patty in sesame seed bun with lettuce, tomato, cheese, and condiments",
+    "distractors": ["Hot dog - sausage in long bun with toppings", "Pulled pork sandwich - shredded meat in bun", "Veggie burger - plant-based patty in bun"],
+    "difficulty": "EASY",
+    "category": "FOOD"
+  },
+  {
+    "id": "q034",
+    "stem": "Croissant",
+    "correct": "Croissant - crescent-shaped flaky golden French pastry with layered butter dough",
+    "distractors": ["Pain au chocolat - rectangular chocolate filled pastry", "Danish pastry - round pastry with fruit filling", "Brioche - round golden bread roll"],
+    "difficulty": "EASY",
+    "category": "FOOD"
+  },
+  {
+    "id": "q035",
+    "stem": "Tacos",
+    "correct": "Mexican tacos - small corn tortillas filled with seasoned meat, onions, cilantro, and salsa",
+    "distractors": ["Burritos - large flour tortilla wrapped around filling", "Quesadilla - folded tortilla with melted cheese", "Enchiladas - rolled tortillas covered in sauce"],
+    "difficulty": "EASY",
+    "category": "FOOD"
+  },
+  {
+    "id": "q036",
+    "stem": "Pad Thai",
+    "correct": "Pad Thai - stir-fried rice noodles with shrimp, tofu, peanuts, bean sprouts, and lime",
+    "distractors": ["Pho - Vietnamese noodle soup with herbs and meat", "Ramen - Japanese noodles in broth with egg and pork", "Lo mein - Chinese egg noodles with vegetables"],
+    "difficulty": "EASY",
+    "category": "FOOD"
+  },
+  {
+    "id": "q037",
+    "stem": "Fish and Chips",
+    "correct": "Fish and chips - battered fried fish fillet with thick cut fried potatoes, served in paper",
+    "distractors": ["Chicken tenders and fries - breaded chicken strips with thin fries", "Calamari and chips - fried squid rings with fries", "Schnitzel and fries - breaded meat cutlet with fries"],
+    "difficulty": "EASY",
+    "category": "FOOD"
+  },
+  {
+    "id": "q038",
+    "stem": "Dim Sum Dumplings",
+    "correct": "Dim sum - steamed dumplings in bamboo basket, including har gow shrimp dumplings and siu mai pork",
+    "distractors": ["Gyoza - Japanese pan-fried dumplings with pleated edges", "Momo - Tibetan steamed dumplings", "Pierogi - Polish filled dumplings"],
+    "difficulty": "EASY",
+    "category": "FOOD"
+  },
+  {
+    "id": "q039",
+    "stem": "Churros",
+    "correct": "Churros - ridged fried dough pastry dusted with cinnamon sugar, often with chocolate dipping sauce",
+    "distractors": ["Donuts - ring-shaped fried dough with glaze", "Beignets - square fried dough with powdered sugar", "Funnel cake - spiral fried dough with sugar"],
+    "difficulty": "EASY",
+    "category": "FOOD"
+  },
+  {
+    "id": "q040",
+    "stem": "Peking Duck",
+    "correct": "Peking duck - whole roasted duck with crispy golden skin, served with pancakes and hoisin sauce",
+    "distractors": ["Roast chicken - whole golden roasted chicken", "Tandoori chicken - red-orange spiced grilled chicken", "Turducken - multi-bird roasted dish"],
+    "difficulty": "EASY",
+    "category": "FOOD"
+  },
+  {
+    "id": "q041",
+    "stem": "Flag of Norway",
+    "correct": "Norwegian flag with red background, blue cross with white border off-center to the left",
+    "distractors": ["Flag of Iceland with blue background, red cross with white border", "Flag of Denmark with red background and white cross", "Flag of Sweden with blue background and yellow cross"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q042",
+    "stem": "Flag of Greece",
+    "correct": "Greek flag with nine horizontal blue and white stripes and white cross on blue square in canton",
+    "distractors": ["Flag of Uruguay with nine blue and white stripes and sun in canton", "Flag of Israel with white flag and two blue horizontal stripes with Star of David", "Flag of Argentina with light blue and white horizontal stripes with sun"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q043",
+    "stem": "Flag of South Africa",
+    "correct": "South African flag with Y-shaped green band, red and blue triangles, black triangle with yellow borders",
+    "distractors": ["Flag of Seychelles with radiating colored stripes", "Flag of Guyana with triangle design in green yellow red black white", "Flag of Jamaica with diagonal gold cross creating green and black triangles"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q044",
+    "stem": "Flag of Thailand",
+    "correct": "Thai flag with five horizontal stripes: red, white, blue (double width), white, red",
+    "distractors": ["Flag of Costa Rica with five stripes: blue white red white blue", "Flag of North Korea with wide red stripe between blue with white and star", "Flag of Cambodia with blue and red stripes and Angkor Wat"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q045",
+    "stem": "Flag of Switzerland",
+    "correct": "Swiss flag - square red flag with bold white cross in center",
+    "distractors": ["Flag of Denmark with white cross on red rectangle", "Flag of Tonga with red cross in white canton on red", "Flag of Georgia with white flag and five red crosses"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q046",
+    "stem": "Flag of Poland",
+    "correct": "Polish flag with two horizontal stripes: white on top, red on bottom",
+    "distractors": ["Flag of Monaco with red on top, white on bottom", "Flag of Indonesia with red on top, white on bottom", "Flag of Singapore with red on top, white on bottom with moon and stars"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q047",
+    "stem": "Flag of Argentina",
+    "correct": "Argentine flag with three horizontal stripes: light blue, white with golden Sun of May, light blue",
+    "distractors": ["Flag of Uruguay with white and blue stripes and sun in corner", "Flag of El Salvador with blue and white stripes and coat of arms", "Flag of Honduras with blue white blue stripes and five stars"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q048",
+    "stem": "Flag of Sweden",
+    "correct": "Swedish flag with blue background and golden yellow Nordic cross offset to left",
+    "distractors": ["Flag of Finland with white background and blue cross", "Flag of Ukraine with blue over yellow horizontal stripes", "Flag of Estonia with blue black white horizontal stripes"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q049",
+    "stem": "Flag of Portugal",
+    "correct": "Portuguese flag with green vertical band on left, red on right, coat of arms on dividing line",
+    "distractors": ["Flag of Madagascar with white vertical band and red and green horizontal", "Flag of Italy with green white red vertical stripes", "Flag of Zambia with green field, red black orange stripes and eagle"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q050",
+    "stem": "Flag of Egypt",
+    "correct": "Egyptian flag with three horizontal stripes: red, white with golden Eagle of Saladin, black",
+    "distractors": ["Flag of Yemen with red white black horizontal stripes no emblem", "Flag of Iraq with red white black stripes and Arabic text", "Flag of Syria with red white black stripes and two green stars"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q051",
+    "stem": "Flag of Philippines",
+    "correct": "Philippine flag with blue and red horizontal bands, white triangle with sun and three stars",
+    "distractors": ["Flag of Czech Republic with blue triangle and white red horizontal bands", "Flag of Cuba with blue and white stripes and red triangle with star", "Flag of Puerto Rico with blue and white stripes and red triangle with star"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q052",
+    "stem": "Flag of Pakistan",
+    "correct": "Pakistani flag with green field, white vertical stripe on left, white crescent and star",
+    "distractors": ["Flag of Algeria with green and white halves and red crescent star", "Flag of Mauritania with green field and gold crescent star", "Flag of Libya with solid green field"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q053",
+    "stem": "Flag of Saudi Arabia",
+    "correct": "Saudi flag with green field, white Arabic shahada text and sword pointing left",
+    "distractors": ["Flag of Iran with green white red stripes and emblem with text", "Flag of Bangladesh with green field and red circle", "Flag of Turkmenistan with green field and carpet pattern"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q054",
+    "stem": "Flag of Nigeria",
+    "correct": "Nigerian flag with three vertical stripes: green, white, green",
+    "distractors": ["Flag of Ivory Coast with orange white green vertical stripes", "Flag of Mali with green yellow red vertical stripes", "Flag of Guinea with red yellow green vertical stripes"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q055",
+    "stem": "Flag of Vietnam",
+    "correct": "Vietnamese flag with solid red background and large yellow five-pointed star in center",
+    "distractors": ["Flag of China with red background and five yellow stars", "Flag of Morocco with red background and green pentagram", "Flag of Turkey with red background and white crescent star"],
+    "difficulty": "MEDIUM",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q056",
+    "stem": "Machu Picchu",
+    "correct": "Machu Picchu - ancient Incan stone citadel on mountain ridge with terraces in Peru Andes",
+    "distractors": ["Choquequirao - similar Incan ruins on mountain in Peru", "Ollantaytambo - Incan fortress with terraces in Sacred Valley", "Sacsayhuaman - Incan stone walls near Cusco Peru"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q057",
+    "stem": "Angkor Wat",
+    "correct": "Angkor Wat - massive stone temple complex with iconic five lotus towers reflected in moat, Cambodia",
+    "distractors": ["Borobudur - Buddhist pyramid temple with stupas in Indonesia", "Prambanan - Hindu stone temples with pointed towers in Java", "Bagan temples - numerous brick temples on plains in Myanmar"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q058",
+    "stem": "Petra Treasury",
+    "correct": "Petra Treasury Al-Khazneh - ancient carved rose-red facade with columns in rock cliff, Jordan",
+    "distractors": ["Ellora Caves - carved temples in rock cliff in India", "Abu Simbel - carved colossal statues in rock cliff in Egypt", "Lalibela churches - carved rock churches in Ethiopia"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q059",
+    "stem": "Neuschwanstein Castle",
+    "correct": "Neuschwanstein Castle - white Romanesque Revival castle with towers on hilltop in Bavaria Germany",
+    "distractors": ["Hohenzollern Castle - Gothic Revival castle on mountain in Germany", "Prague Castle - large castle complex on hill in Czech Republic", "Edinburgh Castle - stone fortress on volcanic rock in Scotland"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q060",
+    "stem": "Sagrada Familia",
+    "correct": "Sagrada Familia - ornate Gothic Art Nouveau basilica with tall spires under construction in Barcelona",
+    "distractors": ["Milan Cathedral - white Gothic cathedral with many spires in Italy", "Cologne Cathedral - dark Gothic twin-spired cathedral in Germany", "Westminster Abbey - Gothic church with two towers in London"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q061",
+    "stem": "Christ the Redeemer",
+    "correct": "Christ the Redeemer - large white Art Deco statue with outstretched arms on Corcovado mountain, Rio de Janeiro",
+    "distractors": ["Statue of Liberty - green copper robed figure with torch in New York", "Christ the King - white statue on pillar in Lisbon Portugal", "Angel of Independence - golden winged figure on column in Mexico City"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q062",
+    "stem": "Burj Khalifa",
+    "correct": "Burj Khalifa - sleek silver supertall skyscraper tapering to needle point in Dubai",
+    "distractors": ["Shanghai Tower - twisted glass skyscraper in China", "Taipei 101 - pagoda-styled segmented skyscraper in Taiwan", "One World Trade Center - crystalline spired tower in New York"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q063",
+    "stem": "Stonehenge",
+    "correct": "Stonehenge - prehistoric circular arrangement of massive standing stones on Salisbury Plain, England",
+    "distractors": ["Avebury stones - larger stone circle surrounding village in England", "Carnac stones - rows of standing stones in Brittany France", "Ring of Brodgar - stone circle in Orkney Scotland"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q064",
+    "stem": "Hagia Sophia",
+    "correct": "Hagia Sophia - massive domed Byzantine structure with four minarets in Istanbul Turkey",
+    "distractors": ["Blue Mosque - mosque with six minarets and cascading domes in Istanbul", "Dome of the Rock - golden domed shrine in Jerusalem", "St Peters Basilica - domed Renaissance church in Vatican"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q065",
+    "stem": "Acropolis of Athens",
+    "correct": "Acropolis with Parthenon - ancient Greek temple ruins with columns on hilltop in Athens",
+    "distractors": ["Temple of Hera at Olympia - single row of columns in Greece", "Temple of Apollo at Delphi - partial columns on mountain in Greece", "Ephesus Library of Celsus - ornate Roman facade in Turkey"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q066",
+    "stem": "Niagara Falls",
+    "correct": "Niagara Falls - massive horseshoe waterfall with mist on US-Canada border",
+    "distractors": ["Victoria Falls - wide waterfall with rainbow spray in Africa", "Iguazu Falls - series of cascading waterfalls in Brazil-Argentina", "Angel Falls - tall thin waterfall from tepui in Venezuela"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q067",
+    "stem": "Forbidden City",
+    "correct": "Forbidden City - vast imperial palace complex with red walls and yellow roofs in Beijing China",
+    "distractors": ["Gyeongbokgung Palace - Korean palace with colorful decorations in Seoul", "Imperial Palace Tokyo - Japanese palace with stone walls and moat", "Grand Palace Bangkok - ornate Thai palace with golden spires"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q068",
+    "stem": "Leaning Tower of Pisa",
+    "correct": "Leaning Tower of Pisa - white marble cylindrical bell tower tilting notably in Italy",
+    "distractors": ["Bell tower of St Marks Venice - red brick tower in Venice square", "Giotto's Campanile - decorated marble tower in Florence", "Two Towers of Bologna - tall medieval brick towers in Bologna"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q069",
+    "stem": "Grand Canyon",
+    "correct": "Grand Canyon - vast layered red rock canyon with Colorado River in Arizona USA",
+    "distractors": ["Bryce Canyon - red hoodoo rock formations in Utah", "Antelope Canyon - narrow slot canyon with curved walls", "Zion Canyon - steep red and white cliffs with river in Utah"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q070",
+    "stem": "Northern Lights Aurora",
+    "correct": "Northern Lights Aurora Borealis - green and purple curtains of light in night sky over snowy landscape",
+    "distractors": ["Milky Way galaxy - band of stars across dark night sky", "Lightning storm - purple electrical bolts in clouds", "Sunset sky - orange and pink colored clouds"],
+    "difficulty": "MEDIUM",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q071",
+    "stem": "Snow Leopard",
+    "correct": "Snow leopard - gray spotted big cat with very long thick tail in rocky mountain habitat",
+    "distractors": ["Clouded leopard - smaller spotted cat with cloud-like markings in trees", "Amur leopard - yellow spotted leopard in snowy forest", "Persian leopard - tan spotted leopard in rocky terrain"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q072",
+    "stem": "Red Panda",
+    "correct": "Red panda - small reddish-brown mammal with ringed tail and white face markings in bamboo",
+    "distractors": ["Raccoon - gray masked mammal with ringed tail", "Coati - long-nosed brownish mammal with banded tail", "Kinkajou - golden-brown mammal with prehensile tail"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q073",
+    "stem": "Komodo Dragon",
+    "correct": "Komodo dragon - massive gray-brown monitor lizard with forked tongue on Indonesian island",
+    "distractors": ["Nile monitor - large spotted lizard near African water", "Asian water monitor - dark lizard with yellow spots in Southeast Asia", "Gila monster - orange and black venomous lizard in desert"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q074",
+    "stem": "Orangutan",
+    "correct": "Orangutan - large red-orange furred ape with long arms in Borneo rainforest",
+    "distractors": ["Gorilla - black furred great ape with silver back", "Chimpanzee - black furred ape with pink face", "Bonobo - slender dark furred ape with pink lips"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q075",
+    "stem": "Mandrill",
+    "correct": "Mandrill - large monkey with bright blue and red striped face and colorful rear",
+    "distractors": ["Baboon - brown monkey with dog-like face", "Macaque - medium monkey with pink face", "Gelada - brown monkey with red chest patch"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q076",
+    "stem": "Peacock",
+    "correct": "Indian peacock - iridescent blue bird displaying large fan of eye-spotted green tail feathers",
+    "distractors": ["Golden pheasant - red and yellow bird with long tail", "Lyrebird - brown bird with lyre-shaped tail display", "Bird of paradise - colorful bird with elaborate plumes"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q077",
+    "stem": "Axolotl",
+    "correct": "Axolotl - pink aquatic salamander with external feathery gills and wide smile",
+    "distractors": ["Mudpuppy - brown aquatic salamander with gills", "Olm - pale blind cave salamander", "Giant salamander - large brown salamander in stream"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q078",
+    "stem": "Narwhal",
+    "correct": "Narwhal - Arctic whale with mottled gray skin and long spiral tusk protruding from head",
+    "distractors": ["Beluga whale - white whale without tusk", "Orca - black and white whale without tusk", "Pilot whale - black whale with bulbous head"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q079",
+    "stem": "Platypus",
+    "correct": "Platypus - brown furry semi-aquatic mammal with duck bill, beaver tail, webbed feet",
+    "distractors": ["Otter - sleek brown swimming mammal with normal snout", "Beaver - large rodent with flat tail", "Muskrat - smaller brown swimming rodent"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q080",
+    "stem": "Flamingo",
+    "correct": "Flamingo - tall pink wading bird with long curved neck and bent beak standing in water",
+    "distractors": ["Scarlet ibis - red bird with long curved beak", "Roseate spoonbill - pink bird with flat spoon-shaped beak", "Great egret - tall white wading bird"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q081",
+    "stem": "Okapi",
+    "correct": "Okapi - brown forest mammal with zebra-striped legs and giraffe-like head in Congo",
+    "distractors": ["Bongo - reddish-brown antelope with white stripes", "Gerenuk - long-necked brown antelope", "Kudu - brown antelope with spiral horns and stripes"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q082",
+    "stem": "Pangolin",
+    "correct": "Pangolin - scaly anteater mammal covered in brown overlapping scales curled in ball",
+    "distractors": ["Armadillo - mammal with banded shell armor", "Echidna - spiny anteater with quills", "Hedgehog - small mammal with spines"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q083",
+    "stem": "Chameleon",
+    "correct": "Chameleon - green lizard with curled tail, cone-shaped eyes, and long sticky tongue catching insect",
+    "distractors": ["Iguana - large green lizard with spiny crest", "Gecko - small lizard with sticky toe pads", "Anole - small lizard with red throat fan"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q084",
+    "stem": "Jellyfish",
+    "correct": "Moon jellyfish - translucent bell-shaped creature with trailing tentacles in blue water",
+    "distractors": ["Portuguese man o war - blue bladder with long tentacles", "Sea nettle - orange bell-shaped jellyfish", "Box jellyfish - cube-shaped transparent jellyfish"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q085",
+    "stem": "Toucan",
+    "correct": "Toco toucan - black bird with white throat and enormous orange-yellow beak",
+    "distractors": ["Hornbill - bird with large curved bill and casque", "Puffin - black and white bird with colorful beak", "Keel-billed toucan - toucan with green and orange beak"],
+    "difficulty": "MEDIUM",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q086",
+    "stem": "Apple Logo",
+    "correct": "Apple Inc logo - simple bitten apple silhouette in silver/black monochrome",
+    "distractors": ["Huawei logo - stylized flower petal design", "Xiaomi logo - rounded square MI letters", "Samsung logo - blue oval with text"],
+    "difficulty": "MEDIUM",
+    "category": "LOGOS"
+  },
+  {
+    "id": "q087",
+    "stem": "Nike Swoosh",
+    "correct": "Nike swoosh - simple curved checkmark shape in black",
+    "distractors": ["Puma logo - leaping cat silhouette", "Adidas three stripes - three parallel diagonal lines", "Under Armour logo - interlocking U and A"],
+    "difficulty": "MEDIUM",
+    "category": "LOGOS"
+  },
+  {
+    "id": "q088",
+    "stem": "McDonald's Golden Arches",
+    "correct": "McDonald's logo - golden yellow M shape arches on red background",
+    "distractors": ["Burger King logo - text between bun halves", "Wendy's logo - red-haired girl face", "KFC logo - Colonel Sanders face illustration"],
+    "difficulty": "MEDIUM",
+    "category": "LOGOS"
+  },
+  {
+    "id": "q089",
+    "stem": "Mercedes-Benz Star",
+    "correct": "Mercedes-Benz logo - three-pointed silver star in circle",
+    "distractors": ["BMW logo - blue and white quarters in circle", "Audi logo - four interlocking silver rings", "Volkswagen logo - VW letters in circle"],
+    "difficulty": "MEDIUM",
+    "category": "LOGOS"
+  },
+  {
+    "id": "q090",
+    "stem": "Toyota Logo",
+    "correct": "Toyota logo - three overlapping ovals forming stylized T in silver",
+    "distractors": ["Honda logo - H in square shape", "Mazda logo - winged M shape", "Hyundai logo - slanted H in oval"],
+    "difficulty": "MEDIUM",
+    "category": "LOGOS"
+  },
+  {
+    "id": "q091",
+    "stem": "Google Logo",
+    "correct": "Google logo - colorful letters spelling Google in blue red yellow blue green red",
+    "distractors": ["Microsoft logo - four colored squares in grid", "Facebook Meta logo - infinity-like loop", "Amazon logo - text with arrow smile from A to Z"],
+    "difficulty": "MEDIUM",
+    "category": "LOGOS"
+  },
+  {
+    "id": "q092",
+    "stem": "Starbucks Logo",
+    "correct": "Starbucks logo - green circular badge with white twin-tailed mermaid siren",
+    "distractors": ["Dunkin logo - orange and pink text in rounded font", "Costa Coffee logo - maroon text with three wavy lines", "Peets Coffee logo - circular badge with coffee cup"],
+    "difficulty": "MEDIUM",
+    "category": "LOGOS"
+  },
+  {
+    "id": "q093",
+    "stem": "Twitter/X Logo",
+    "correct": "Twitter X logo - bold white X on black background",
+    "distractors": ["Facebook logo - white lowercase f on blue", "Instagram logo - colorful camera outline gradient", "LinkedIn logo - white in on blue square"],
+    "difficulty": "MEDIUM",
+    "category": "LOGOS"
+  },
+  {
+    "id": "q094",
+    "stem": "Shell Oil Logo",
+    "correct": "Shell logo - yellow scallop shell with red outline",
+    "distractors": ["BP logo - green and yellow sunflower design", "Chevron logo - two chevron shapes stacked", "ExxonMobil logo - text with double X"],
+    "difficulty": "MEDIUM",
+    "category": "LOGOS"
+  },
+  {
+    "id": "q095",
+    "stem": "Netflix Logo",
+    "correct": "Netflix logo - red capital N made of ribbon shape on black",
+    "distractors": ["HBO logo - bold HBO letters", "Disney Plus logo - blue text with arc", "Amazon Prime logo - text with arrow"],
+    "difficulty": "MEDIUM",
+    "category": "LOGOS"
+  },
+  {
+    "id": "q096",
+    "stem": "Paella",
+    "correct": "Paella - Spanish rice dish with saffron yellow color, seafood, chicken, and vegetables in wide pan",
+    "distractors": ["Risotto - creamy white Italian rice dish", "Jambalaya - Cajun rice with sausage and shrimp", "Biryani - Indian spiced rice with meat"],
+    "difficulty": "MEDIUM",
+    "category": "FOOD"
+  },
+  {
+    "id": "q097",
+    "stem": "Pho",
+    "correct": "Pho - Vietnamese noodle soup with rice noodles, beef slices, bean sprouts, herbs in clear broth",
+    "distractors": ["Ramen - Japanese noodles in cloudy broth with egg and pork", "Tom yum - Thai spicy sour soup with shrimp", "Laksa - Malaysian curry noodle soup"],
+    "difficulty": "MEDIUM",
+    "category": "FOOD"
+  },
+  {
+    "id": "q098",
+    "stem": "Falafel",
+    "correct": "Falafel - fried green chickpea balls in pita with tahini, vegetables, Middle Eastern",
+    "distractors": ["Arancini - fried Italian rice balls", "Hush puppies - fried American cornmeal balls", "Samosa - fried Indian triangular pastry"],
+    "difficulty": "MEDIUM",
+    "category": "FOOD"
+  },
+  {
+    "id": "q099",
+    "stem": "Bibimbap",
+    "correct": "Bibimbap - Korean rice bowl with vegetables arranged by color, fried egg, gochujang sauce",
+    "distractors": ["Donburi - Japanese rice bowl with topping", "Poke bowl - Hawaiian raw fish rice bowl", "Chirashi - Japanese scattered sushi on rice"],
+    "difficulty": "MEDIUM",
+    "category": "FOOD"
+  },
+  {
+    "id": "q100",
+    "stem": "Moussaka",
+    "correct": "Moussaka - Greek layered casserole with eggplant, meat sauce, and bechamel topping",
+    "distractors": ["Lasagna - Italian layered pasta with meat and cheese", "Shepherds pie - British meat pie with mashed potato topping", "Pastitsio - Greek baked pasta with meat"],
+    "difficulty": "MEDIUM",
+    "category": "FOOD"
+  },
+  {
+    "id": "q101",
+    "stem": "Ceviche",
+    "correct": "Ceviche - raw fish cured in citrus juice with onions, cilantro, served cold Latin American",
+    "distractors": ["Tartare - raw minced meat or fish with seasonings", "Carpaccio - thin sliced raw meat or fish", "Poke - Hawaiian cubed raw fish with sauce"],
+    "difficulty": "MEDIUM",
+    "category": "FOOD"
+  },
+  {
+    "id": "q102",
+    "stem": "Tiramisu",
+    "correct": "Tiramisu - Italian layered dessert with coffee-soaked ladyfingers, mascarpone, cocoa powder",
+    "distractors": ["Trifle - British layered dessert with cake and custard", "Opera cake - French layered coffee chocolate cake", "Pavlova - meringue dessert with cream and fruit"],
+    "difficulty": "MEDIUM",
+    "category": "FOOD"
+  },
+  {
+    "id": "q103",
+    "stem": "Baklava",
+    "correct": "Baklava - layered filo pastry with chopped nuts and honey syrup, Middle Eastern dessert",
+    "distractors": ["Strudel - rolled pastry with fruit filling", "Galaktoboureko - Greek custard in filo", "Kanafeh - Middle Eastern cheese pastry with syrup"],
+    "difficulty": "MEDIUM",
+    "category": "FOOD"
+  },
+  {
+    "id": "q104",
+    "stem": "Goulash",
+    "correct": "Goulash - Hungarian beef stew with paprika, onions, potatoes in rich red broth",
+    "distractors": ["Boeuf bourguignon - French beef stew with red wine", "Irish stew - lamb stew with potatoes", "Stroganoff - beef in sour cream sauce"],
+    "difficulty": "MEDIUM",
+    "category": "FOOD"
+  },
+  {
+    "id": "q105",
+    "stem": "Injera with Wat",
+    "correct": "Injera - Ethiopian spongy sourdough flatbread with colorful stews and lentils on top",
+    "distractors": ["Naan with curry - Indian flatbread with sauce", "Dosa with sambar - South Indian crepe with lentil soup", "Roti canai with curry - Malaysian flatbread with sauce"],
+    "difficulty": "MEDIUM",
+    "category": "FOOD"
+  },
+  {
+    "id": "q106",
+    "stem": "Peace Symbol",
+    "correct": "Peace symbol - circle with interior lines forming semaphore N and D for nuclear disarmament",
+    "distractors": ["Mercedes logo - three-pointed star in circle", "Biohazard symbol - three interlocking crescents", "Radiation symbol - three blades around center dot"],
+    "difficulty": "MEDIUM",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q107",
+    "stem": "Yin Yang Symbol",
+    "correct": "Yin Yang - black and white swirling teardrop shapes in circle with opposite colored dots",
+    "distractors": ["Triskelion - three interlocked spirals", "Ouroboros - snake eating its own tail in circle", "Enso - single brushstroke circle in Zen"],
+    "difficulty": "MEDIUM",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q108",
+    "stem": "Caduceus Medical Symbol",
+    "correct": "Caduceus - winged staff with two snakes intertwined, commonly used medical symbol",
+    "distractors": ["Rod of Asclepius - single snake on staff without wings", "Ankh - Egyptian cross with loop at top", "Chi Rho - overlapping X and P Christian symbol"],
+    "difficulty": "MEDIUM",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q109",
+    "stem": "Recycling Symbol",
+    "correct": "Recycling symbol - three chasing arrows forming triangle in green",
+    "distractors": ["Biohazard symbol - three curved shapes around circle", "Radiation trefoil - three-bladed propeller shape", "Compostable symbol - seedling in circle"],
+    "difficulty": "MEDIUM",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q110",
+    "stem": "Bluetooth Symbol",
+    "correct": "Bluetooth symbol - angular B-like rune shape in blue, combines H and B runes",
+    "distractors": ["WiFi symbol - radiating curved lines", "NFC symbol - N with radio waves", "USB symbol - trident with shapes"],
+    "difficulty": "MEDIUM",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q111",
+    "stem": "Flag of Bhutan",
+    "correct": "Bhutan flag - diagonally divided yellow and orange with white dragon holding jewels",
+    "distractors": ["Flag of Sri Lanka - lion holding sword on maroon and orange with green and yellow stripes", "Flag of Wales - green and white with red dragon", "Flag of Malta - white and red with George Cross"],
+    "difficulty": "HARD",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q112",
+    "stem": "Flag of Nepal",
+    "correct": "Nepal flag - unique double pennant shape in crimson with blue border, sun and moon symbols",
+    "distractors": ["Flag of Ohio - burgee pennant shape with stars and stripes circle", "Flag of Maldives - red rectangle with green inner rectangle and white crescent", "Flag of Bangladesh - red circle on green rectangle"],
+    "difficulty": "HARD",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q113",
+    "stem": "Flag of Mozambique",
+    "correct": "Mozambique flag - green white black yellow stripes with red triangle containing star, book, and AK-47",
+    "distractors": ["Flag of Zimbabwe - green yellow red black stripes with white triangle and bird", "Flag of Kenya - black red green stripes with Maasai shield and spears", "Flag of South Sudan - black red green stripes with blue triangle and star"],
+    "difficulty": "HARD",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q114",
+    "stem": "Flag of Kiribati",
+    "correct": "Kiribati flag - red upper half with gold frigatebird over rising sun, blue and white wavy lower half",
+    "distractors": ["Flag of Tuvalu - light blue with Union Jack and nine yellow stars", "Flag of Nauru - dark blue with yellow stripe and white twelve-pointed star", "Flag of Marshall Islands - blue with orange and white diagonal stripes and star"],
+    "difficulty": "HARD",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q115",
+    "stem": "Flag of Brunei",
+    "correct": "Brunei flag - yellow field with black and white diagonal stripes and red national emblem with crescent",
+    "distractors": ["Flag of Malaysia - red and white stripes with blue canton containing crescent and star", "Flag of Singapore - red and white horizontal halves with crescent and stars", "Flag of Mauritius - four horizontal stripes red blue yellow green"],
+    "difficulty": "HARD",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q116",
+    "stem": "Flag of Eswatini",
+    "correct": "Eswatini flag - blue yellow red horizontal stripes with Nguni shield, spears and staff in center",
+    "distractors": ["Flag of Lesotho - blue white green stripes with black Basotho hat", "Flag of Botswana - light blue with black and white horizontal stripe", "Flag of Uganda - black yellow red stripes with grey crowned crane"],
+    "difficulty": "HARD",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q117",
+    "stem": "Flag of Turkmenistan",
+    "correct": "Turkmenistan flag - green with red stripe containing carpet patterns and crescent with five stars",
+    "distractors": ["Flag of Uzbekistan - blue white green stripes with crescent and twelve stars", "Flag of Kazakhstan - light blue with golden sun and eagle, ornamental stripe", "Flag of Azerbaijan - blue red green stripes with white crescent and star"],
+    "difficulty": "HARD",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q118",
+    "stem": "Flag of Papua New Guinea",
+    "correct": "Papua New Guinea flag - diagonally divided red and black with bird of paradise and Southern Cross",
+    "distractors": ["Flag of Timor-Leste - red with black and yellow triangles and white star", "Flag of Solomon Islands - blue and green diagonal with yellow stripe and white stars", "Flag of Vanuatu - red and green with black triangle containing yellow and red emblem"],
+    "difficulty": "HARD",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q119",
+    "stem": "Flag of Seychelles",
+    "correct": "Seychelles flag - five radiating colored bands: blue yellow red white green from corner",
+    "distractors": ["Flag of South Africa - Y-shaped green band with red blue black white yellow", "Flag of Central African Republic - four horizontal stripes with vertical red stripe and star", "Flag of Comoros - four horizontal stripes with green triangle and crescent"],
+    "difficulty": "HARD",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q120",
+    "stem": "Flag of Mauritania",
+    "correct": "Mauritania flag - green field with gold crescent and star, red stripes at top and bottom added 2017",
+    "distractors": ["Flag of Algeria - green and white vertical halves with red crescent and star", "Flag of Libya - red black green horizontal stripes with crescent and star", "Flag of Western Sahara - black white green stripes with red triangle and crescent star"],
+    "difficulty": "HARD",
+    "category": "FLAGS"
+  },
+  {
+    "id": "q121",
+    "stem": "Potala Palace",
+    "correct": "Potala Palace - massive white and red tiered fortress-palace on mountain in Lhasa Tibet",
+    "distractors": ["Punakha Dzong - white fortress monastery at river confluence in Bhutan", "Namgyal Tsemo Monastery - red monastery on hilltop in Ladakh", "Tashilhunpo Monastery - gold-roofed monastery complex in Tibet"],
+    "difficulty": "HARD",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q122",
+    "stem": "Meteora Monasteries",
+    "correct": "Meteora Monasteries - Greek Orthodox monasteries perched atop tall sandstone rock pillars",
+    "distractors": ["Mont Saint-Michel - abbey on tidal island in France", "Taktsang Monastery - Buddhist temple on cliff in Bhutan", "Hanging Temple of Hengshan - temple on cliff supports in China"],
+    "difficulty": "HARD",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q123",
+    "stem": "Cappadocia Fairy Chimneys",
+    "correct": "Cappadocia - unique cone-shaped rock formations with cave dwellings and hot air balloons Turkey",
+    "distractors": ["Bryce Canyon hoodoos - red spire rock formations in Utah", "Zhangjiajie pillars - tall sandstone columns in China", "Monument Valley - red buttes and mesas in Arizona"],
+    "difficulty": "HARD",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q124",
+    "stem": "Alhambra Palace",
+    "correct": "Alhambra - Moorish palace complex with intricate Islamic geometric patterns and arched courtyards Granada Spain",
+    "distractors": ["Alcazar of Seville - royal palace with Mudejar architecture in Spain", "Topkapi Palace - Ottoman palace complex in Istanbul", "Mezquita Cordoba - mosque-cathedral with red and white arches in Spain"],
+    "difficulty": "HARD",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q125",
+    "stem": "Antelope Canyon",
+    "correct": "Antelope Canyon - narrow slot canyon with smooth curved orange and purple sandstone walls Arizona",
+    "distractors": ["Wave Arizona - undulating striped sandstone rock formation", "Valley of Fire - red sandstone formations in Nevada", "Red Rock Canyon - red and cream colored cliff formations"],
+    "difficulty": "HARD",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q126",
+    "stem": "Salar de Uyuni",
+    "correct": "Salar de Uyuni - vast white salt flat with mirror reflection of sky in Bolivia",
+    "distractors": ["Bonneville Salt Flats - white salt desert in Utah", "Etosha Pan - dry salt pan in Namibia", "Rann of Kutch - seasonal salt marsh in India"],
+    "difficulty": "HARD",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q127",
+    "stem": "Sigiriya Rock Fortress",
+    "correct": "Sigiriya - ancient palace ruins atop massive rock column surrounded by gardens Sri Lanka",
+    "distractors": ["Uluru - massive red sandstone monolith in Australian outback", "Devils Tower - striated igneous rock formation in Wyoming", "Pedra da Gavea - coastal rock mountain in Rio de Janeiro"],
+    "difficulty": "HARD",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q128",
+    "stem": "Hallstatt Village",
+    "correct": "Hallstatt - picturesque Alpine village with pastel houses on lake shore under mountains Austria",
+    "distractors": ["Cinque Terre - colorful coastal villages on Italian cliffs", "Colmar - half-timbered colorful houses in Alsace France", "Bled - lake with island church under castle in Slovenia"],
+    "difficulty": "HARD",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q129",
+    "stem": "Bagan Temple Plain",
+    "correct": "Bagan - thousands of ancient Buddhist temples and pagodas scattered across plain Myanmar",
+    "distractors": ["Ayutthaya - scattered Thai temple ruins among modern city", "Sukhothai - Buddha statues and stupas in historical park Thailand", "Mrauk U - Buddhist temples in misty hills Myanmar"],
+    "difficulty": "HARD",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q130",
+    "stem": "Door to Hell Turkmenistan",
+    "correct": "Door to Hell - burning natural gas crater glowing orange in Karakum Desert Turkmenistan",
+    "distractors": ["Grand Prismatic Spring - colorful hot spring in Yellowstone", "Fly Geyser - multi-colored mineral formation in Nevada", "Morning Glory Pool - deep blue hot spring in Yellowstone"],
+    "difficulty": "HARD",
+    "category": "LANDMARKS"
+  },
+  {
+    "id": "q131",
+    "stem": "Aye-Aye",
+    "correct": "Aye-aye - bizarre black lemur with large ears, bulging eyes, and long thin middle finger Madagascar",
+    "distractors": ["Tarsier - tiny primate with enormous round eyes in Philippines", "Slow loris - round-faced primate with large eyes", "Bush baby - small primate with big ears and eyes in Africa"],
+    "difficulty": "HARD",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q132",
+    "stem": "Blue-Ringed Octopus",
+    "correct": "Blue-ringed octopus - small yellow-brown octopus with iridescent blue rings, extremely venomous",
+    "distractors": ["Mimic octopus - brown octopus that changes shape", "Dumbo octopus - deep sea octopus with ear-like fins", "Giant Pacific octopus - large reddish-brown octopus"],
+    "difficulty": "HARD",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q133",
+    "stem": "Proboscis Monkey",
+    "correct": "Proboscis monkey - reddish-brown monkey with very large bulbous nose Borneo",
+    "distractors": ["Snub-nosed monkey - monkey with tiny upturned nose in China", "Uakari - red-faced bald monkey in Amazon", "Howler monkey - black monkey with beard in Central America"],
+    "difficulty": "HARD",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q134",
+    "stem": "Cassowary",
+    "correct": "Cassowary - large flightless black bird with blue neck, red wattle, and bony head casque",
+    "distractors": ["Emu - large brown flightless bird with shaggy feathers", "Ostrich - tall black and white flightless bird with long neck", "Rhea - gray flightless bird from South America"],
+    "difficulty": "HARD",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q135",
+    "stem": "Fossa",
+    "correct": "Fossa - cat-like carnivorous mammal with long tail, Madagascar's top predator",
+    "distractors": ["Binturong - black furry mammal with prehensile tail", "Genet - spotted cat-like mammal in Africa", "Civet - small spotted mammal in Southeast Asia"],
+    "difficulty": "HARD",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q136",
+    "stem": "Leafy Sea Dragon",
+    "correct": "Leafy sea dragon - ornate seahorse relative with leaf-like appendages camouflaged as seaweed",
+    "distractors": ["Weedy sea dragon - similar but with less elaborate appendages", "Seahorse - curved fish with horse-like head", "Pipefish - long thin fish related to seahorse"],
+    "difficulty": "HARD",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q137",
+    "stem": "Saiga Antelope",
+    "correct": "Saiga antelope - tan antelope with bizarre bulbous overhanging nose in Central Asian steppes",
+    "distractors": ["Tibetan antelope - slender antelope with straight horns", "Blackbuck - Indian antelope with spiral horns", "Dik-dik - tiny antelope with pointed snout"],
+    "difficulty": "HARD",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q138",
+    "stem": "Gharial",
+    "correct": "Gharial - critically endangered crocodilian with extremely long thin snout full of teeth India",
+    "distractors": ["False gharial - crocodile with moderately narrow snout", "American alligator - broad-snouted reptile", "Saltwater crocodile - large crocodile with V-shaped snout"],
+    "difficulty": "HARD",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q139",
+    "stem": "Kakapo",
+    "correct": "Kakapo - large flightless nocturnal green parrot with owl-like face New Zealand",
+    "distractors": ["Kea - olive-green mountain parrot from New Zealand", "Night parrot - small nocturnal Australian parrot", "Kaka - brown forest parrot from New Zealand"],
+    "difficulty": "HARD",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q140",
+    "stem": "Shoebill Stork",
+    "correct": "Shoebill - tall gray bird with enormous shoe-shaped bill and intense stare African swamps",
+    "distractors": ["Marabou stork - large bald-headed stork in Africa", "Jabiru - tall white stork with black head in Americas", "Saddle-billed stork - colorful beaked stork in Africa"],
+    "difficulty": "HARD",
+    "category": "ANIMALS"
+  },
+  {
+    "id": "q141",
+    "stem": "Triquetra Celtic Symbol",
+    "correct": "Triquetra - three interlocked arcs forming triangular Celtic knot symbol",
+    "distractors": ["Triskelion - three spiraling legs or curved shapes", "Valknut - three interlocked triangles Norse symbol", "Trinity knot - three-pointed shape with circle"],
+    "difficulty": "HARD",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q142",
+    "stem": "Eye of Horus",
+    "correct": "Eye of Horus - stylized ancient Egyptian eye symbol with distinctive markings below",
+    "distractors": ["Eye of Providence - eye in triangle symbol", "Evil eye - simple blue eye amulet", "Ankh - Egyptian cross with loop"],
+    "difficulty": "HARD",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q143",
+    "stem": "Om Symbol",
+    "correct": "Om - sacred Hindu/Buddhist symbol resembling stylized number 3 with curl and dot above",
+    "distractors": ["Swastika - ancient hooked cross symbol", "Khanda - Sikh symbol with double-edged sword", "Dharma wheel - eight-spoked Buddhist wheel"],
+    "difficulty": "HARD",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q144",
+    "stem": "Fleur-de-lis",
+    "correct": "Fleur-de-lis - stylized three-petaled lily flower symbol associated with French royalty",
+    "distractors": ["Tudor rose - stylized five-petaled English rose", "Scottish thistle - purple spiky flower symbol", "Irish shamrock - three-leafed clover"],
+    "difficulty": "HARD",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q145",
+    "stem": "Ouroboros",
+    "correct": "Ouroboros - ancient symbol of serpent or dragon eating its own tail in circle",
+    "distractors": ["Midgard Serpent - Norse world-encircling snake", "Caduceus - winged staff with two snakes", "Rod of Asclepius - single snake on staff"],
+    "difficulty": "HARD",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q146",
+    "stem": "Hamsa Hand",
+    "correct": "Hamsa - symmetrical hand-shaped amulet with eye in palm, Middle Eastern protective symbol",
+    "distractors": ["Fatima Hand - similar but often with more ornate decorations", "Mudra hand gesture - Buddhist hand position", "Mano Fico - clenched fist with thumb between fingers"],
+    "difficulty": "HARD",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q147",
+    "stem": "Ankh Symbol",
+    "correct": "Ankh - ancient Egyptian cross with loop at top, symbol of eternal life",
+    "distractors": ["Celtic cross - cross with ring behind intersection", "Chi Rho - overlapping X and P symbol", "Venus symbol - circle with cross below"],
+    "difficulty": "HARD",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q148",
+    "stem": "Enso Circle",
+    "correct": "Enso - hand-drawn circle in single brushstroke, Japanese Zen Buddhist symbol",
+    "distractors": ["Yin Yang - black and white teardrop halves in circle", "Dharma wheel - spoked wheel Buddhist symbol", "Tomoe - comma-shaped swirling pattern"],
+    "difficulty": "HARD",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q149",
+    "stem": "Vegvisir",
+    "correct": "Vegvisir - Icelandic magical stave compass symbol with eight arms of different rune-like designs",
+    "distractors": ["Helm of Awe - eight-armed Norse symbol with trident ends", "Valknut - three interlocked triangles", "Web of Wyrd - angular grid Norse symbol"],
+    "difficulty": "HARD",
+    "category": "SYMBOLS"
+  },
+  {
+    "id": "q150",
+    "stem": "Sri Yantra",
+    "correct": "Sri Yantra - complex Hindu geometric pattern with nine interlocking triangles forming star",
+    "distractors": ["Metatrons Cube - geometric pattern with thirteen circles", "Flower of Life - overlapping circles pattern", "Seed of Life - seven overlapping circles"],
+    "difficulty": "HARD",
+    "category": "SYMBOLS"
+  }
+]

@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
+exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -475,6 +475,9 @@ Status: ${errorCount > 0 ? 'COMPLETED WITH ERRORS' : 'SUCCESS'}
 const matchmaking_1 = require("./duel/matchmaking");
 const settlement_1 = require("./duel/settlement");
 const creditManager_1 = require("./duel/creditManager");
+const questionPopulator_1 = require("./duel/questionPopulator");
+// DUEL Arena Agents
+const agents_1 = require("./duel/agents");
 /**
  * Matchmaking Scheduler - Runs every 2 minutes
  * Matches waiting users based on stance type, ping, and entry fee
@@ -604,6 +607,148 @@ exports.finalizeDuelMatch = functions.https.onCall(async (request) => {
     }
     catch (error) {
         console.error('Error finalizing match:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Populate Questions (HTTP Callable - Admin Only)
+ * One-time function to populate 150 questions to Firestore
+ */
+exports.populateDuelQuestions = functions.https.onCall(async (request) => {
+    const { auth } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    try {
+        const result = await (0, questionPopulator_1.populateQuestions)();
+        return result;
+    }
+    catch (error) {
+        console.error('Error populating questions:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+// ==================== DUEL Arena Agent Functions ====================
+/**
+ * Get Question Stats (HTTP Callable)
+ * Returns stats about questions in duel_questions collection
+ */
+exports.getDuelQuestionStats = functions.https.onCall(async (request) => {
+    const { auth } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    try {
+        const result = await (0, agents_1.getQuestionStats)();
+        if (!result.success) {
+            throw new Error(result.error);
+        }
+        return { success: true, stats: result.data, logs: result.logs };
+    }
+    catch (error) {
+        console.error('Error getting question stats:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Get Sequence Stats (HTTP Callable)
+ * Returns stats about sequences in duel_sequences collection
+ */
+exports.getDuelSequenceStats = functions.https.onCall(async (request) => {
+    const { auth } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    try {
+        const result = await (0, agents_1.getSequenceStats)();
+        if (!result.success) {
+            throw new Error(result.error);
+        }
+        return { success: true, stats: result.data, logs: result.logs };
+    }
+    catch (error) {
+        console.error('Error getting sequence stats:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Get Random Sequence for Match (HTTP Callable)
+ * Used by matchmaking to get a sequence for a new match
+ */
+exports.getDuelMatchSequence = functions.https.onCall(async (request) => {
+    const { auth, data } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const duration = data?.duration || 30;
+    if (duration !== 30 && duration !== 45) {
+        throw new functions.https.HttpsError('invalid-argument', 'Duration must be 30 or 45');
+    }
+    try {
+        const result = await (0, agents_1.getRandomSequence)(duration);
+        if (!result.success) {
+            throw new Error(result.error);
+        }
+        return { success: true, sequence: result.data };
+    }
+    catch (error) {
+        console.error('Error getting match sequence:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Generate All Sequences (HTTP Callable - Admin Only)
+ * Generates and stores 12 pre-defined sequences to Firestore
+ */
+exports.generateDuelSequences = functions.https.onCall(async (request) => {
+    const { auth } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    try {
+        // Generate sequences
+        const genResult = await (0, agents_1.generateAllSequences)();
+        if (!genResult.success || !genResult.data) {
+            throw new Error(genResult.error || 'Failed to generate sequences');
+        }
+        // Store to Firestore
+        const storeResult = await (0, agents_1.storeSequencesToFirestore)(genResult.data);
+        if (!storeResult.success) {
+            throw new Error(storeResult.error || 'Failed to store sequences');
+        }
+        return {
+            success: true,
+            count: storeResult.data,
+            logs: [...genResult.logs, ...storeResult.logs]
+        };
+    }
+    catch (error) {
+        console.error('Error generating sequences:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Validate Questions (HTTP Callable)
+ * Validates raw questions from complete-questions.json format
+ */
+exports.validateDuelQuestions = functions.https.onCall(async (request) => {
+    const { auth, data } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    if (!data?.questions || !Array.isArray(data.questions)) {
+        throw new functions.https.HttpsError('invalid-argument', 'questions array required');
+    }
+    try {
+        const result = await (0, agents_1.batchValidateRawQuestions)(data.questions);
+        return {
+            success: result.success,
+            validation: result.data,
+            logs: result.logs
+        };
+    }
+    catch (error) {
+        console.error('Error validating questions:', error);
         throw new functions.https.HttpsError('internal', error.message);
     }
 });

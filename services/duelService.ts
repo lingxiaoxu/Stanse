@@ -7,10 +7,14 @@
  * - Match initialization
  * - Result calculation
  * - Credit settlement
+ *
+ * 重要: 使用 duel_questions (150个问题) 和 duel_sequences (12个序列) 集合
+ * 不再使用旧的 mock 数据
  */
 
 import { DuelConfig, DuelMatch, DuelPlayer, UserCredits } from '../types';
-import { questionSequencingAgent } from './agents/questionAgents';
+import { getMatchSequence } from './duelAgentService';
+import { getQuestionSequence } from './duelFirebaseService';
 
 export const SAFETY_BELT_COST = 5; // $5 safety belt fee
 export const SAFETY_BELT_THRESHOLD = 18; // Minimum entry fee to enable safety belt
@@ -100,7 +104,7 @@ export const findOpponent = async (
       const opponentPing = Math.max(15, Math.min(100, userPing + (Math.random() * 40 - 20)));
 
       resolve({
-        id: 'opponent_bot_' + Math.random().toString(36).substr(2, 8),
+        id: 'opponent_bot_' + Math.random().toString(36).slice(2, 10),
         personaLabel: randomOpponent.label,
         stanceType: randomOpponent.stanceType,
         ping: Math.round(opponentPing),
@@ -123,25 +127,34 @@ export const validatePingDifference = (pingA: number, pingB: number): boolean =>
 
 /**
  * Initialize a new duel match
- * Generates question sequence using Agent 3
+ * 从 Firestore duel_sequences 集合获取预生成的问题序列
+ * 使用 duel_questions 集合中的 150 个问题
  */
 export const initMatch = async (
   playerA: DuelPlayer,
   playerB: DuelPlayer,
   config: DuelConfig
 ): Promise<DuelMatch> => {
-  // Generate question sequence using Question Sequencing Agent
-  const questionSequence = await questionSequencingAgent.generateSequence(
-    config.duration,
-    config.difficultyStrategy
-  );
+  // 从 Firestore 获取随机序列 (使用 Cloud Function)
+  const sequenceResult = await getMatchSequence(config.duration);
+
+  if (!sequenceResult.success || !sequenceResult.data) {
+    throw new Error(sequenceResult.error || 'Failed to get question sequence');
+  }
+
+  // 获取序列中的所有问题详情
+  const questions = await getQuestionSequence(sequenceResult.data.sequenceId);
+
+  if (questions.length === 0) {
+    throw new Error('No questions found in sequence');
+  }
 
   const match: DuelMatch = {
-    id: 'match_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+    id: 'match_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
     playerA,
     playerB,
     config,
-    questions: questionSequence,
+    questions,
     currentQuestionIndex: 0,
     winner: null,
     earnings: 0,

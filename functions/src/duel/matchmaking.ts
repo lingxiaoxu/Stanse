@@ -278,6 +278,9 @@ async function createMatch(userA: QueueEntry, userB: QueueEntry, isAIOpponent: b
     gameType: 'picture_trivia_v1',
     durationSec: userA.duration,
 
+    // For client-side queries (array-contains)
+    participantIds: [userA.userId, userB.userId],
+
     players: {
       A: {
         userId: userA.userId,

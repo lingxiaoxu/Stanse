@@ -56,7 +56,7 @@ export const UnionView: React.FC = () => {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [userCredits, setUserCredits] = useState(100); // Default initial credits
   const { t } = useLanguage();
-  const { user, demoMode } = useAuth();
+  const { user, demoMode, userProfile } = useAuth();
 
   // Generate user DID
   const userDID = user?.email ? PolisAPI.generateUserDID(user.email) : '';
@@ -326,7 +326,7 @@ export const UnionView: React.FC = () => {
       </PixelCard>
 
       {/* DUEL ARENA Entry Card - Using same style as Active Allies */}
-      <PixelCard className="relative bg-white">
+      <PixelCard className="relative bg-white" data-tour-id="duel-arena">
         <div className="absolute top-3 right-3 flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-full">
           <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
           <span className="font-mono text-[10px] font-bold text-red-500 tracking-wider">PVP ARENA</span>
@@ -548,8 +548,8 @@ export const UnionView: React.FC = () => {
           isOpen={showDuelModal}
           onClose={() => setShowDuelModal(false)}
           userCredits={userCredits}
-          userPersonaLabel={user.displayName || 'Unknown'}
-          userStanceType={'moderate-centrist'} // TODO: Get from user profile
+          userPersonaLabel={userProfile?.coordinates?.label || user.displayName || 'Unknown'}
+          userStanceType={userProfile?.coordinates?.coreStanceType || 'moderate-centrist'}
           onCreditsChange={(newBalance: number) => setUserCredits(newBalance)}
         />
       )}
