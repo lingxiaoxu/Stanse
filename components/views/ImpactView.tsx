@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import * as PolisAPI from '../../services/polisApi';
 import { LogActionModal } from '../modals/LogActionModal';
 import { DuelModal } from '../modals/DuelModal';
+import { WalletModal } from '../modals/WalletModal';
 import { recordUserAction } from '../../services/userActionService';
 
 // Helper function to get the API base URL
@@ -52,6 +53,7 @@ export const UnionView: React.FC = () => {
   const [showAllCampaigns, setShowAllCampaigns] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [showDuelModal, setShowDuelModal] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
   const [userCredits, setUserCredits] = useState(100); // Default initial credits
   const { t } = useLanguage();
   const { user, demoMode } = useAuth();
@@ -323,88 +325,84 @@ export const UnionView: React.FC = () => {
         </div>
       </PixelCard>
 
-      {/* DUEL ARENA Entry Card - Exactly matching wireframe design */}
-      <PixelCard className="p-0 border-4 border-black bg-white">
-        {/* Top Bar: PVP ARENA + BALANCE */}
-        <div className="px-4 py-2 bg-white border-b-2 border-black flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-500"></div>
-            <span className="font-mono text-xs font-bold tracking-widest uppercase">PVP ARENA</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-bold uppercase">BALANCE:</span>
-            <div className="bg-green-500 text-white px-2 py-0.5 font-mono text-sm font-bold">${userCredits}</div>
-          </div>
+      {/* DUEL ARENA Entry Card - Using same style as Active Allies */}
+      <PixelCard className="relative bg-white">
+        <div className="absolute top-3 right-3 flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-full">
+          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+          <span className="font-mono text-[10px] font-bold text-red-500 tracking-wider">PVP ARENA</span>
         </div>
 
-        {/* Main Content Area */}
-        <div className="p-6 flex items-center justify-between gap-6">
-          {/* Left: Title */}
-          <div className="flex-1">
-            <h2 className="font-pixel text-5xl leading-none mb-2">DUEL</h2>
-            <h2 className="font-pixel text-5xl leading-none">MODE</h2>
-          </div>
-
-          {/* Right: Icon */}
-          <div className="w-20 h-20 border-2 border-black flex items-center justify-center bg-white">
-            <Swords size={48} strokeWidth={2} className="text-black" />
-          </div>
+        <div className="absolute top-3 left-3 flex items-center gap-2">
+          <span className="font-mono text-[10px] font-bold text-gray-500 uppercase">BALANCE:</span>
+          <div className="bg-green-500 text-white px-2 py-0.5 font-mono text-xs font-bold">${userCredits}</div>
         </div>
 
-        {/* Preview Button */}
-        <div className="px-6 pb-4">
-          <button className="bg-gray-600 text-white px-4 py-1.5 font-mono text-xs font-bold uppercase">
-            Preview
-          </button>
-        </div>
+        {/* Main Content */}
+        <div className="pt-12 pb-6 px-6">
+          <div className="flex items-center justify-between gap-6">
+            {/* Left: Title */}
+            <div className="flex-1">
+              <h2 className="font-pixel text-5xl leading-none mb-2">DUEL</h2>
+              <h2 className="font-pixel text-5xl leading-none mb-4">MODE</h2>
 
-        {/* Description */}
-        <div className="px-6 pb-4">
-          <p className="font-mono text-sm text-gray-700 leading-relaxed">
-            Skill-based picture trivia. Challenge opposing personas. Win rewards.
-          </p>
-        </div>
+              {/* Preview Button */}
+              <button className="bg-gray-600 text-white px-4 py-1.5 font-mono text-xs font-bold uppercase mb-4">
+                Preview
+              </button>
 
-        {/* Feature Tags - 3 boxes */}
-        <div className="px-6 pb-6 grid grid-cols-3 gap-3">
-          <div className="border-2 border-black p-3 text-center bg-white">
-            <Zap size={20} className="mx-auto mb-1" strokeWidth={2} />
-            <div className="font-mono text-xs font-bold uppercase">FAST</div>
-          </div>
-          <div className="border-2 border-black p-3 text-center bg-white">
-            <Target size={20} className="mx-auto mb-1" strokeWidth={2} />
-            <div className="font-mono text-xs font-bold uppercase">GLOBAL</div>
-          </div>
-          <div className="border-2 border-black p-3 text-center bg-white">
-            <Shield size={20} className="mx-auto mb-1" strokeWidth={2} />
-            <div className="font-mono text-xs font-bold uppercase">SAFE</div>
-          </div>
-        </div>
+              {/* Description */}
+              <p className="font-mono text-sm text-gray-700 leading-relaxed mb-4">
+                Skill-based picture trivia. Challenge opposing personas. Win rewards.
+              </p>
+            </div>
 
-        {/* ENTER ARENA Button */}
-        <div className="border-t-2 border-black">
+            {/* Right: Icon */}
+            <div className="w-20 h-20 border-2 border-black flex items-center justify-center bg-white shrink-0">
+              <Swords size={48} strokeWidth={2} className="text-black" />
+            </div>
+          </div>
+
+          {/* Feature Tags - 3 boxes */}
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="border-2 border-black p-3 text-center bg-white">
+              <Zap size={20} className="mx-auto mb-1" strokeWidth={2} />
+              <div className="font-mono text-xs font-bold uppercase">FAST</div>
+            </div>
+            <div className="border-2 border-black p-3 text-center bg-white">
+              <Target size={20} className="mx-auto mb-1" strokeWidth={2} />
+              <div className="font-mono text-xs font-bold uppercase">GLOBAL</div>
+            </div>
+            <div className="border-2 border-black p-3 text-center bg-white">
+              <Shield size={20} className="mx-auto mb-1" strokeWidth={2} />
+              <div className="font-mono text-xs font-bold uppercase">SAFE</div>
+            </div>
+          </div>
+
+          {/* ENTER ARENA Button */}
           <button
             onClick={() => setShowDuelModal(true)}
-            className="w-full bg-black text-white hover:bg-gray-800 transition-colors py-4 font-mono text-lg font-bold uppercase tracking-widest"
+            className="w-full bg-black text-white hover:bg-gray-800 transition-colors py-4 font-mono text-lg font-bold uppercase tracking-widest border-2 border-black shadow-pixel mb-3"
           >
             ENTER ARENA
           </button>
-        </div>
 
-        {/* Deposit and Withdraw Buttons */}
-        <div className="border-t-2 border-black flex">
-          <button
-            className="flex-1 border-r border-black bg-white hover:bg-gray-100 transition-colors py-3 flex items-center justify-center gap-2 font-mono text-sm font-bold uppercase"
-          >
-            <ArrowUpRight size={14} className="rotate-180" />
-            Deposit
-          </button>
-          <button
-            className="flex-1 bg-white hover:bg-gray-100 transition-colors py-3 flex items-center justify-center gap-2 font-mono text-sm font-bold uppercase"
-          >
-            <ArrowUpRight size={14} />
-            Withdraw
-          </button>
+          {/* Deposit and Withdraw Buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setShowWalletModal(true)}
+              className="border-2 border-black bg-white hover:bg-gray-100 transition-colors py-3 flex items-center justify-center gap-2 font-mono text-sm font-bold uppercase"
+            >
+              <ArrowUpRight size={14} className="rotate-180" />
+              Deposit
+            </button>
+            <button
+              onClick={() => setShowWalletModal(true)}
+              className="border-2 border-black bg-white hover:bg-gray-100 transition-colors py-3 flex items-center justify-center gap-2 font-mono text-sm font-bold uppercase"
+            >
+              <ArrowUpRight size={14} />
+              Withdraw
+            </button>
+          </div>
         </div>
       </PixelCard>
 
@@ -553,6 +551,23 @@ export const UnionView: React.FC = () => {
           userPersonaLabel={user.displayName || 'Unknown'}
           userStanceType={'moderate-centrist'} // TODO: Get from user profile
           onCreditsChange={(newBalance: number) => setUserCredits(newBalance)}
+        />
+      )}
+
+      {/* WALLET Modal */}
+      {showWalletModal && (
+        <WalletModal
+          isOpen={showWalletModal}
+          onClose={() => setShowWalletModal(false)}
+          currentBalance={userCredits}
+          onDeposit={(amount: number) => {
+            setUserCredits((prev: number) => prev + amount);
+            console.log(`Deposited $${amount}`);
+          }}
+          onWithdraw={(amount: number) => {
+            setUserCredits((prev: number) => prev - amount);
+            console.log(`Withdrew $${amount}`);
+          }}
         />
       )}
     </div>

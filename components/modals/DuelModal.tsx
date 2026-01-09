@@ -402,13 +402,13 @@ export const DuelModal: React.FC<DuelModalProps> = ({
             </div>
           )}
 
-          {/* PRE_MATCH_CHECK */}
+          {/* PRE_MATCH_CHECK - Enhanced with opponent details */}
           {gameState === DuelState.PRE_MATCH_CHECK && match && (
             <div className="flex flex-col h-full bg-black text-white">
               <div className="bg-green-500 text-black border-b-2 border-white text-center py-2 font-pixel text-xl uppercase tracking-widest animate-pulse">
                 {t('duel', 'match_found')}
               </div>
-              <div className="flex-1 p-6 space-y-8 flex flex-col justify-center items-center">
+              <div className="flex-1 p-6 space-y-6 flex flex-col justify-center items-center">
                 {/* YOU */}
                 <div className="w-full">
                   <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 text-center">
@@ -416,24 +416,35 @@ export const DuelModal: React.FC<DuelModalProps> = ({
                   </div>
                   <div className="bg-white text-black border-4 border-white p-4">
                     <div className="font-bold text-xl text-center uppercase">{match.playerA.personaLabel}</div>
-                    <div className="text-[10px] text-center mt-1 uppercase text-gray-500">{match.playerA.ping}ms</div>
+                    <div className="text-[10px] text-center mt-1 uppercase text-gray-500">
+                      {match.playerA.stanceType} • {match.playerA.ping}ms
+                    </div>
                   </div>
                 </div>
 
                 <div className="font-pixel text-6xl text-red-600">VS</div>
 
-                {/* OPPONENT */}
+                {/* OPPONENT - Enhanced details */}
                 <div className="w-full">
                   <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1 text-center">
                     {t('duel', 'opponent')}
                   </div>
-                  <div className="bg-gray-800 text-white border-4 border-gray-600 p-4">
+                  <div className="bg-gray-800 text-white border-4 border-gray-600 p-4 space-y-2">
                     <div className="font-bold text-xl text-center uppercase">{match.playerB.personaLabel}</div>
-                    <div className="text-[10px] text-center mt-1 uppercase text-green-400">{match.playerB.ping}ms</div>
+                    <div className="text-[10px] text-center uppercase text-gray-400">
+                      {match.playerB.stanceType}
+                    </div>
+                    <div className="text-[10px] text-center uppercase text-green-400">
+                      Ping: {match.playerB.ping}ms
+                    </div>
                   </div>
                 </div>
 
-                <p className="text-xs font-mono text-gray-500 animate-pulse mt-4">{t('duel', 'syncing')}</p>
+                {/* Countdown and sync message */}
+                <div className="text-center space-y-2">
+                  <div className="font-pixel text-4xl text-yellow-400">3</div>
+                  <p className="text-xs font-mono text-gray-500 animate-pulse">{t('duel', 'syncing')}</p>
+                </div>
               </div>
             </div>
           )}
@@ -541,32 +552,35 @@ export const DuelModal: React.FC<DuelModalProps> = ({
           )}
         </div>
 
-        {/* CASH ANIMATION OVERLAY */}
-        {gameState === DuelState.CASH_ANIMATION && match && (
-          <div className="absolute inset-0 z-[100] bg-black flex items-center justify-center overflow-hidden">
-            {match.winner === 'A' ? (
-              <div className="text-center animate-bounce">
-                <div className="font-pixel text-9xl text-green-500 drop-shadow-[4px_4px_0_rgba(255,255,255,0.2)]">
-                  +${Math.abs(match.earnings)}
-                </div>
-                <div className="text-white font-mono uppercase tracking-[1em] text-xs mt-4">{t('duel', 'victory_reward')}</div>
-              </div>
-            ) : match.winner === 'B' ? (
-              <div className="text-center">
-                <div className="font-pixel text-9xl text-red-600 drop-shadow-[4px_4px_0_rgba(255,255,255,0.2)] animate-[ping_1s_ease-in-out_infinite]">
-                  -${Math.abs(match.earnings)}
-                </div>
-                <div className="text-white font-mono uppercase tracking-[1em] text-xs mt-8">{t('duel', 'funds_deducted')}</div>
-              </div>
-            ) : (
-              <div className="text-center">
-                <div className="font-pixel text-9xl text-gray-500 drop-shadow-[4px_4px_0_rgba(255,255,255,0.2)]">$0</div>
-                <div className="text-white font-mono uppercase tracking-[1em] text-xs mt-4">{t('duel', 'draw_refunded')}</div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
+
+      {/* CASH ANIMATION - FULL SCREEN OVERLAY (outside modal) */}
+      {gameState === DuelState.CASH_ANIMATION && match && (
+        <div className="fixed inset-0 z-[200] bg-black flex items-center justify-center">
+          {match.winner === 'A' ? (
+            <div className="text-center w-full px-4 animate-bounce">
+              <div className="font-pixel text-[12rem] leading-none text-green-500 drop-shadow-[8px_8px_0_rgba(0,0,0,0.5)]">
+                +${Math.abs(match.earnings)}
+              </div>
+              <div className="text-white font-mono uppercase tracking-[0.5em] text-2xl mt-12">{t('duel', 'victory_reward')}</div>
+            </div>
+          ) : match.winner === 'B' ? (
+            <div className="text-center w-full px-4">
+              <div className="font-pixel text-[12rem] leading-none text-red-600 drop-shadow-[8px_8px_0_rgba(0,0,0,0.5)] animate-[ping_1s_ease-in-out_infinite]">
+                -${Math.abs(match.earnings)}
+              </div>
+              <div className="text-white font-mono uppercase tracking-[0.5em] text-2xl mt-16">{t('duel', 'funds_deducted')}</div>
+            </div>
+          ) : (
+            <div className="text-center w-full px-4">
+              <div className="font-pixel text-[12rem] leading-none text-gray-500 drop-shadow-[8px_8px_0_rgba(0,0,0,0.5)]">
+                $0
+              </div>
+              <div className="text-white font-mono uppercase tracking-[0.5em] text-2xl mt-12">{t('duel', 'draw_refunded')}</div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
