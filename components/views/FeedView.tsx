@@ -601,8 +601,8 @@ export const FeedView: React.FC = () => {
     <div className="max-w-md mx-auto w-full pb-20">
 
       {/* VALUES MARKET ALIGNMENT - Combined Sections */}
-      <div className="mb-12 relative" data-tour-id="market-signal">
-         <div className="text-center mb-3">
+      <div className="mb-12 relative">
+         <div className="text-center mb-3" data-tour-id="market-signal">
            <div className="flex items-center justify-center gap-4">
              <h2 className="font-pixel text-5xl">{t('feed', 'market_title')}</h2>
              {hasCompletedOnboarding && (
@@ -689,6 +689,102 @@ export const FeedView: React.FC = () => {
                    </div>
                  )}
                </div>
+
+               {/* VALUES POSITIONING - Three axes visualization (moved up) */}
+               <div className="border-t border-gray-200 px-4 py-3 bg-white">
+                 <div className="space-y-2">
+                   {/* Economic Axis */}
+                   <div>
+                     <div className="flex justify-between items-center mb-1">
+                       <span className="font-mono text-[9px] text-gray-500 uppercase">{t('feed', 'economic_axis')}</span>
+                       <span className="font-mono text-[9px] font-bold text-black">
+                         {userProfile?.coordinates?.economic !== undefined
+                           ? `${userProfile.coordinates.economic > 0 ? t('feed', 'right') : t('feed', 'left')} ${Math.abs(userProfile.coordinates.economic)}`
+                           : ''}
+                       </span>
+                     </div>
+                     <div className="h-2 flex">
+                       <div
+                         className="bg-black h-full"
+                         style={{
+                           width: `${((userProfile?.coordinates?.economic ?? 0) + 100) / 2}%`
+                         }}
+                       />
+                       <div
+                         className="bg-gray-300 h-full"
+                         style={{
+                           width: `${100 - ((userProfile?.coordinates?.economic ?? 0) + 100) / 2}%`
+                         }}
+                       />
+                     </div>
+                     <div className="flex justify-between mt-0.5">
+                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'left')}</span>
+                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'right')} →</span>
+                     </div>
+                   </div>
+
+                   {/* Social Axis */}
+                   <div>
+                     <div className="flex justify-between items-center mb-1">
+                       <span className="font-mono text-[9px] text-gray-500 uppercase">{t('feed', 'social_axis')}</span>
+                       <span className="font-mono text-[9px] font-bold text-black">
+                         {userProfile?.coordinates?.social !== undefined
+                           ? `${userProfile.coordinates.social > 0 ? t('feed', 'progressive') : t('feed', 'conservative')} ${Math.abs(userProfile.coordinates.social)}`
+                           : ''}
+                       </span>
+                     </div>
+                     <div className="h-2 flex">
+                       <div
+                         className="bg-black h-full"
+                         style={{
+                           width: `${(-(userProfile?.coordinates?.social ?? 0) + 100) / 2}%`
+                         }}
+                       />
+                       <div
+                         className="bg-gray-300 h-full"
+                         style={{
+                           width: `${100 - (-(userProfile?.coordinates?.social ?? 0) + 100) / 2}%`
+                         }}
+                       />
+                     </div>
+                     <div className="flex justify-between mt-0.5">
+                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'progressive')}</span>
+                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'conservative')} →</span>
+                     </div>
+                   </div>
+
+                   {/* Diplomatic Axis */}
+                   <div>
+                     <div className="flex justify-between items-center mb-1">
+                       <span className="font-mono text-[9px] text-gray-500 uppercase">{t('feed', 'diplomatic_axis')}</span>
+                       <span className="font-mono text-[9px] font-bold text-black">
+                         {userProfile?.coordinates?.diplomatic !== undefined
+                           ? `${userProfile.coordinates.diplomatic > 0 ? t('feed', 'global') : t('feed', 'national')} ${Math.abs(userProfile.coordinates.diplomatic)}`
+                           : ''}
+                       </span>
+                     </div>
+                     <div className="h-2 flex">
+                       <div
+                         className="bg-black h-full"
+                         style={{
+                           width: `${(-(userProfile?.coordinates?.diplomatic ?? 0) + 100) / 2}%`
+                         }}
+                       />
+                       <div
+                         className="bg-gray-300 h-full"
+                         style={{
+                           width: `${100 - (-(userProfile?.coordinates?.diplomatic ?? 0) + 100) / 2}%`
+                         }}
+                       />
+                     </div>
+                     <div className="flex justify-between mt-0.5">
+                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'global')}</span>
+                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'national')} →</span>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
                {/* Performance bar */}
                <div className="bg-black text-white px-3 py-2 border-t border-gray-700 relative" ref={activeTooltip === 'performance' ? tooltipRef : null}>
                  <div className="flex items-center gap-2 mb-1">
@@ -814,102 +910,6 @@ export const FeedView: React.FC = () => {
                       ))}
                     </div>
                   </div>
-               </div>
-
-               {/* VALUES POSITIONING - Three axes visualization */}
-               <div className="border-t-2 border-black px-4 py-3 bg-white">
-                 <div className="space-y-3">
-                   {/* Economic Axis */}
-                   <div>
-                     <div className="flex justify-between items-center mb-1">
-                       <span className="font-mono text-[9px] text-gray-500 uppercase">{t('feed', 'economic_axis')}</span>
-                       <span className="font-mono text-[9px] font-bold">
-                         {userProfile?.coordinates?.economic !== undefined
-                           ? `${userProfile.coordinates.economic > 0 ? t('feed', 'right') : t('feed', 'left')} ${Math.abs(userProfile.coordinates.economic)}`
-                           : ''}
-                       </span>
-                     </div>
-                     {/* Bar with black/gray split indicating position - black portion represents the value */}
-                     <div className="h-2 flex">
-                       <div
-                         className="bg-black h-full"
-                         style={{
-                           width: `${((userProfile?.coordinates?.economic ?? 0) + 100) / 2}%`
-                         }}
-                       />
-                       <div
-                         className="bg-gray-300 h-full"
-                         style={{
-                           width: `${100 - ((userProfile?.coordinates?.economic ?? 0) + 100) / 2}%`
-                         }}
-                       />
-                     </div>
-                     <div className="flex justify-between mt-0.5">
-                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'left')}</span>
-                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'right')} →</span>
-                     </div>
-                   </div>
-
-                   {/* Social Axis */}
-                   <div>
-                     <div className="flex justify-between items-center mb-1">
-                       <span className="font-mono text-[9px] text-gray-500 uppercase">{t('feed', 'social_axis')}</span>
-                       <span className="font-mono text-[9px] font-bold">
-                         {userProfile?.coordinates?.social !== undefined
-                           ? `${userProfile.coordinates.social > 0 ? t('feed', 'progressive') : t('feed', 'conservative')} ${Math.abs(userProfile.coordinates.social)}`
-                           : ''}
-                       </span>
-                     </div>
-                     <div className="h-2 flex">
-                       <div
-                         className="bg-black h-full"
-                         style={{
-                           width: `${(-(userProfile?.coordinates?.social ?? 0) + 100) / 2}%`
-                         }}
-                       />
-                       <div
-                         className="bg-gray-300 h-full"
-                         style={{
-                           width: `${100 - (-(userProfile?.coordinates?.social ?? 0) + 100) / 2}%`
-                         }}
-                       />
-                     </div>
-                     <div className="flex justify-between mt-0.5">
-                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'progressive')}</span>
-                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'conservative')} →</span>
-                     </div>
-                   </div>
-
-                   {/* Diplomatic Axis */}
-                   <div>
-                     <div className="flex justify-between items-center mb-1">
-                       <span className="font-mono text-[9px] text-gray-500 uppercase">{t('feed', 'diplomatic_axis')}</span>
-                       <span className="font-mono text-[9px] font-bold">
-                         {userProfile?.coordinates?.diplomatic !== undefined
-                           ? `${userProfile.coordinates.diplomatic > 0 ? t('feed', 'global') : t('feed', 'national')} ${Math.abs(userProfile.coordinates.diplomatic)}`
-                           : ''}
-                       </span>
-                     </div>
-                     <div className="h-2 flex">
-                       <div
-                         className="bg-black h-full"
-                         style={{
-                           width: `${(-(userProfile?.coordinates?.diplomatic ?? 0) + 100) / 2}%`
-                         }}
-                       />
-                       <div
-                         className="bg-gray-300 h-full"
-                         style={{
-                           width: `${100 - (-(userProfile?.coordinates?.diplomatic ?? 0) + 100) / 2}%`
-                         }}
-                       />
-                     </div>
-                     <div className="flex justify-between mt-0.5">
-                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'global')}</span>
-                       <span className="font-mono text-[7px] text-gray-400">{t('feed', 'national')} →</span>
-                     </div>
-                   </div>
-                 </div>
                </div>
 
                {/* REPRESENTATIVE POSITIONS Section Header */}

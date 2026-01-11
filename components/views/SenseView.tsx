@@ -1,10 +1,12 @@
 
-import React, { useState } from 'react';
-import { Search, ShieldAlert, CheckCircle, FileText, ExternalLink, Users, Newspaper, Twitter, Activity, X, ThumbsUp, ThumbsDown, AlertTriangle, DollarSign } from 'lucide-react';
+import React, { useState, useRef, useCallback } from 'react';
+import { Search, ShieldAlert, CheckCircle, FileText, ExternalLink, Users, Newspaper, Twitter, Activity, X, ThumbsUp, ThumbsDown, AlertTriangle, DollarSign, Camera, RotateCcw, Scan } from 'lucide-react';
 import { PixelCard } from '../ui/PixelCard';
 import { PixelButton } from '../ui/PixelButton';
-import { analyzeBrandAlignment, UserDemographicsForAnalysis } from '../../services/geminiService';
+import { analyzeBrandAlignment, UserDemographicsForAnalysis, recognizeBrandedProduct } from '../../services/geminiService';
 import { queryCompanyFECData, FECCompanyData, FECPartyData, formatPartyName, getPartyColor } from '../../services/fecService';
+import { updateUserCamera } from '../../services/userService';
+import { detectDeviceType, detectBrowser } from '../../services/locationService';
 import { PoliticalCoordinates, BrandAlignment, ViewState } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -63,8 +65,158 @@ export const SenseView: React.FC<SenseViewProps> = ({
   const [recalReason, setRecalReason] = useState('');
   const [recalSubmitting, setRecalSubmitting] = useState(false);
 
+  // Camera state
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [analyzingImage, setAnalyzingImage] = useState(false);
+  const [imageSearchBrand, setImageSearchBrand] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Start camera
+  const startCamera = useCallback(async () => {
+    try {
+      setCameraError(null);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      setCameraStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      // Save camera permission granted to Firebase
+      if (user?.uid) {
+        await updateUserCamera(user.uid, {
+          status: 'granted',
+          deviceType: detectDeviceType() as 'mobile' | 'tablet' | 'desktop',
+          browser: detectBrowser(),
+          timestamp: new Date().toISOString()
+        });
+        console.log('📷 Camera permission saved to Firebase');
+      }
+    } catch (err: any) {
+      console.error('Camera error:', err);
+      setCameraError(t('sense', 'camera_permission'));
+
+      // Save camera permission denied to Firebase
+      if (user?.uid) {
+        const status = err.name === 'NotAllowedError' ? 'denied' : 'unsupported';
+        await updateUserCamera(user.uid, {
+          status: status as 'denied' | 'unsupported',
+          deviceType: detectDeviceType() as 'mobile' | 'tablet' | 'desktop',
+          browser: detectBrowser(),
+          timestamp: new Date().toISOString(),
+          errorMessage: err.message || 'Camera permission denied'
+        });
+        console.log('📷 Camera permission denied saved to Firebase');
+      }
+    }
+  }, [t, user?.uid]);
+
+  // Stop camera
+  const stopCamera = useCallback(() => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+  }, [cameraStream]);
+
+  // Capture image from video
+  const captureImage = useCallback(() => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        const imageData = canvas.toDataURL('image/jpeg', 0.8);
+        setCapturedImage(imageData);
+        stopCamera();
+      }
+    }
+  }, [stopCamera]);
+
+  // Retake photo
+  const retakePhoto = useCallback(() => {
+    setCapturedImage(null);
+    startCamera();
+  }, [startCamera]);
+
+  // Analyze captured image
+  const analyzeImage = useCallback(async () => {
+    if (!capturedImage) return;
+
+    setAnalyzingImage(true);
+    try {
+      // Extract base64 data (remove data:image/jpeg;base64, prefix)
+      const base64Data = capturedImage.split(',')[1];
+      const result = await recognizeBrandedProduct(base64Data, 'image/jpeg');
+
+      if (result.success && result.brandName) {
+        // Close camera modal and search for the brand
+        setShowCamera(false);
+        setCapturedImage(null);
+        setImageSearchBrand(result.brandName);
+        setQuery(result.brandName);
+
+        // Trigger search with image-identified brand
+        setLoading(true);
+        setResult(null);
+        setFecData(null);
+        try {
+          const [brandData, fecResult] = await Promise.all([
+            analyzeBrandAlignment(result.brandName, userProfile, userDemographics, user?.uid),
+            queryCompanyFECData(result.brandName)
+          ]);
+          setResult(brandData);
+          setFecData(fecResult);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setLoading(false);
+          setImageSearchBrand(null);
+        }
+      } else {
+        // Show error state - no brand detected
+        setCameraError(result.confidence === 'LOW'
+          ? t('sense', 'camera_low_confidence_desc')
+          : t('sense', 'camera_no_brand_desc'));
+      }
+    } catch (err) {
+      console.error('Image analysis error:', err);
+      setCameraError(t('sense', 'camera_error'));
+    } finally {
+      setAnalyzingImage(false);
+    }
+  }, [capturedImage, userProfile, userDemographics, user?.uid, setQuery, setResult, setFecData, t]);
+
+  // Open camera modal
+  const openCamera = useCallback(() => {
+    setShowCamera(true);
+    setCapturedImage(null);
+    setCameraError(null);
+    startCamera();
+  }, [startCamera]);
+
+  // Close camera modal
+  const closeCamera = useCallback(() => {
+    setShowCamera(false);
+    setCapturedImage(null);
+    setCameraError(null);
+    stopCamera();
+  }, [stopCamera]);
+
   const handleScan = async () => {
-    if (!query.trim()) return;
+    // If search box is empty, open camera
+    if (!query.trim()) {
+      openCamera();
+      return;
+    }
     setLoading(true);
     setResult(null);
     setFecData(null);
@@ -105,20 +257,26 @@ export const SenseView: React.FC<SenseViewProps> = ({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('sense', 'placeholder')}
-              className="flex-1 border-2 border-pixel-black p-3 font-mono text-lg focus:outline-none focus:bg-gray-50 placeholder:text-gray-300 uppercase"
+              className="flex-1 border-2 border-pixel-black p-3 font-mono text-lg focus:outline-none focus:bg-gray-50 placeholder:text-gray-300 uppercase min-w-0"
               onKeyDown={(e) => e.key === 'Enter' && handleScan()}
             />
-            <PixelButton onClick={handleScan} disabled={loading} className="px-6 bg-black text-white">
+            <PixelButton onClick={handleScan} disabled={loading} className="px-6 bg-black text-white shrink-0 flex items-center gap-2">
+              {query.trim() ? <Search size={16} /> : <Camera size={16} />}
               {t('sense', 'run')}
             </PixelButton>
           </div>
+          <p className="font-mono text-[10px] text-gray-500 text-center">
+            {t('sense', 'scan_hint')}
+          </p>
         </div>
       </PixelCard>
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-12 space-y-4 opacity-50">
           <div className="animate-spin w-8 h-8 border-4 border-black border-t-transparent rounded-full"></div>
-          <div className="font-pixel text-2xl animate-pulse">{t('sense', 'loading')}</div>
+          <div className="font-pixel text-2xl animate-pulse">
+            {imageSearchBrand ? `${t('sense', 'loading_image')} ${imageSearchBrand}...` : t('sense', 'loading')}
+          </div>
         </div>
       )}
 
@@ -471,6 +629,134 @@ export const SenseView: React.FC<SenseViewProps> = ({
               >
                 {recalSubmitting ? 'Calibrating...' : 'Submit Feedback'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Camera Modal */}
+      {showCamera && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black">
+          {/* Hidden canvas for image capture */}
+          <canvas ref={canvasRef} className="hidden" />
+
+          {/* Modal Content */}
+          <div className="relative w-full max-w-md h-full max-h-[80vh] flex flex-col">
+            {/* Header */}
+            <div className="bg-black text-white p-4 border-b-2 border-white/20 flex justify-between items-center shrink-0">
+              <div>
+                <div className="font-pixel text-xl uppercase">{t('sense', 'camera_title')}</div>
+                <div className="font-mono text-[10px] text-gray-400 uppercase">{t('sense', 'camera_subtitle')}</div>
+              </div>
+              <button
+                onClick={closeCamera}
+                className="p-2 hover:bg-white/10 transition-colors"
+              >
+                <X size={24} className="text-white" />
+              </button>
+            </div>
+
+            {/* Camera View / Captured Image */}
+            <div className="flex-1 relative bg-gray-900 overflow-hidden">
+              {cameraError ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                  <div className="w-16 h-16 border-4 border-red-500 flex items-center justify-center mb-4">
+                    <X size={32} className="text-red-500" />
+                  </div>
+                  <div className="font-pixel text-lg text-red-500 uppercase mb-2">
+                    {capturedImage ? t('sense', 'camera_no_brand') : t('sense', 'camera_error')}
+                  </div>
+                  <p className="font-mono text-xs text-gray-400 max-w-xs">
+                    {cameraError}
+                  </p>
+                  {capturedImage && (
+                    <button
+                      onClick={retakePhoto}
+                      className="mt-4 px-6 py-2 bg-white text-black font-mono text-xs uppercase border-2 border-white hover:bg-gray-200 transition-colors flex items-center gap-2"
+                    >
+                      <RotateCcw size={14} />
+                      {t('sense', 'camera_retake')}
+                    </button>
+                  )}
+                </div>
+              ) : capturedImage ? (
+                <img
+                  src={capturedImage}
+                  alt="Captured"
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Scan overlay */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute inset-8 border-2 border-white/30 border-dashed">
+                      <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-white" />
+                      <div className="absolute -top-1 -right-1 w-6 h-6 border-t-2 border-r-2 border-white" />
+                      <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-2 border-l-2 border-white" />
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-2 border-r-2 border-white" />
+                    </div>
+                    {/* Scanning line animation */}
+                    <div className="absolute inset-x-8 top-8 h-0.5 bg-gradient-to-r from-transparent via-green-400 to-transparent animate-pulse" />
+                  </div>
+                </>
+              )}
+
+              {/* Analyzing overlay */}
+              {analyzingImage && (
+                <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center">
+                  <div className="animate-spin w-12 h-12 border-4 border-white border-t-transparent mb-4" />
+                  <div className="font-pixel text-lg text-white uppercase animate-pulse">
+                    {t('sense', 'camera_analyzing')}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="bg-black p-4 border-t-2 border-white/20 shrink-0">
+              {!capturedImage && !cameraError ? (
+                <button
+                  onClick={captureImage}
+                  disabled={!cameraStream}
+                  className="w-full py-4 bg-white text-black font-pixel text-lg uppercase transition-all hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 border-2 border-white"
+                >
+                  <Camera size={20} />
+                  {t('sense', 'camera_capture')}
+                </button>
+              ) : capturedImage && !cameraError ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={retakePhoto}
+                    disabled={analyzingImage}
+                    className="py-3 bg-transparent text-white font-mono text-sm uppercase border-2 border-white hover:bg-white/10 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <RotateCcw size={16} />
+                    {t('sense', 'camera_retake')}
+                  </button>
+                  <button
+                    onClick={analyzeImage}
+                    disabled={analyzingImage}
+                    className="py-3 bg-white text-black font-mono text-sm uppercase border-2 border-white hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Scan size={16} />
+                    {t('sense', 'camera_confirm')}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={closeCamera}
+                  className="w-full py-3 bg-transparent text-white font-mono text-sm uppercase border-2 border-white hover:bg-white/10 transition-colors"
+                >
+                  {t('sense', 'camera_close')}
+                </button>
+              )}
             </div>
           </div>
         </div>

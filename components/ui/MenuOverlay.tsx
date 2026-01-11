@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, BookOpen, Shield, Settings, LogOut, ChevronRight, Github, Twitter, Check, User } from 'lucide-react';
+import { X, BookOpen, Shield, Settings, LogOut, ChevronRight, Users, Twitter, Check, User } from 'lucide-react';
 import { ViewState, SocialPlatform } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -121,10 +121,10 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose, onNav
           onClick={() => handleNav(ViewState.ACCOUNT)}
         />
         <MenuItem
-          icon={<Github />}
-          label={t('menu', 'source')}
-          sub={t('menu', 'subs').source}
-          onClick={() => window.open('https://github.com', '_blank')}
+          icon={<Users />}
+          label={t('menu', 'aboutUs')}
+          sub={t('menu', 'subs').aboutUs}
+          onClick={() => handleNav(ViewState.ABOUT_US)}
         />
          
          {/* Interactive Twitter Connect Item */}

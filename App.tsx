@@ -12,8 +12,10 @@ import { ManifestoView } from './components/views/ManifestoView';
 import { PrivacyView } from './components/views/PrivacyView';
 import { SettingsView } from './components/views/SettingsView';
 import { AccountView } from './components/views/AccountView';
+import { AboutUsView } from './components/views/AboutUsView';
 import { MenuOverlay } from './components/ui/MenuOverlay';
 import { AppTour } from './components/ui/AppTour';
+import { SplashVideo } from './components/ui/SplashVideo';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppStateProvider } from './contexts/AppStateContext';
@@ -33,6 +35,7 @@ const StanseApp: React.FC = () => {
   const [view, setView] = useState<ViewState>(ViewState.FEED);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const { t, language } = useLanguage();
   const { user, userProfile: authUserProfile, logout, loading, updateCoordinates, hasCompletedOnboarding } = useAuth();
 
@@ -54,6 +57,11 @@ const StanseApp: React.FC = () => {
   // Check if tour should be shown after login
   useEffect(() => {
     const checkTour = async () => {
+      // Wait for splash video to complete before showing tour
+      if (showSplash) {
+        return;
+      }
+
       if (user && authUserProfile) {
         // Create a unique key for this user + language combination
         const checkKey = `${user.uid}-${language}`;
@@ -86,7 +94,7 @@ const StanseApp: React.FC = () => {
     };
 
     checkTour();
-  }, [user, authUserProfile, language]);
+  }, [user, authUserProfile, language, showSplash]);
 
   const handleLogin = () => {
     setView(ViewState.FEED);
@@ -156,14 +164,17 @@ const StanseApp: React.FC = () => {
     }
   };
 
-  // Show loading state
+  // Show splash video on first load - BEFORE any other loading states
+  if (showSplash) {
+    return <SplashVideo onComplete={() => setShowSplash(false)} />;
+  }
+
+  // Show loading state - match SplashVideo loading indicator exactly
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-pixel-white">
-        <div className="text-center">
-          <h1 className="font-pixel text-4xl mb-4">STANSE</h1>
-          <p className="font-mono text-sm text-gray-500">Loading...</p>
-        </div>
+      <div className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center">
+        <div className="font-pixel text-5xl text-white mb-4">STANSE</div>
+        <div className="font-mono text-sm text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -204,6 +215,8 @@ const StanseApp: React.FC = () => {
         return <SettingsView />;
       case ViewState.ACCOUNT:
         return <AccountView />;
+      case ViewState.ABOUT_US:
+        return <AboutUsView />;
       default:
         return <FeedView />;
     }

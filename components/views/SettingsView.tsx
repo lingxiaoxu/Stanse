@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { PixelCard } from '../ui/PixelCard';
-import { Globe, RotateCcw, MapPin, Bell, Shield, Users } from 'lucide-react';
+import { Globe, RotateCcw, MapPin, Bell, Shield, Users, Camera } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Language } from '../../types';
-import { disconnectAllSocialMedia, updateUserLocation, getUserLocation, clearUserLocation, StoredLocation, LocationStatus, updateUserNotification, getUserNotification, clearUserNotification, StoredNotification, NotificationStatus } from '../../services/userService';
+import { disconnectAllSocialMedia, updateUserLocation, getUserLocation, clearUserLocation, StoredLocation, LocationStatus, updateUserNotification, getUserNotification, clearUserNotification, StoredNotification, NotificationStatus, updateUserCamera, getUserCamera, clearUserCamera, StoredCamera, CameraStatus } from '../../services/userService';
 import { requestLocation, detectDeviceType, detectBrowser, getLocationStatusText, checkLocationPermission } from '../../services/locationService';
 import { requestNotificationPermission, checkNotificationPermission, getNotificationStatusText, detectDeviceType as detectNotifDeviceType, detectBrowser as detectNotifBrowser } from '../../services/notificationService';
 
@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS = {
   language: Language.EN,
   notifications: false, // Default OFF - only request when user enables
   location: false, // Default OFF - only request when user enables
+  camera: false, // Default OFF - only request when user enables
   strictMode: false,
   demoMode: true
 };
@@ -21,6 +22,7 @@ const DEFAULT_SETTINGS = {
 export const SettingsView: React.FC = () => {
   const [notifications, setNotifications] = useState(DEFAULT_SETTINGS.notifications);
   const [location, setLocation] = useState(DEFAULT_SETTINGS.location);
+  const [camera, setCamera] = useState(DEFAULT_SETTINGS.camera);
   const [strictMode, setStrictMode] = useState(DEFAULT_SETTINGS.strictMode);
   const [isResetting, setIsResetting] = useState(false);
   const [settingsModified, setSettingsModified] = useState(false);
@@ -31,61 +33,121 @@ export const SettingsView: React.FC = () => {
   const [notificationStatus, setNotificationStatus] = useState<NotificationStatus | null>(null);
   const [isRequestingNotification, setIsRequestingNotification] = useState(false);
   const hasRequestedNotification = useRef(false);
+  // Camera state
+  const [cameraStatus, setCameraStatus] = useState<CameraStatus | null>(null);
+  const [isRequestingCamera, setIsRequestingCamera] = useState(false);
+  const hasRequestedCamera = useRef(false);
   const { t, language, setLanguage } = useLanguage();
   const { resetOnboarding, hasCompletedOnboarding, demoMode, setDemoMode, user } = useAuth();
 
   // Load saved location and notification status on mount
+  // IMPORTANT: Always check BROWSER's actual permission state first, as it's the source of truth
+  // This handles "Allow Once" permission which expires after the session
   useEffect(() => {
     const loadSavedSettings = async () => {
       if (!user?.uid) return;
 
       try {
-        // Load location status
-        const savedLocation = await getUserLocation(user.uid);
-        if (savedLocation) {
-          setLocationStatus(savedLocation.status);
-          if (savedLocation.status === 'granted') {
-            setLocation(true);
-            hasRequestedLocation.current = true;
-          } else if (savedLocation.status === 'denied' || savedLocation.status === 'unavailable') {
-            setLocation(false);
-            hasRequestedLocation.current = true;
-          }
+        // 1. NOTIFICATION: Check browser's ACTUAL permission first (source of truth)
+        const browserNotifStatus = checkNotificationPermission();
+        console.log('🔔 Browser notification permission:', browserNotifStatus);
+
+        if (browserNotifStatus === 'granted') {
+          // Browser says granted - turn on toggle
+          setNotifications(true);
+          setNotificationStatus('granted');
+          hasRequestedNotification.current = true;
+        } else if (browserNotifStatus === 'denied') {
+          // Browser says denied - turn off toggle
+          setNotifications(false);
+          setNotificationStatus('denied');
+          hasRequestedNotification.current = true;
         } else {
-          // Check browser's current permission status (if supported)
-          const browserStatus = await checkLocationPermission();
-          if (browserStatus === 'granted') {
-            // Browser has permission but no saved data - user may request
-            // Don't set toggle on - let user explicitly enable
-          } else if (browserStatus === 'denied') {
-            setLocation(false);
-            setLocationStatus('denied');
-            hasRequestedLocation.current = true;
+          // Browser says 'default' or 'unsupported' - check saved data for context
+          const savedNotification = await getUserNotification(user.uid);
+          if (savedNotification && savedNotification.status === 'granted') {
+            // User previously granted but browser now says default
+            // This means "Allow Once" expired - keep toggle off
+            setNotifications(false);
+            setNotificationStatus('default');
+          } else {
+            setNotifications(false);
+            setNotificationStatus(browserNotifStatus);
           }
         }
 
-        // Load notification status
-        const savedNotification = await getUserNotification(user.uid);
-        if (savedNotification) {
-          setNotificationStatus(savedNotification.status);
-          if (savedNotification.status === 'granted') {
-            setNotifications(true);
-            hasRequestedNotification.current = true;
-          } else if (savedNotification.status === 'denied') {
-            setNotifications(false);
-            hasRequestedNotification.current = true;
-          }
+        // 2. LOCATION: Check browser's ACTUAL permission first (source of truth)
+        const browserLocStatus = await checkLocationPermission();
+        console.log('📍 Browser location permission:', browserLocStatus);
+
+        if (browserLocStatus === 'granted') {
+          // Browser says granted - turn on toggle
+          setLocation(true);
+          setLocationStatus('granted');
+          hasRequestedLocation.current = true;
+        } else if (browserLocStatus === 'denied') {
+          // Browser says denied - turn off toggle
+          setLocation(false);
+          setLocationStatus('denied');
+          hasRequestedLocation.current = true;
         } else {
-          // Check browser's current permission status
-          const browserStatus = checkNotificationPermission();
-          if (browserStatus === 'granted') {
-            setNotifications(true);
-            setNotificationStatus('granted');
-            hasRequestedNotification.current = true;
-          } else if (browserStatus === 'denied') {
-            setNotifications(false);
-            setNotificationStatus('denied');
-            hasRequestedNotification.current = true;
+          // Browser says 'prompt' or null (Safari) - check saved data for context
+          const savedLocation = await getUserLocation(user.uid);
+          if (savedLocation && savedLocation.status === 'granted') {
+            // User previously granted but browser now says prompt
+            // This means "Allow Once" expired - keep toggle off
+            setLocation(false);
+            setLocationStatus('unknown');
+          } else if (savedLocation && (savedLocation.status === 'denied' || savedLocation.status === 'unavailable')) {
+            setLocation(false);
+            setLocationStatus(savedLocation.status);
+            hasRequestedLocation.current = true;
+          } else {
+            setLocation(false);
+            setLocationStatus('unknown');
+          }
+        }
+
+        // 3. CAMERA: Check browser's ACTUAL permission first (source of truth)
+        try {
+          const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          console.log('📷 Browser camera permission:', cameraPermission.state);
+
+          if (cameraPermission.state === 'granted') {
+            setCamera(true);
+            setCameraStatus('granted');
+            hasRequestedCamera.current = true;
+          } else if (cameraPermission.state === 'denied') {
+            setCamera(false);
+            setCameraStatus('denied');
+            hasRequestedCamera.current = true;
+          } else {
+            // 'prompt' state - check saved data
+            const savedCamera = await getUserCamera(user.uid);
+            if (savedCamera && savedCamera.status === 'granted') {
+              // Previously granted but now prompt - "Allow Once" expired
+              setCamera(false);
+              setCameraStatus('prompt');
+            } else {
+              setCamera(false);
+              setCameraStatus('prompt');
+            }
+          }
+        } catch {
+          // Permissions API for camera not supported (Safari)
+          // Fall back to saved data
+          const savedCamera = await getUserCamera(user.uid);
+          if (savedCamera) {
+            setCameraStatus(savedCamera.status);
+            if (savedCamera.status === 'granted') {
+              setCamera(true);
+              hasRequestedCamera.current = true;
+            } else {
+              setCamera(false);
+              if (savedCamera.status === 'denied') {
+                hasRequestedCamera.current = true;
+              }
+            }
           }
         }
       } catch (error) {
@@ -239,17 +301,100 @@ export const SettingsView: React.FC = () => {
     }
   };
 
+  // Handle camera toggle change
+  const handleCameraToggle = async () => {
+    if (!user?.uid) return;
+
+    const newValue = !camera;
+    setCamera(newValue);
+
+    if (newValue && !hasRequestedCamera.current) {
+      // User turned ON camera - request permission (only once)
+      hasRequestedCamera.current = true;
+      setIsRequestingCamera(true);
+
+      try {
+        // Request camera permission
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // Stop the stream immediately - we just wanted to trigger the permission
+        stream.getTracks().forEach(track => track.stop());
+
+        console.log('📷 Camera permission granted');
+
+        // Build camera data for storage
+        const cameraData: Omit<StoredCamera, 'userId' | 'action' | 'version'> = {
+          status: 'granted',
+          deviceType: detectDeviceType() as 'mobile' | 'tablet' | 'desktop',
+          browser: detectBrowser(),
+          timestamp: new Date().toISOString()
+        };
+
+        // Save to Firebase
+        await updateUserCamera(user.uid, cameraData);
+        setCameraStatus('granted');
+
+      } catch (error: any) {
+        console.error('Camera request failed:', error);
+
+        // Determine status based on error
+        const status: CameraStatus = error.name === 'NotAllowedError' ? 'denied' : 'unsupported';
+        setCameraStatus(status);
+
+        // Save denied state
+        await updateUserCamera(user.uid, {
+          status,
+          deviceType: detectDeviceType() as 'mobile' | 'tablet' | 'desktop',
+          browser: detectBrowser(),
+          timestamp: new Date().toISOString(),
+          errorMessage: error.message || 'Camera permission denied'
+        });
+
+        // Turn toggle back off
+        setCamera(false);
+      } finally {
+        setIsRequestingCamera(false);
+      }
+    } else if (!newValue) {
+      // User turned OFF camera - clear stored camera
+      try {
+        await clearUserCamera(user.uid);
+        // Only reset the flag if permission was previously granted
+        if (cameraStatus === 'granted') {
+          hasRequestedCamera.current = false;
+        }
+        setCameraStatus('prompt');
+      } catch (error) {
+        console.error('Failed to clear camera:', error);
+      }
+    }
+  };
+
+  // Get camera status display text
+  const getCameraSubText = (): string => {
+    if (isRequestingCamera) {
+      return t('settings', 'camera_pending');
+    }
+    if (cameraStatus === 'granted' && camera) {
+      return t('settings', 'camera_enabled');
+    }
+    if (cameraStatus === 'denied') {
+      return t('settings', 'camera_denied');
+    }
+    return t('settings', 'sub_camera');
+  };
+
   // Track if any settings have been modified from defaults
   useEffect(() => {
     const isModified =
       language !== DEFAULT_SETTINGS.language ||
       notifications !== DEFAULT_SETTINGS.notifications ||
       location !== DEFAULT_SETTINGS.location ||
+      camera !== DEFAULT_SETTINGS.camera ||
       strictMode !== DEFAULT_SETTINGS.strictMode ||
       demoMode !== DEFAULT_SETTINGS.demoMode;
 
     setSettingsModified(isModified);
-  }, [language, notifications, location, strictMode, demoMode]);
+  }, [language, notifications, location, camera, strictMode, demoMode]);
 
   // Get location status display text
   const getLocationSubText = (): string => {
@@ -339,6 +484,25 @@ export const SettingsView: React.FC = () => {
                 </div>
             </div>
 
+            {/* Camera Toggle with Status */}
+            <div
+              className={`flex items-center justify-between p-6 hover:bg-gray-50 transition-colors cursor-pointer ${isRequestingCamera ? 'opacity-70' : ''}`}
+              onClick={isRequestingCamera ? undefined : handleCameraToggle}
+            >
+                <div className="flex items-center gap-3">
+                    <Camera size={20} />
+                    <div>
+                        <div className="font-bold font-mono text-lg">{t('settings', 'camera')}</div>
+                        <div className="font-mono text-xs text-gray-500">
+                          {getCameraSubText()}
+                        </div>
+                    </div>
+                </div>
+                <div className={`w-14 h-8 border-2 border-black relative transition-colors ${camera ? 'bg-black' : 'bg-white'} ${isRequestingCamera ? 'animate-pulse' : ''}`}>
+                    <div className={`absolute top-1 bottom-1 w-5 bg-current border border-black transition-all ${camera ? 'left-7 bg-white' : 'left-1 bg-black'}`}></div>
+                </div>
+            </div>
+
             <ToggleItem
                 icon={<Shield size={20} />}
                 label={t('settings', 'strict')}
@@ -374,6 +538,7 @@ export const SettingsView: React.FC = () => {
                                 setLanguage(DEFAULT_SETTINGS.language);
                                 setNotifications(DEFAULT_SETTINGS.notifications);
                                 setLocation(DEFAULT_SETTINGS.location);
+                                setCamera(DEFAULT_SETTINGS.camera);
                                 setStrictMode(DEFAULT_SETTINGS.strictMode);
                                 setDemoMode(DEFAULT_SETTINGS.demoMode);
 
@@ -387,13 +552,18 @@ export const SettingsView: React.FC = () => {
                                 setNotificationStatus(null);
                                 hasRequestedNotification.current = false;
 
+                                // Clear camera data
+                                await clearUserCamera(user.uid);
+                                setCameraStatus(null);
+                                hasRequestedCamera.current = false;
+
                                 // Clear social media connections from Firebase
                                 await disconnectAllSocialMedia(user.uid);
 
                                 // Reset stance/onboarding
                                 await resetOnboarding();
 
-                                alert('All Stanse settings reset! Language set to English, notifications disabled, location disabled, strict mode disabled, demo mode enabled, social media disconnected. Go to Stance tab to recalibrate.');
+                                alert('All Stanse settings reset! Language set to English, notifications disabled, location disabled, camera disabled, strict mode disabled, demo mode enabled, social media disconnected. Go to Stance tab to recalibrate.');
                             } catch (error) {
                                 console.error('Reset error:', error);
                                 alert('Failed to reset settings. Please try again.');

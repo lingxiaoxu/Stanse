@@ -293,6 +293,18 @@ service cloud.firestore {
       }
     }
 
+    // User Camera - users can read/write only their own camera permission data
+    // Structure: userCamera/{userId} with history subcollection
+    // Pattern: Main document stores current state, history/{timestamp} stores all changes
+    match /userCamera/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // History subcollection - users can read/write their own camera history
+      match /history/{historyId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
     // ==================== DUEL Arena System ====================
 
     // User Credits - Main document with current balance + history subcollection

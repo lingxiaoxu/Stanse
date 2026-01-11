@@ -1014,3 +1014,200 @@ export const clearUserNotification = async (userId: string): Promise<void> => {
     throw error;
   }
 };
+
+// ==================== User Camera ====================
+// Uses dedicated collection: userCamera/{userId}
+// With history subcollection: userCamera/{userId}/history/{timestamp}
+// Pattern: Main document stores current state, history stores all changes
+// For tracking camera permission status (similar to userNotifications)
+
+export type CameraStatus = 'granted' | 'denied' | 'prompt' | 'unsupported' | 'pending';
+
+export interface StoredCamera {
+  userId: string;
+  status: CameraStatus;
+  deviceType: 'mobile' | 'tablet' | 'desktop';
+  browser: string;
+  timestamp: string;
+  sessionId?: string;  // For tracking "allow once" - permission expires with session
+  errorMessage?: string;
+  action?: 'granted' | 'denied' | 'disabled' | 'error' | 'session_expired';
+  version?: string;
+}
+
+/**
+ * Update user's camera permission data in Firestore with history tracking
+ * Structure: userCamera/{userId} (main doc) + userCamera/{userId}/history/{timestamp}
+ *
+ * @param userId - The user's ID
+ * @param cameraData - Camera permission data to store
+ */
+export const updateUserCamera = async (
+  userId: string,
+  cameraData: Omit<StoredCamera, 'userId' | 'action' | 'version'>
+): Promise<void> => {
+  try {
+    // Generate timestamp for history document ID
+    const now = new Date();
+    const timestamp_str = now.toISOString().replace(/[-:]/g, '').replace('T', '_').split('.')[0];
+
+    // Determine action based on status
+    let action: StoredCamera['action'] = 'granted';
+    if (cameraData.status === 'denied') {
+      action = 'denied';
+    } else if (cameraData.status === 'prompt' || cameraData.status === 'unsupported') {
+      action = 'error';
+    }
+
+    // Prepare data (exclude undefined values for Firestore)
+    const dataToSave: Record<string, any> = {
+      userId,
+      status: cameraData.status,
+      deviceType: cameraData.deviceType,
+      browser: cameraData.browser,
+      timestamp: cameraData.timestamp,
+      action,
+      version: '1.0'
+    };
+
+    // Only add optional fields if they have values
+    if (cameraData.sessionId) dataToSave.sessionId = cameraData.sessionId;
+    if (cameraData.errorMessage) dataToSave.errorMessage = cameraData.errorMessage;
+
+    // 1. Save to history first (snapshot)
+    const historyRef = doc(db, 'userCamera', userId, 'history', timestamp_str);
+    await setDoc(historyRef, dataToSave);
+    console.log(`📷 Saved camera history: userCamera/${userId}/history/${timestamp_str}`);
+
+    // 2. Update main document (merge=true to preserve createdAt if exists)
+    const mainRef = doc(db, 'userCamera', userId);
+    await setDoc(mainRef, dataToSave, { merge: true });
+    console.log(`📷 Updated main camera: userCamera/${userId} (status=${cameraData.status})`);
+
+  } catch (error) {
+    console.error(`📷 Error saving user camera for ${userId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get user's current camera permission data (from main document)
+ * @param userId - The user's ID
+ * @returns StoredCamera if exists, null otherwise
+ */
+export const getUserCamera = async (
+  userId: string
+): Promise<StoredCamera | null> => {
+  try {
+    const cameraRef = doc(db, 'userCamera', userId);
+    const cameraSnap = await getDoc(cameraRef);
+
+    if (cameraSnap.exists()) {
+      return cameraSnap.data() as StoredCamera;
+    }
+    return null;
+  } catch (error) {
+    console.error(`📷 Error getting user camera for ${userId}:`, error);
+    return null;
+  }
+};
+
+/**
+ * Clear user's camera permission data (when turning off camera setting)
+ * Saves a 'disabled' entry to history and updates main document
+ * @param userId - The user's ID
+ */
+export const clearUserCamera = async (userId: string): Promise<void> => {
+  try {
+    const mainRef = doc(db, 'userCamera', userId);
+    const existingDoc = await getDoc(mainRef);
+
+    if (!existingDoc.exists()) {
+      console.log(`📷 No camera data to clear for ${userId}`);
+      return;
+    }
+
+    const existingData = existingDoc.data();
+
+    // Generate timestamp for history
+    const now = new Date();
+    const timestamp_str = now.toISOString().replace(/[-:]/g, '').replace('T', '_').split('.')[0];
+
+    // Prepare disabled data
+    const disabledData: Record<string, any> = {
+      userId,
+      status: 'prompt',
+      deviceType: existingData.deviceType || 'desktop',
+      browser: existingData.browser || 'Unknown',
+      timestamp: now.toISOString(),
+      action: 'disabled',
+      errorMessage: 'Camera disabled by user',
+      version: '1.0'
+    };
+
+    // 1. Save disabled state to history
+    const historyRef = doc(db, 'userCamera', userId, 'history', timestamp_str);
+    await setDoc(historyRef, disabledData);
+    console.log(`📷 Saved disabled history: userCamera/${userId}/history/${timestamp_str}`);
+
+    // 2. Update main document
+    await setDoc(mainRef, disabledData, { merge: true });
+    console.log(`📷 User camera disabled: userCamera/${userId}`);
+
+  } catch (error) {
+    console.error(`📷 Error clearing user camera for ${userId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Mark camera permission as session-expired
+ * Called when a new session starts and the user had "allow once" permission
+ * @param userId - The user's ID
+ */
+export const expireUserCameraSession = async (userId: string): Promise<void> => {
+  try {
+    const mainRef = doc(db, 'userCamera', userId);
+    const existingDoc = await getDoc(mainRef);
+
+    if (!existingDoc.exists()) {
+      return;  // No camera data to expire
+    }
+
+    const existingData = existingDoc.data();
+
+    // Only expire if it was a session-based permission
+    if (!existingData.sessionId) {
+      return;  // Permanent permission, don't expire
+    }
+
+    // Generate timestamp for history
+    const now = new Date();
+    const timestamp_str = now.toISOString().replace(/[-:]/g, '').replace('T', '_').split('.')[0];
+
+    // Prepare expired data
+    const expiredData: Record<string, any> = {
+      userId,
+      status: 'prompt',
+      deviceType: existingData.deviceType || 'desktop',
+      browser: existingData.browser || 'Unknown',
+      timestamp: now.toISOString(),
+      action: 'session_expired',
+      errorMessage: 'Camera permission expired with session',
+      version: '1.0'
+    };
+
+    // 1. Save expired state to history
+    const historyRef = doc(db, 'userCamera', userId, 'history', timestamp_str);
+    await setDoc(historyRef, expiredData);
+    console.log(`📷 Saved expired history: userCamera/${userId}/history/${timestamp_str}`);
+
+    // 2. Update main document
+    await setDoc(mainRef, expiredData, { merge: true });
+    console.log(`📷 User camera session expired: userCamera/${userId}`);
+
+  } catch (error) {
+    console.error(`📷 Error expiring user camera session for ${userId}:`, error);
+    // Don't throw - this is a best-effort operation
+  }
+};

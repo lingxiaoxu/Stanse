@@ -524,7 +524,7 @@ Status: ${errorCount > 0 ? 'COMPLETED WITH ERRORS' : 'SUCCESS'}
 
 import { processMatchmakingQueue, joinMatchmakingQueue, leaveMatchmakingQueue } from './duel/matchmaking';
 import { submitGameplayEvent, finalizeMatch } from './duel/settlement';
-import { getUserCredits, getCreditHistory } from './duel/creditManager';
+import { getUserCredits, getCreditHistory, releaseCredits, withdrawCredits } from './duel/creditManager';
 import { populateQuestions } from './duel/questionPopulator';
 
 // DUEL Arena Agents
@@ -538,12 +538,13 @@ import {
 } from './duel/agents';
 
 /**
- * Matchmaking Scheduler - Runs every 2 minutes
+ * Matchmaking Scheduler - Runs every 1 minute
  * Matches waiting users based on stance type, ping, and entry fee
+ * Also creates AI opponents for users waiting > 30 seconds
  */
 export const runDuelMatchmaking = functions.scheduler.onSchedule(
   {
-    schedule: 'every 2 minutes',
+    schedule: 'every 1 minutes',
     timeZone: 'UTC',
     region: 'us-central1'
   },
@@ -553,7 +554,31 @@ export const runDuelMatchmaking = functions.scheduler.onSchedule(
 );
 
 /**
+ * Force Matchmaking Check (HTTP Callable)
+ * Client can call this after waiting to trigger AI opponent creation
+ */
+export const checkDuelMatchmaking = functions.https.onCall(
+  async (request) => {
+    const { auth } = request;
+
+    if (!auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    try {
+      // Run matchmaking which will create AI opponent if user waited > 30s
+      await processMatchmakingQueue();
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error checking matchmaking:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  }
+);
+
+/**
  * Join Matchmaking Queue (HTTP Callable)
+ * Also triggers immediate matchmaking attempt
  */
 export const joinDuelQueue = functions.https.onCall(
   async (request) => {
@@ -572,6 +597,12 @@ export const joinDuelQueue = functions.https.onCall(
         entryFee: data.entryFee,
         safetyBelt: data.safetyBelt,
         duration: data.duration
+      });
+
+      // Trigger immediate matchmaking attempt (non-blocking)
+      // This allows instant matching if another player is waiting
+      processMatchmakingQueue().catch(err => {
+        console.error('Background matchmaking error:', err);
       });
 
       return { success: true, queueId };
@@ -641,6 +672,140 @@ export const getDuelCreditHistory = functions.https.onCall(
       return { success: true, history };
     } catch (error: any) {
       console.error('Error getting credit history:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  }
+);
+
+/**
+ * Add Credits (HTTP Callable) - For testing/deposit simulation
+ * Adds credits to user's balance
+ */
+export const addDuelCredits = functions.https.onCall(
+  async (request) => {
+    const { auth, data } = request;
+
+    if (!auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const amount = data?.amount || 100;
+    if (amount <= 0 || amount > 1000) {
+      throw new functions.https.HttpsError('invalid-argument', 'Amount must be between 1 and 1000');
+    }
+
+    try {
+      const now = new Date().toISOString();
+      const mainRef = db.collection('user_credits').doc(auth.uid);
+
+      await db.runTransaction(async (transaction) => {
+        const doc = await transaction.get(mainRef);
+
+        if (!doc.exists) {
+          // Create new user credits document
+          const newDoc = {
+            userId: auth.uid,
+            balance: amount,
+            totalGranted: amount,
+            totalSpent: 0,
+            totalEarned: 0,
+            updatedAt: now,
+            lastTransactionAt: now
+          };
+          transaction.set(mainRef, newDoc);
+        } else {
+          const current = doc.data()!;
+          transaction.update(mainRef, {
+            balance: current.balance + amount,
+            totalGranted: (current.totalGranted || 0) + amount,
+            updatedAt: now,
+            lastTransactionAt: now
+          });
+        }
+
+        // Add history entry
+        const historyRef = mainRef.collection('history').doc();
+        transaction.set(historyRef, {
+          eventId: historyRef.id,
+          type: 'GRANT',
+          amount,
+          balanceBefore: doc.exists ? doc.data()!.balance : 0,
+          balanceAfter: (doc.exists ? doc.data()!.balance : 0) + amount,
+          timestamp: now,
+          metadata: {
+            reason: 'Deposit',
+            description: 'User deposit simulation'
+          }
+        });
+      });
+
+      const updatedDoc = await mainRef.get();
+      return { success: true, credits: updatedDoc.data() };
+    } catch (error: any) {
+      console.error('Error adding credits:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  }
+);
+
+/**
+ * Refund Credits (HTTP Callable)
+ * Releases held credits back to user when match fails/errors
+ */
+export const refundDuelCredits = functions.https.onCall(
+  async (request) => {
+    const { auth, data } = request;
+
+    if (!auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const matchId = data?.matchId;
+    const amount = data?.amount;
+
+    if (!matchId || typeof amount !== 'number' || amount <= 0) {
+      throw new functions.https.HttpsError('invalid-argument', 'matchId and positive amount required');
+    }
+
+    try {
+      await releaseCredits(auth.uid, amount, matchId);
+
+      // Get updated balance
+      const credits = await getUserCredits(auth.uid);
+      return { success: true, credits };
+    } catch (error: any) {
+      console.error('Error refunding credits:', error);
+      throw new functions.https.HttpsError('internal', error.message);
+    }
+  }
+);
+
+/**
+ * Withdraw Credits (HTTP Callable)
+ * Deducts credits from user balance (withdrawal simulation)
+ */
+export const withdrawDuelCredits = functions.https.onCall(
+  async (request) => {
+    const { auth, data } = request;
+
+    if (!auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const amount = data?.amount;
+
+    if (typeof amount !== 'number' || amount <= 0) {
+      throw new functions.https.HttpsError('invalid-argument', 'Positive amount required');
+    }
+
+    try {
+      await withdrawCredits(auth.uid, amount);
+
+      // Get updated balance
+      const credits = await getUserCredits(auth.uid);
+      return { success: true, credits };
+    } catch (error: any) {
+      console.error('Error withdrawing credits:', error);
       throw new functions.https.HttpsError('internal', error.message);
     }
   }

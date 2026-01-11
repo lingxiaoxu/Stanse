@@ -293,6 +293,128 @@ export async function rewardCredits(
 }
 
 /**
+ * Withdraw credits from user balance
+ */
+export async function withdrawCredits(
+  userId: string,
+  amount: number
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  await db.runTransaction(async (transaction) => {
+    const mainRef = db.collection('user_credits').doc(userId);
+    const doc = await transaction.get(mainRef);
+
+    if (!doc.exists) {
+      throw new Error('User credits not initialized');
+    }
+
+    const current = doc.data() as UserCreditsDocument;
+
+    if (current.balance < amount) {
+      throw new Error(`Insufficient balance: need ${amount}, have ${current.balance}`);
+    }
+
+    const historyRef = mainRef.collection('history').doc();
+
+    const event: CreditEvent = {
+      eventId: historyRef.id,
+      type: 'DEDUCT',
+      amount,
+      balanceBefore: current.balance,
+      balanceAfter: current.balance - amount,
+      timestamp: now,
+      metadata: {
+        reason: 'Withdrawal',
+        description: 'User requested withdrawal'
+      }
+    };
+
+    transaction.set(historyRef, event);
+    transaction.update(mainRef, {
+      balance: current.balance - amount,
+      totalSpent: current.totalSpent + amount,
+      updatedAt: now,
+      lastTransactionAt: now
+    });
+  });
+
+  console.log(`✅ Withdrew ${amount} credits from user ${userId}`);
+}
+
+/**
+ * Add credits to user balance (deposit)
+ */
+export async function addCredits(
+  userId: string,
+  amount: number
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  await db.runTransaction(async (transaction) => {
+    const mainRef = db.collection('user_credits').doc(userId);
+    const doc = await transaction.get(mainRef);
+
+    if (!doc.exists) {
+      // Initialize with the deposit amount
+      await grantInitialCredits(userId);
+      // Re-run to add the deposit on top
+      const newDoc = await mainRef.get();
+      const current = newDoc.data() as UserCreditsDocument;
+
+      const historyRef = mainRef.collection('history').doc();
+      const event: CreditEvent = {
+        eventId: historyRef.id,
+        type: 'GRANT',
+        amount,
+        balanceBefore: current.balance,
+        balanceAfter: current.balance + amount,
+        timestamp: now,
+        metadata: {
+          reason: 'Deposit',
+          description: 'User deposited credits'
+        }
+      };
+
+      await historyRef.set(event);
+      await mainRef.update({
+        balance: current.balance + amount,
+        totalGranted: current.totalGranted + amount,
+        updatedAt: now,
+        lastTransactionAt: now
+      });
+      return;
+    }
+
+    const current = doc.data() as UserCreditsDocument;
+    const historyRef = mainRef.collection('history').doc();
+
+    const event: CreditEvent = {
+      eventId: historyRef.id,
+      type: 'GRANT',
+      amount,
+      balanceBefore: current.balance,
+      balanceAfter: current.balance + amount,
+      timestamp: now,
+      metadata: {
+        reason: 'Deposit',
+        description: 'User deposited credits'
+      }
+    };
+
+    transaction.set(historyRef, event);
+    transaction.update(mainRef, {
+      balance: current.balance + amount,
+      totalGranted: current.totalGranted + amount,
+      updatedAt: now,
+      lastTransactionAt: now
+    });
+  });
+
+  console.log(`✅ Added ${amount} credits to user ${userId}`);
+}
+
+/**
  * Get credit transaction history
  */
 export async function getCreditHistory(
