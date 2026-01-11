@@ -37,6 +37,69 @@ export async function getUserCreditsBalance(userId: string): Promise<UserCredits
 }
 
 /**
+ * Add credits to user's balance (deposit simulation)
+ */
+export async function addCredits(amount: number): Promise<UserCredits | null> {
+  try {
+    const addDuelCredits = httpsCallable(functions, 'addDuelCredits');
+    const result = await addDuelCredits({ amount });
+    const data = result.data as { success: boolean; credits: UserCredits };
+
+    if (data.success) {
+      return data.credits;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error adding credits:', error);
+    throw error;
+  }
+}
+
+/**
+ * Refund credits when match fails/errors
+ * Returns updated balance after refund
+ */
+export async function refundCredits(matchId: string, amount: number): Promise<UserCredits | null> {
+  try {
+    const refundDuelCredits = httpsCallable(functions, 'refundDuelCredits');
+    const result = await refundDuelCredits({ matchId, amount });
+    const data = result.data as { success: boolean; credits: UserCredits };
+
+    if (data.success) {
+      console.log(`[refundCredits] Refunded ${amount} credits for match ${matchId}`);
+      return data.credits;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error refunding credits:', error);
+    return null;
+  }
+}
+
+/**
+ * Withdraw credits from user's balance
+ */
+export async function withdrawCredits(amount: number): Promise<UserCredits | null> {
+  try {
+    const withdrawDuelCredits = httpsCallable(functions, 'withdrawDuelCredits');
+    const result = await withdrawDuelCredits({ amount });
+    const data = result.data as { success: boolean; credits: UserCredits };
+
+    if (data.success) {
+      console.log(`[withdrawCredits] Withdrew ${amount} credits`);
+      return data.credits;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error withdrawing credits:', error);
+    throw error;
+  }
+}
+
+/**
  * Get user's credit transaction history
  */
 export async function getCreditHistory(limit: number = 50) {
@@ -153,6 +216,22 @@ export async function leaveMatchmaking(): Promise<boolean> {
 }
 
 /**
+ * Force matchmaking check - triggers AI opponent creation if waiting > 30s
+ */
+export async function checkMatchmaking(): Promise<boolean> {
+  try {
+    const checkDuelMatchmaking = httpsCallable(functions, 'checkDuelMatchmaking');
+    const result = await checkDuelMatchmaking({});
+    const data = result.data as { success: boolean };
+
+    return data.success;
+  } catch (error) {
+    console.error('Error checking matchmaking:', error);
+    return false;
+  }
+}
+
+/**
  * Listen for match updates
  * Returns unsubscribe function
  */
@@ -169,14 +248,19 @@ export function listenForMatch(
     where('participantIds', 'array-contains', userId)
   );
 
+  // Track the timestamp when listener was created to only process new matches
+  const listenerCreatedAt = new Date().toISOString();
+
   return onSnapshot(
     matchesQuery,
     (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added' || change.type === 'modified') {
           const matchData = change.doc.data() as FirestoreDuelMatch;
-          // Filter by status client-side
-          if (matchData.status === 'ready' || matchData.status === 'in_progress') {
+          // Filter by status client-side AND only process matches created after listener started
+          if ((matchData.status === 'ready' || matchData.status === 'in_progress')
+              && matchData.createdAt >= listenerCreatedAt) {
+            console.log('[listenForMatch] New match detected:', matchData.matchId);
             onMatch(matchData);
           }
         }

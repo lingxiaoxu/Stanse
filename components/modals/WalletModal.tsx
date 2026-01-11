@@ -10,13 +10,13 @@ interface WalletModalProps {
   onWithdraw: (amount: number) => void;
 }
 
-const ModalHeader: React.FC<{ onClose: () => void }> = ({ onClose }) => (
+const ModalHeader: React.FC<{ onClose: () => void; title: string }> = ({ onClose, title }) => (
   <div className="flex items-center justify-between p-6 border-b-2 border-black bg-white">
     <div className="flex items-center gap-3">
       <div className="w-6 h-6 border-2 border-black bg-white flex items-center justify-center">
         <div className="w-3 h-2 border border-black"></div>
       </div>
-      <h2 className="text-3xl font-pixel uppercase tracking-wide">WALLET</h2>
+      <h2 className="text-3xl font-pixel uppercase tracking-wide">{title}</h2>
     </div>
     <button
       onClick={onClose}
@@ -45,7 +45,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
       onDeposit(selectedAmount);
     } else {
       if (selectedAmount > currentBalance) {
-        alert('Insufficient balance');
+        alert(t('duel', 'insufficient_balance'));
         return;
       }
       onWithdraw(selectedAmount);
@@ -60,13 +60,13 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
       <div className="bg-white border-4 border-black w-full max-w-md shadow-pixel-modal">
-        <ModalHeader onClose={onClose} />
+        <ModalHeader onClose={onClose} title={t('duel', 'wallet_title')} />
 
         {/* Current Balance Section */}
         <div className="bg-black text-white py-6">
           <div className="text-center">
             <div className="font-mono text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
-              CURRENT BALANCE
+              {t('duel', 'current_balance')}
             </div>
             <div className="font-pixel text-7xl text-green-500 leading-none">
               ${currentBalance}
@@ -84,7 +84,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
             }`}
           >
-            DEPOSIT
+            {t('duel', 'deposit')}
           </button>
           <button
             onClick={() => setActiveTab('WITHDRAW')}
@@ -94,14 +94,14 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
             }`}
           >
-            WITHDRAW
+            {t('duel', 'withdraw')}
           </button>
         </div>
 
         {/* Content Area */}
         <div className="p-6 bg-gray-50 space-y-4">
           <div className="font-mono text-xs font-bold uppercase tracking-widest text-gray-500">
-            SELECT AMOUNT
+            {t('duel', 'select_amount')}
           </div>
 
           {/* Amount Buttons Grid */}
@@ -124,7 +124,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           {/* Disclaimer */}
           <div className="text-center pt-2">
             <p className="font-mono text-[10px] text-gray-500">
-              * Simulates external payment gateway
+              * {t('duel', 'payment_note')}
             </p>
           </div>
         </div>
@@ -139,12 +139,12 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               {activeTab === 'DEPOSIT' ? (
                 <>
                   <ArrowDownLeft size={20} />
-                  CONFIRM DEPOSIT ${selectedAmount}
+                  {t('duel', 'confirm_deposit')} ${selectedAmount}
                 </>
               ) : (
                 <>
                   <ArrowUpRight size={20} />
-                  CONFIRM WITHDRAW ${selectedAmount}
+                  {t('duel', 'confirm_withdraw')} ${selectedAmount}
                 </>
               )}
             </button>

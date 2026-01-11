@@ -203,25 +203,37 @@ function calculateSettlement(match, winner, scoreA, scoreB) {
     };
 }
 /**
+ * Check if a user ID belongs to an AI bot
+ */
+function isAIBot(userId) {
+    return userId.startsWith('ai_bot_');
+}
+/**
  * Execute settlement - update credits and match document atomically
  */
 async function executeSettlement(match, settlement) {
     const now = new Date().toISOString();
     const matchId = match.matchId;
-    // Release held credits first
-    await (0, creditManager_1.releaseCredits)(match.players.A.userId, match.holds.A, matchId);
-    await (0, creditManager_1.releaseCredits)(match.players.B.userId, match.holds.B, matchId);
-    // Apply deductions and rewards
-    if (settlement.deductionA > 0) {
+    const playerAIsBot = isAIBot(match.players.A.userId);
+    const playerBIsBot = isAIBot(match.players.B.userId);
+    // Release held credits first (only for human players)
+    if (!playerAIsBot && match.holds.A > 0) {
+        await (0, creditManager_1.releaseCredits)(match.players.A.userId, match.holds.A, matchId);
+    }
+    if (!playerBIsBot && match.holds.B > 0) {
+        await (0, creditManager_1.releaseCredits)(match.players.B.userId, match.holds.B, matchId);
+    }
+    // Apply deductions and rewards (only for human players)
+    if (!playerAIsBot && settlement.deductionA > 0) {
         await (0, creditManager_1.deductCredits)(match.players.A.userId, settlement.deductionA, matchId, 'Match loss');
     }
-    if (settlement.deductionB > 0) {
+    if (!playerBIsBot && settlement.deductionB > 0) {
         await (0, creditManager_1.deductCredits)(match.players.B.userId, settlement.deductionB, matchId, 'Match loss');
     }
-    if (settlement.rewardA > 0) {
+    if (!playerAIsBot && settlement.rewardA > 0) {
         await (0, creditManager_1.rewardCredits)(match.players.A.userId, settlement.rewardA, matchId);
     }
-    if (settlement.rewardB > 0) {
+    if (!playerBIsBot && settlement.rewardB > 0) {
         await (0, creditManager_1.rewardCredits)(match.players.B.userId, settlement.rewardB, matchId);
     }
     // Update match document
@@ -245,9 +257,13 @@ async function executeSettlement(match, settlement) {
  */
 async function cancelMatch(matchId, match, reason) {
     console.log(`🚫 Cancelling match ${matchId}: ${reason}`);
-    // Release all held credits
-    await (0, creditManager_1.releaseCredits)(match.players.A.userId, match.holds.A, matchId);
-    await (0, creditManager_1.releaseCredits)(match.players.B.userId, match.holds.B, matchId);
+    // Release all held credits (only for human players)
+    if (!isAIBot(match.players.A.userId) && match.holds.A > 0) {
+        await (0, creditManager_1.releaseCredits)(match.players.A.userId, match.holds.A, matchId);
+    }
+    if (!isAIBot(match.players.B.userId) && match.holds.B > 0) {
+        await (0, creditManager_1.releaseCredits)(match.players.B.userId, match.holds.B, matchId);
+    }
     // Update match status
     await db.collection('duel_matches').doc(matchId).update({
         status: 'cancelled',

@@ -391,7 +391,7 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords, isTour
                style={{backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '10px 10px'}}>
           </div>
 
-          <div className="w-full h-[350px] font-mono text-xs relative z-10">
+          <div className="w-full h-[298px] font-mono text-xs relative z-10">
             <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
               {/* Dynamic outerRadius: smaller when labels shown to prevent clipping */}
               <RadarChart cx="50%" cy="50%" outerRadius={isCalibrating ? "75%" : "55%"} data={data}>

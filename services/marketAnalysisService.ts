@@ -75,6 +75,16 @@ export const generateTodayAnalysis = async (
 
     const targetLanguage = LANGUAGE_NAMES[language] || 'English';
 
+    // Define minimum character counts per language to ensure consistent output length
+    const minChars: Record<string, number> = {
+      'English': 150,
+      'Chinese (Simplified)': 300,
+      'Japanese': 250,
+      'French': 150,
+      'Spanish': 150
+    };
+    const targetMinChars = minChars[targetLanguage] || 400;
+
     const prompt = `You are a financial analyst explaining today's market movements to a user with "${personaLabel}" political values.
 
 Today's market data:
@@ -89,12 +99,16 @@ Average change: ${opposedAvgChange > 0 ? '+' : ''}${opposedAvgChange.toFixed(2)}
 
 Overall alignment performance: ${overallPerformance > 0 ? '+' : ''}${overallPerformance.toFixed(2)}%
 
-Generate a concise 2-3 sentence explanation of WHY the market performed this way today. Focus on:
+Generate a 3-4 sentence explanation of WHY the market performed this way today. Focus on:
 1. The sector or industry trends that affected these stocks
 2. How the performance aligns with the user's values (${personaLabel})
 3. Keep it factual and educational, not prescriptive
 
-IMPORTANT: Write your response in ${targetLanguage}. Keep the response under 150 words, conversational, and directly answer "why today?".`;
+CRITICAL REQUIREMENTS:
+- Write your response ONLY in ${targetLanguage}
+- Your response MUST be at least ${targetMinChars} characters long
+- Be conversational and directly answer "why today?"
+- Do not use bullet points, just flowing prose`;
 
     const result = await ai.models.generateContent({
       model: 'gemini-2.0-flash-exp',

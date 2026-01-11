@@ -47,14 +47,6 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
-      id: 'company-rankings',
-      target: 'company-rankings',
-      title: 'Values-Based Rankings',
-      description: 'Top companies ranked by your political values.',
-      position: 'top',
-      requiredTab: 'FEED'
-    },
-    {
       id: 'news-feed',
       target: 'news-feed',
       title: 'The Feed',
@@ -141,14 +133,6 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       target: 'market-signal',
       title: '市场信号',
       description: '发现与您价值观一致的公司。',
-      position: 'top',
-      requiredTab: 'FEED'
-    },
-    {
-      id: 'company-rankings',
-      target: 'company-rankings',
-      title: '价值观排名',
-      description: '基于政治立场的公司排名。',
       position: 'top',
       requiredTab: 'FEED'
     },
@@ -243,14 +227,6 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
-      id: 'company-rankings',
-      target: 'company-rankings',
-      title: '価値観ランキング',
-      description: '政治的立場に基づく企業ランキング。',
-      position: 'top',
-      requiredTab: 'FEED'
-    },
-    {
       id: 'news-feed',
       target: 'news-feed',
       title: 'ニュースフィード',
@@ -341,14 +317,6 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       requiredTab: 'FEED'
     },
     {
-      id: 'company-rankings',
-      target: 'company-rankings',
-      title: 'Classements Valeurs',
-      description: 'Entreprises classées selon position politique.',
-      position: 'top',
-      requiredTab: 'FEED'
-    },
-    {
       id: 'news-feed',
       target: 'news-feed',
       title: 'Le Flux d\'Actualités',
@@ -435,14 +403,6 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       target: 'market-signal',
       title: 'Señal de Mercado',
       description: 'Empresas alineadas con tus valores.',
-      position: 'top',
-      requiredTab: 'FEED'
-    },
-    {
-      id: 'company-rankings',
-      target: 'company-rankings',
-      title: 'Ranking de Valores',
-      description: 'Empresas por posición política.',
       position: 'top',
       requiredTab: 'FEED'
     },

@@ -10,6 +10,7 @@ import { LogActionModal } from '../modals/LogActionModal';
 import { DuelModal } from '../modals/DuelModal';
 import { WalletModal } from '../modals/WalletModal';
 import { recordUserAction } from '../../services/userActionService';
+import { getUserCreditsBalance, addCredits, withdrawCredits } from '../../services/duelFirebaseService';
 
 // Helper function to get the API base URL
 const getApiBaseUrl = () => {
@@ -54,9 +55,31 @@ export const UnionView: React.FC = () => {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [showDuelModal, setShowDuelModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [userCredits, setUserCredits] = useState(100); // Default initial credits
+  const [userCredits, setUserCredits] = useState<number | null>(null); // null = loading
   const { t } = useLanguage();
   const { user, demoMode, userProfile } = useAuth();
+
+  // Fetch user credits from server
+  useEffect(() => {
+    const fetchCredits = async () => {
+      if (!user) {
+        setUserCredits(100); // Default for non-logged in users
+        return;
+      }
+      try {
+        const credits = await getUserCreditsBalance(user.uid);
+        if (credits) {
+          setUserCredits(credits.balance);
+        } else {
+          setUserCredits(100); // Fallback to default
+        }
+      } catch (error) {
+        console.error('Failed to fetch credits:', error);
+        setUserCredits(100); // Fallback on error
+      }
+    };
+    fetchCredits();
+  }, [user]);
 
   // Generate user DID
   const userDID = user?.email ? PolisAPI.generateUserDID(user.email) : '';
@@ -329,30 +352,31 @@ export const UnionView: React.FC = () => {
       <PixelCard className="relative bg-white" data-tour-id="duel-arena">
         <div className="absolute top-3 right-3 flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-full">
           <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-          <span className="font-mono text-[10px] font-bold text-red-500 tracking-wider">PVP ARENA</span>
-        </div>
-
-        <div className="absolute top-3 left-3 flex items-center gap-2">
-          <span className="font-mono text-[10px] font-bold text-gray-500 uppercase">BALANCE:</span>
-          <div className="bg-green-500 text-white px-2 py-0.5 font-mono text-xs font-bold">${userCredits}</div>
+          <span className="font-mono text-[10px] font-bold text-red-500 tracking-wider">{t('duel', 'pvp_arena')}</span>
         </div>
 
         {/* Main Content - Compact (25% shorter) */}
         <div className="pt-10 pb-3 px-5">
+          {/* Balance display - aligned with content */}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="font-mono text-[10px] font-bold text-gray-500 uppercase">{t('duel', 'balance')}:</span>
+            <div className="bg-green-500 text-white px-2 py-0.5 font-mono text-xs font-bold">
+              {userCredits === null ? '...' : `$${userCredits}`}
+            </div>
+          </div>
           <div className="flex items-center justify-between gap-4 mb-2">
             {/* Left: Title */}
             <div className="flex-1">
-              <h2 className="font-pixel text-3xl leading-none mb-1">DUEL</h2>
-              <h2 className="font-pixel text-3xl leading-none mb-2">MODE</h2>
+              <h2 className="font-pixel text-3xl leading-none mb-2">{t('duel', 'duel_mode')}</h2>
 
               {/* Preview Button */}
               <button className="bg-gray-600 text-white px-3 py-1 font-mono text-[10px] font-bold uppercase mb-2">
-                Preview
+                {t('duel', 'preview')}
               </button>
 
               {/* Description */}
               <p className="font-mono text-[11px] text-gray-700 leading-tight">
-                Skill-based picture trivia. Challenge opposing personas. Win rewards.
+                {t('duel', 'duel_description')}
               </p>
             </div>
 
@@ -366,15 +390,15 @@ export const UnionView: React.FC = () => {
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="border-2 border-black p-1.5 text-center bg-white">
               <Zap size={14} className="mx-auto mb-0.5" strokeWidth={2} />
-              <div className="font-mono text-[9px] font-bold uppercase">FAST</div>
+              <div className="font-mono text-[9px] font-bold uppercase">{t('duel', 'fast')}</div>
             </div>
             <div className="border-2 border-black p-1.5 text-center bg-white">
               <Target size={14} className="mx-auto mb-0.5" strokeWidth={2} />
-              <div className="font-mono text-[9px] font-bold uppercase">GLOBAL</div>
+              <div className="font-mono text-[9px] font-bold uppercase">{t('duel', 'global')}</div>
             </div>
             <div className="border-2 border-black p-1.5 text-center bg-white">
               <Shield size={14} className="mx-auto mb-0.5" strokeWidth={2} />
-              <div className="font-mono text-[9px] font-bold uppercase">SAFE</div>
+              <div className="font-mono text-[9px] font-bold uppercase">{t('duel', 'safe')}</div>
             </div>
           </div>
 
@@ -383,7 +407,7 @@ export const UnionView: React.FC = () => {
             onClick={() => setShowDuelModal(true)}
             className="w-full bg-black text-white hover:bg-gray-800 transition-colors py-2.5 font-mono text-sm font-bold uppercase tracking-wide border-2 border-black shadow-pixel mb-2"
           >
-            ENTER ARENA
+            {t('duel', 'enter_arena')}
           </button>
 
           {/* Deposit and Withdraw Buttons */}
@@ -393,14 +417,14 @@ export const UnionView: React.FC = () => {
               className="border-2 border-black bg-white hover:bg-gray-100 transition-colors py-2 flex items-center justify-center gap-1 font-mono text-xs font-bold uppercase"
             >
               <ArrowUpRight size={12} className="rotate-180" />
-              Deposit
+              {t('duel', 'deposit')}
             </button>
             <button
               onClick={() => setShowWalletModal(true)}
               className="border-2 border-black bg-white hover:bg-gray-100 transition-colors py-2 flex items-center justify-center gap-1 font-mono text-xs font-bold uppercase"
             >
               <ArrowUpRight size={12} />
-              Withdraw
+              {t('duel', 'withdraw')}
             </button>
           </div>
         </div>
@@ -543,30 +567,45 @@ export const UnionView: React.FC = () => {
       )}
 
       {/* DUEL Modal */}
-      {showDuelModal && user && (
+      {showDuelModal && user && userCredits !== null && (
         <DuelModal
           isOpen={showDuelModal}
           onClose={() => setShowDuelModal(false)}
           userCredits={userCredits}
           userPersonaLabel={userProfile?.coordinates?.label || user.displayName || 'Unknown'}
           userStanceType={userProfile?.coordinates?.coreStanceType || 'moderate-centrist'}
+          userCoordinates={userProfile?.coordinates}
           onCreditsChange={(newBalance: number) => setUserCredits(newBalance)}
         />
       )}
 
       {/* WALLET Modal */}
-      {showWalletModal && (
+      {showWalletModal && userCredits !== null && (
         <WalletModal
           isOpen={showWalletModal}
           onClose={() => setShowWalletModal(false)}
           currentBalance={userCredits}
-          onDeposit={(amount: number) => {
-            setUserCredits((prev: number) => prev + amount);
-            console.log(`Deposited $${amount}`);
+          onDeposit={async (amount: number) => {
+            try {
+              const result = await addCredits(amount);
+              if (result) {
+                setUserCredits(result.balance);
+                console.log(`Deposited $${amount}, new balance: $${result.balance}`);
+              }
+            } catch (error) {
+              console.error('Deposit failed:', error);
+            }
           }}
-          onWithdraw={(amount: number) => {
-            setUserCredits((prev: number) => prev - amount);
-            console.log(`Withdrew $${amount}`);
+          onWithdraw={async (amount: number) => {
+            try {
+              const result = await withdrawCredits(amount);
+              if (result) {
+                setUserCredits(result.balance);
+                console.log(`Withdrew $${amount}, new balance: $${result.balance}`);
+              }
+            } catch (error) {
+              console.error('Withdraw failed:', error);
+            }
           }}
         />
       )}

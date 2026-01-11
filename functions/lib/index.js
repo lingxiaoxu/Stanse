@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
+exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -479,18 +479,39 @@ const questionPopulator_1 = require("./duel/questionPopulator");
 // DUEL Arena Agents
 const agents_1 = require("./duel/agents");
 /**
- * Matchmaking Scheduler - Runs every 2 minutes
+ * Matchmaking Scheduler - Runs every 1 minute
  * Matches waiting users based on stance type, ping, and entry fee
+ * Also creates AI opponents for users waiting > 30 seconds
  */
 exports.runDuelMatchmaking = functions.scheduler.onSchedule({
-    schedule: 'every 2 minutes',
+    schedule: 'every 1 minutes',
     timeZone: 'UTC',
     region: 'us-central1'
 }, async () => {
     await (0, matchmaking_1.processMatchmakingQueue)();
 });
 /**
+ * Force Matchmaking Check (HTTP Callable)
+ * Client can call this after waiting to trigger AI opponent creation
+ */
+exports.checkDuelMatchmaking = functions.https.onCall(async (request) => {
+    const { auth } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    try {
+        // Run matchmaking which will create AI opponent if user waited > 30s
+        await (0, matchmaking_1.processMatchmakingQueue)();
+        return { success: true };
+    }
+    catch (error) {
+        console.error('Error checking matchmaking:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
  * Join Matchmaking Queue (HTTP Callable)
+ * Also triggers immediate matchmaking attempt
  */
 exports.joinDuelQueue = functions.https.onCall(async (request) => {
     const { auth, data } = request;
@@ -506,6 +527,11 @@ exports.joinDuelQueue = functions.https.onCall(async (request) => {
             entryFee: data.entryFee,
             safetyBelt: data.safetyBelt,
             duration: data.duration
+        });
+        // Trigger immediate matchmaking attempt (non-blocking)
+        // This allows instant matching if another player is waiting
+        (0, matchmaking_1.processMatchmakingQueue)().catch(err => {
+            console.error('Background matchmaking error:', err);
         });
         return { success: true, queueId };
     }
@@ -563,6 +589,118 @@ exports.getDuelCreditHistory = functions.https.onCall(async (request) => {
     }
     catch (error) {
         console.error('Error getting credit history:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Add Credits (HTTP Callable) - For testing/deposit simulation
+ * Adds credits to user's balance
+ */
+exports.addDuelCredits = functions.https.onCall(async (request) => {
+    const { auth, data } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const amount = data?.amount || 100;
+    if (amount <= 0 || amount > 1000) {
+        throw new functions.https.HttpsError('invalid-argument', 'Amount must be between 1 and 1000');
+    }
+    try {
+        const now = new Date().toISOString();
+        const mainRef = db.collection('user_credits').doc(auth.uid);
+        await db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(mainRef);
+            if (!doc.exists) {
+                // Create new user credits document
+                const newDoc = {
+                    userId: auth.uid,
+                    balance: amount,
+                    totalGranted: amount,
+                    totalSpent: 0,
+                    totalEarned: 0,
+                    updatedAt: now,
+                    lastTransactionAt: now
+                };
+                transaction.set(mainRef, newDoc);
+            }
+            else {
+                const current = doc.data();
+                transaction.update(mainRef, {
+                    balance: current.balance + amount,
+                    totalGranted: (current.totalGranted || 0) + amount,
+                    updatedAt: now,
+                    lastTransactionAt: now
+                });
+            }
+            // Add history entry
+            const historyRef = mainRef.collection('history').doc();
+            transaction.set(historyRef, {
+                eventId: historyRef.id,
+                type: 'GRANT',
+                amount,
+                balanceBefore: doc.exists ? doc.data().balance : 0,
+                balanceAfter: (doc.exists ? doc.data().balance : 0) + amount,
+                timestamp: now,
+                metadata: {
+                    reason: 'Deposit',
+                    description: 'User deposit simulation'
+                }
+            });
+        });
+        const updatedDoc = await mainRef.get();
+        return { success: true, credits: updatedDoc.data() };
+    }
+    catch (error) {
+        console.error('Error adding credits:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Refund Credits (HTTP Callable)
+ * Releases held credits back to user when match fails/errors
+ */
+exports.refundDuelCredits = functions.https.onCall(async (request) => {
+    const { auth, data } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const matchId = data?.matchId;
+    const amount = data?.amount;
+    if (!matchId || typeof amount !== 'number' || amount <= 0) {
+        throw new functions.https.HttpsError('invalid-argument', 'matchId and positive amount required');
+    }
+    try {
+        await (0, creditManager_1.releaseCredits)(auth.uid, amount, matchId);
+        // Get updated balance
+        const credits = await (0, creditManager_1.getUserCredits)(auth.uid);
+        return { success: true, credits };
+    }
+    catch (error) {
+        console.error('Error refunding credits:', error);
+        throw new functions.https.HttpsError('internal', error.message);
+    }
+});
+/**
+ * Withdraw Credits (HTTP Callable)
+ * Deducts credits from user balance (withdrawal simulation)
+ */
+exports.withdrawDuelCredits = functions.https.onCall(async (request) => {
+    const { auth, data } = request;
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const amount = data?.amount;
+    if (typeof amount !== 'number' || amount <= 0) {
+        throw new functions.https.HttpsError('invalid-argument', 'Positive amount required');
+    }
+    try {
+        await (0, creditManager_1.withdrawCredits)(auth.uid, amount);
+        // Get updated balance
+        const credits = await (0, creditManager_1.getUserCredits)(auth.uid);
+        return { success: true, credits };
+    }
+    catch (error) {
+        console.error('Error withdrawing credits:', error);
         throw new functions.https.HttpsError('internal', error.message);
     }
 });

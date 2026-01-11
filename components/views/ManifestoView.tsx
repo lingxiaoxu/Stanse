@@ -37,8 +37,8 @@ export const ManifestoView: React.FC = () => {
         </PixelCard>
       </div>
       
-      <div className="text-center font-pixel text-2xl animate-pulse uppercase">
-        {t('manifesto', 'footer')}
+      <div className="text-center py-6 opacity-60">
+        <p className="font-pixel text-xl">"{t('manifesto', 'footer')}"</p>
       </div>
     </div>
   );

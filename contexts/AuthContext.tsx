@@ -156,7 +156,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     setLoading(true);
     try {
-      await signInWithEmail(email, password);
+      const emailUser = await signInWithEmail(email, password);
+      // Fetch user profile immediately after successful login
+      if (emailUser) {
+        try {
+          const profile = await getUserProfile(emailUser.uid);
+          setUserProfile(profile);
+        } catch (err) {
+          console.error('Error fetching user profile after email login:', err);
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
       throw err;
@@ -169,7 +178,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     setLoading(true);
     try {
-      await signUpWithEmail(email, password, displayName);
+      const newUser = await signUpWithEmail(email, password, displayName);
+      // Fetch user profile immediately after successful signup
+      if (newUser) {
+        try {
+          const profile = await getUserProfile(newUser.uid);
+          setUserProfile(profile);
+        } catch (err) {
+          console.error('Error fetching user profile after signup:', err);
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to sign up');
       throw err;
@@ -182,7 +200,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError(null);
     setLoading(true);
     try {
-      await signInWithGoogle();
+      const googleUser = await signInWithGoogle();
+      // Fetch user profile immediately after successful login
+      // This ensures authUserProfile is available for tour check
+      if (googleUser) {
+        try {
+          const profile = await getUserProfile(googleUser.uid);
+          setUserProfile(profile);
+        } catch (err) {
+          console.error('Error fetching user profile after Google login:', err);
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to sign in with Google');
       throw err;

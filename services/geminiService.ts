@@ -1193,3 +1193,119 @@ export const cleanAndRepopulateNews = async (
     return { deleted: deleteResult.deleted, fetched: 0 };
   }
 };
+
+/**
+ * Image recognition result for branded product identification
+ */
+export interface ImageRecognitionResult {
+  success: boolean;
+  brandName?: string;
+  productType?: string;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE';
+  description?: string;
+  errorMessage?: string;
+}
+
+/**
+ * Recognize branded products from an image using Gemini Vision API
+ * Identifies the brand/company behind a product in a photo
+ */
+export const recognizeBrandedProduct = async (
+  imageBase64: string,
+  mimeType: string = 'image/jpeg'
+): Promise<ImageRecognitionResult> => {
+  try {
+    console.log('[ImageRecognition] Starting brand recognition...');
+
+    const prompt = `Analyze this image and identify any branded products, company logos, or organizational symbols.
+
+TASK:
+1. Look for visible brand names, logos, trademarks, or identifiable branded products
+2. Identify the parent company or organization behind any brands found
+3. Be specific about what you see - don't guess if the brand is not clearly visible
+
+IMPORTANT RULES:
+- Only identify brands that are CLEARLY visible in the image (text, logo, distinctive design)
+- If you see a generic product without clear branding, respond with confidence: "NONE"
+- If you see a product but can only guess the brand based on shape/design (not clear branding), confidence should be "LOW"
+- For clearly visible brand names/logos, confidence should be "HIGH"
+
+RESPONSE FORMAT (JSON):
+{
+  "brandFound": true/false,
+  "brandName": "Company/Brand Name" or null,
+  "productType": "Brief description of the product" or null,
+  "confidence": "HIGH" | "MEDIUM" | "LOW" | "NONE",
+  "description": "Brief explanation of what was identified and how"
+}
+
+Examples:
+- Tesla car with visible logo → {"brandFound": true, "brandName": "Tesla", "productType": "Electric vehicle", "confidence": "HIGH", "description": "Tesla logo clearly visible on the vehicle"}
+- iPhone with Apple logo → {"brandFound": true, "brandName": "Apple", "productType": "Smartphone", "confidence": "HIGH", "description": "Apple logo visible on the device"}
+- Generic coffee mug no branding → {"brandFound": false, "brandName": null, "productType": "Coffee mug", "confidence": "NONE", "description": "No visible brand or logo on the product"}
+- Car that looks like BMW but no clear logo → {"brandFound": true, "brandName": "BMW", "productType": "Automobile", "confidence": "LOW", "description": "Vehicle design suggests BMW but no clear branding visible"}`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType: mimeType,
+                data: imageBase64
+              }
+            },
+            {
+              text: prompt
+            }
+          ]
+        }
+      ],
+      config: {
+        responseMimeType: 'application/json'
+      }
+    });
+
+    const resultText = response.text || '{}';
+    console.log('[ImageRecognition] Raw response:', resultText);
+
+    const result = JSON.parse(resultText);
+
+    if (result.brandFound && result.brandName && (result.confidence === 'HIGH' || result.confidence === 'MEDIUM')) {
+      console.log(`[ImageRecognition] Brand identified: ${result.brandName} (${result.confidence})`);
+      return {
+        success: true,
+        brandName: result.brandName,
+        productType: result.productType,
+        confidence: result.confidence,
+        description: result.description
+      };
+    } else if (result.brandFound && result.brandName && result.confidence === 'LOW') {
+      console.log(`[ImageRecognition] Low confidence brand: ${result.brandName}`);
+      return {
+        success: true,
+        brandName: result.brandName,
+        productType: result.productType,
+        confidence: 'LOW',
+        description: result.description
+      };
+    } else {
+      console.log('[ImageRecognition] No brand identified');
+      return {
+        success: false,
+        confidence: 'NONE',
+        description: result.description || 'No identifiable brand or logo found in the image',
+        productType: result.productType
+      };
+    }
+  } catch (error: any) {
+    console.error('[ImageRecognition] Error:', error);
+    return {
+      success: false,
+      confidence: 'NONE',
+      errorMessage: error.message || 'Failed to analyze image'
+    };
+  }
+};
