@@ -332,3 +332,52 @@ export function listenForMatchResult(
     }
   });
 }
+
+/**
+ * Listen for opponent's answers in real-time during match
+ * Callback fires whenever opponent submits a new answer
+ * Returns unsubscribe function
+ */
+export function listenForOpponentAnswers(
+  matchId: string,
+  userId: string,
+  onOpponentAnswer: (answer: {
+    questionId: string;
+    questionOrder: number;
+    answerIndex: number;
+    isCorrect: boolean;
+    timestamp: string;
+  }) => void
+): Unsubscribe {
+  const matchRef = doc(db, 'duel_matches', matchId);
+  let lastProcessedCount = 0;
+
+  return onSnapshot(matchRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const matchData = snapshot.data() as FirestoreDuelMatch;
+
+      // Determine if user is player A or B
+      const isPlayerA = matchData.players.A.userId === userId;
+      const opponentPlayer = isPlayerA ? 'B' : 'A';
+
+      // Get opponent's answers
+      const opponentAnswers = matchData.answers?.[opponentPlayer] || [];
+
+      // Only process new answers (not previously seen)
+      if (opponentAnswers.length > lastProcessedCount) {
+        const newAnswers = opponentAnswers.slice(lastProcessedCount);
+        newAnswers.forEach((answer: any) => {
+          console.log(`[listenForOpponentAnswers] Opponent answered Q${answer.questionOrder}:`, answer.isCorrect ? 'correct' : 'wrong');
+          onOpponentAnswer({
+            questionId: answer.questionId,
+            questionOrder: answer.questionOrder,
+            answerIndex: answer.answerIndex,
+            isCorrect: answer.isCorrect,
+            timestamp: answer.timestamp
+          });
+        });
+        lastProcessedCount = opponentAnswers.length;
+      }
+    }
+  });
+}

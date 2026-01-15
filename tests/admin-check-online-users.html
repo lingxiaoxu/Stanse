@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STANSE - Online Users Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'VT323', monospace;
+      background: #0a0a0a;
+      color: #00ff00;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      font-size: 48px;
+      margin: 20px 0;
+      text-shadow: 0 0 10px #00ff00;
+    }
+    .stats {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+    .stat-box {
+      background: #1a1a1a;
+      border: 2px solid #00ff00;
+      padding: 20px;
+      text-align: center;
+      min-width: 200px;
+    }
+    .stat-label {
+      font-size: 18px;
+      opacity: 0.7;
+    }
+    .stat-value {
+      font-size: 48px;
+      color: #00ff00;
+      text-shadow: 0 0 10px #00ff00;
+    }
+    .user-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .user-card {
+      background: #1a1a1a;
+      border: 2px solid #00ff00;
+      padding: 15px;
+      position: relative;
+    }
+    .user-card.in-queue {
+      border-color: #ffff00;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 5px #ffff00; }
+      50% { box-shadow: 0 0 20px #ffff00; }
+    }
+    .user-header {
+      font-size: 24px;
+      margin-bottom: 10px;
+      color: #00ffff;
+    }
+    .user-info {
+      font-size: 16px;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+    .queue-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #ffff00;
+      color: #000;
+      padding: 5px 10px;
+      font-size: 14px;
+      font-weight: bold;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0.3; }
+    }
+    .no-users {
+      text-align: center;
+      font-size: 24px;
+      opacity: 0.5;
+      padding: 50px;
+    }
+    .refresh-info {
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.5;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 DUEL ARENA MATCHMAKING MONITOR</h1>
+
+    <!-- Login Section -->
+    <div id="loginSection" style="margin-bottom: 30px; padding: 20px; background: #1a1a1a; border: 2px solid #00ff00;">
+      <div id="loginForm">
+        <h2 style="margin-top: 0;">🔐 Admin Login</h2>
+        <input type="email" id="emailInput" placeholder="Email" value="lxu912@gmail.com" style="padding: 12px; margin-right: 10px; background: #0a0a0a; border: 1px solid #00ff00; color: #00ff00; width: 250px; font-family: 'VT323', monospace; font-size: 18px;">
+        <input type="password" id="passwordInput" placeholder="Password" value="123456" style="padding: 12px; margin-right: 10px; background: #0a0a0a; border: 1px solid #00ff00; color: #00ff00; width: 150px; font-family: 'VT323', monospace; font-size: 18px;">
+        <button onclick="doLogin()" id="loginBtn" style="padding: 12px 30px; background: #00ff00; color: #000; border: none; font-weight: bold; cursor: pointer; font-family: 'VT323', monospace; font-size: 18px;">LOGIN</button>
+      </div>
+      <div id="loggedInAs" style="display: none; color: #00ff00; font-size: 20px;">
+        ✅ Logged in as: <span id="userEmail" style="color: #ffff00;"></span>
+        <button onclick="doLogout()" style="margin-left: 20px; padding: 8px 20px; background: #ff4444; color: #fff; font-family: 'VT323', monospace; font-size: 16px;">Logout</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-box">
+        <div class="stat-label">🔍 WAITING FOR MATCH</div>
+        <div class="stat-value" id="inQueue" style="color: #ffff00;">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">👥 LOGGED IN (INFO)</div>
+        <div class="stat-value" id="totalOnline" style="color: #00ffff;">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">⚔️ ACTIVE MATCHES</div>
+        <div class="stat-value" id="activeMatches" style="color: #ff00ff;">0</div>
+      </div>
+    </div>
+
+    <h2 style="color: #ffff00; margin: 30px 0 15px 0; font-size: 32px;">⚡ USERS WAITING FOR MATCH (CAN BE MATCHED)</h2>
+    <p style="color: #888; margin-bottom: 15px;">These users clicked "FIND OPPONENT" and are actively looking for a match</p>
+    <div id="queueList" class="user-list"></div>
+
+    <h2 style="color: #00ffff; margin: 30px 0 15px 0;">👥 ALL LOGGED IN USERS (INFO ONLY)</h2>
+    <p style="color: #888; margin-bottom: 15px;">All users who are logged into STANSE (may not be looking for match)</p>
+    <div id="userList" class="user-list"></div>
+    <div class="refresh-info">Real-time updates via Firebase Realtime Database</div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+    import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD1Hdjo17l2YrgakNzZW-lpx78vVE77keE",
+      authDomain: "stanseproject.firebaseapp.com",
+      databaseURL: "https://stanseproject-default-rtdb.firebaseio.com",
+      projectId: "stanseproject",
+      storageBucket: "stanseproject.firebasestorage.app",
+      messagingSenderId: "626045766180",
+      appId: "1:626045766180:web:3a8d3967343cc3264ca6b1",
+      measurementId: "G-QZJYQ89Y49"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    let allOnlineUsers = [];
+    let queueEntries = [];
+    let activeMatches = [];
+    let listenersSetup = false;
+
+    // Login function
+    window.doLogin = async function() {
+      const email = document.getElementById('emailInput').value;
+      const password = document.getElementById('passwordInput').value;
+      const loginBtn = document.getElementById('loginBtn');
+
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'LOGGING IN...';
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        console.log('[Monitor] Logged in as:', userCredential.user.email);
+
+        // Show logged in state
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('loggedInAs').style.display = 'block';
+        document.getElementById('userEmail').textContent = userCredential.user.email;
+
+        // Setup listeners
+        if (!listenersSetup) {
+          setupListeners();
+          listenersSetup = true;
+        }
+      } catch (error) {
+        console.error('[Monitor] Login failed:', error);
+        alert('Login failed: ' + error.message);
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'LOGIN';
+      }
+    };
+
+    // Logout function
+    window.doLogout = async function() {
+      await auth.signOut();
+      document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('loggedInAs').style.display = 'none';
+      document.getElementById('loginBtn').disabled = false;
+      document.getElementById('loginBtn').textContent = 'LOGIN';
+      location.reload();
+    };
+
+    function setupListeners() {
+
+    // Listen for active matches
+    const matchesRef = ref(db, 'active_matches');
+    onValue(matchesRef, (snapshot) => {
+      console.log('[Monitor] Active matches snapshot received:', snapshot.exists());
+      const data = snapshot.val();
+      activeMatches = [];
+
+      if (data) {
+        Object.values(data).forEach(match => {
+          if (match.status === 'playing') {
+            activeMatches.push(match);
+          }
+        });
+      }
+
+      console.log('[Monitor] Active matches:', activeMatches.length);
+      updateUI();
+    }, (error) => {
+      console.error('[Monitor] Active matches listener error:', error);
+    });
+
+    // Listen for matchmaking queue
+    const queueRef = ref(db, 'matchmaking_queue');
+    onValue(queueRef, (snapshot) => {
+      console.log('[Monitor] Queue snapshot received:', snapshot.exists());
+      const data = snapshot.val();
+      console.log('[Monitor] Queue data:', data);
+      queueEntries = [];
+
+      if (data) {
+        const now = Date.now();
+        Object.values(data).forEach(entry => {
+          // Filter expired
+          if (entry.expiresAt > now) {
+            queueEntries.push(entry);
+          }
+        });
+      }
+
+      console.log('[Monitor] Queue entries:', queueEntries.length);
+      updateUI();
+    }, (error) => {
+      console.error('[Monitor] Queue listener error:', error);
+      document.getElementById('queueList').innerHTML = '<div class="no-users" style="color: #ff0000;">Error: ' + error.message + '</div>';
+    });
+
+    // Listen for online users
+    const presenceRef = ref(db, 'presence');
+    onValue(presenceRef, (snapshot) => {
+      console.log('[Monitor] Presence snapshot received:', snapshot.exists());
+      const data = snapshot.val();
+      console.log('[Monitor] Presence data:', data);
+      allOnlineUsers = [];
+
+      if (data) {
+        Object.values(data).forEach(user => {
+          console.log('[Monitor] Processing user:', user);
+          if (user.status === 'online') {
+            allOnlineUsers.push(user);
+          }
+        });
+      }
+
+      console.log('[Monitor] Total online users:', allOnlineUsers.length);
+      updateUI();
+    }, (error) => {
+      console.error('[Monitor] Presence listener error:', error);
+      document.getElementById('userList').innerHTML = '<div class="no-users" style="color: #ff0000;">Error: ' + error.message + '</div>';
+    });
+
+    function updateUI() {
+      // Update stats
+      document.getElementById('totalOnline').textContent = allOnlineUsers.length;
+      document.getElementById('inQueue').textContent = queueEntries.length;
+      document.getElementById('activeMatches').textContent = activeMatches.length;
+
+      // Render queue list
+      const queueListEl = document.getElementById('queueList');
+      if (queueEntries.length === 0) {
+        queueListEl.innerHTML = '<div class="no-users">No users in queue</div>';
+      } else {
+        queueListEl.innerHTML = queueEntries.map(entry => {
+          const waitTime = Math.round((Date.now() - entry.joinedAt) / 1000);
+          const timeRemaining = Math.round((entry.expiresAt - Date.now()) / 1000);
+
+          return `
+            <div class="user-card in-queue">
+              <div class="queue-badge">⏱️ ${waitTime}s</div>
+              <div class="user-header">${entry.personaLabel}</div>
+              <div class="user-info">
+                Stance: ${entry.stanceType}<br>
+                Entry Fee: $${entry.entryFee} | Duration: ${entry.duration}s<br>
+                Safety Belt: ${entry.safetyBelt ? 'YES' : 'NO'} | Ping: ${entry.pingMs}ms<br>
+                Expires in: ${timeRemaining}s
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Show compatibility matrix if multiple users
+        if (queueEntries.length > 1) {
+          const matrix = [];
+          for (let i = 0; i < queueEntries.length; i++) {
+            for (let j = i + 1; j < queueEntries.length; j++) {
+              const a = queueEntries[i];
+              const b = queueEntries[j];
+
+              const stanceMatch = a.stanceType !== b.stanceType;
+              const durationMatch = a.duration === b.duration;
+              const pingDiff = Math.abs(a.pingMs - b.pingMs);
+              const pingMatch = pingDiff <= 60;
+              const feeDiff = Math.abs(a.entryFee - b.entryFee);
+              const feeMatch = feeDiff <= 5;
+
+              const compatible = stanceMatch && durationMatch && pingMatch && feeMatch;
+
+              matrix.push(`
+                <div style="margin-top: 15px; padding: 10px; border: 1px solid ${compatible ? '#00ff00' : '#ff0000'};">
+                  ${i + 1} vs ${j + 1}: ${compatible ? '✅ CAN MATCH' : '❌ INCOMPATIBLE'}<br>
+                  ${!compatible ? `Reasons: ${!stanceMatch ? 'same stance, ' : ''}${!durationMatch ? `duration (${a.duration}s vs ${b.duration}s), ` : ''}${!pingMatch ? `ping diff ${pingDiff}ms, ` : ''}${!feeMatch ? `fee diff $${feeDiff}` : ''}` : ''}
+                </div>
+              `);
+            }
+          }
+
+          if (matrix.length > 0) {
+            queueListEl.innerHTML += '<div style="margin-top: 20px; color: #ffffff;"><strong>Compatibility Matrix:</strong>' + matrix.join('') + '</div>';
+          }
+        }
+      }
+
+      // Render user list
+      const userListEl = document.getElementById('userList');
+      if (allOnlineUsers.length === 0) {
+        userListEl.innerHTML = '<div class="no-users">No users online</div>';
+        return;
+      }
+
+      userListEl.innerHTML = allOnlineUsers.map(user => {
+        const email = user.email || 'Anonymous';
+        const displayEmail = email.length > 20 ? email.substring(0, 20) + '...' : email;
+
+        return `
+          <div class="user-card ${user.inDuelQueue ? 'in-queue' : ''}">
+            ${user.inDuelQueue ? '<div class="queue-badge">🎯 SEARCHING</div>' : ''}
+            <div class="user-header">${displayEmail}</div>
+            <div class="user-info">
+              Persona: ${user.personaLabel || 'Unknown'}<br>
+              Stance: ${user.stanceType || 'Unknown'}<br>
+              Status: ${user.inDuelQueue ? '🔍 Looking for opponent' : '✅ Online'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    } // End of setupListeners
+  </script>
+</body>
+</html>

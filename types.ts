@@ -370,6 +370,7 @@ export enum DuelState {
   MATCHING = 'MATCHING',
   PRE_MATCH_CHECK = 'PRE_MATCH_CHECK',
   GAMEPLAY = 'GAMEPLAY',
+  FINALIZING = 'FINALIZING',
   CASH_ANIMATION = 'CASH_ANIMATION',
   RESULTS = 'RESULTS',
   ERROR = 'ERROR'
@@ -458,6 +459,27 @@ export interface FirestoreDuelMatch {
   };
 
   questionSequenceRef: string; // Reference to question sequence doc
+
+  // Player answers during match (for real-time PvP)
+  answers?: {
+    A?: Array<{
+      questionId: string;
+      questionOrder: number;
+      answerIndex: number;
+      isCorrect: boolean;
+      timestamp: string;
+      timeElapsed: number;
+    }>;
+    B?: Array<{
+      questionId: string;
+      questionOrder: number;
+      answerIndex: number;
+      isCorrect: boolean;
+      timestamp: string;
+      timeElapsed: number;
+    }>;
+  };
+
   audit: {
     version: 'v1';
     notes?: string;

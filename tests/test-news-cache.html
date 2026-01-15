@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test News Cache</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #000;
+      color: #0f0;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      background: #0f0;
+      color: #000;
+      border: 2px solid #0f0;
+      cursor: pointer;
+      font-family: monospace;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #000;
+      color: #0f0;
+    }
+    #output {
+      border: 2px solid #0f0;
+      padding: 15px;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .success { color: #0f0; }
+    .error { color: #f00; }
+    .warning { color: #ff0; }
+  </style>
+</head>
+<body>
+  <h1>🧪 News Cache Testing</h1>
+
+  <div>
+    <h3>Test Functions:</h3>
+    <button onclick="testGetImageFromCache()">Test getImageFromCache()</button>
+    <button onclick="testSaveImageToCache()">Test saveImageToCache()</button>
+    <button onclick="testOldVsNewImages()">Compare Old vs New Images</button>
+    <button onclick="clearOutput()">Clear Output</button>
+  </div>
+
+  <div id="output"></div>
+
+  <script type="module">
+    import { getImageFromCache, saveImageToCache } from './services/newsCache.js';
+    import { db } from './services/firebase.js';
+    import { collection, getDocs, limit as firestoreLimit, query } from 'firebase/firestore';
+
+    const output = document.getElementById('output');
+
+    function log(message, type = 'normal') {
+      const span = document.createElement('span');
+      span.className = type;
+      span.textContent = message + '\n';
+      output.appendChild(span);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    window.clearOutput = () => {
+      output.innerHTML = '';
+    };
+
+    window.testGetImageFromCache = async () => {
+      log('\n🧪 Testing getImageFromCache()...\n', 'success');
+
+      try {
+        // Test with a known titleHash from news_images collection
+        const q = query(collection(db, 'news_images'), firestoreLimit(5));
+        const snapshot = await getDocs(q);
+
+        log(`Found ${snapshot.size} cached images\n`);
+
+        for (const doc of snapshot.docs) {
+          const data = doc.data();
+          log(`\nTesting titleHash: ${doc.id}`);
+          log(`Stored URL: ${data.imageUrl?.slice(0, 80)}...`);
+
+          const result = await getImageFromCache(doc.id);
+
+          if (result) {
+            log(`✅ RETURNED: ${result.slice(0, 80)}...`, 'success');
+            log(`   Is AI-generated: ${result.includes('stanse-public-assets') ? 'YES' : 'NO'}`);
+          } else {
+            log(`❌ RETURNED: null (filtered out)`, 'warning');
+            log(`   Reason: URL not from AI-generated pool`);
+          }
+        }
+      } catch (error) {
+        log(`\n❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    window.testSaveImageToCache = async () => {
+      log('\n🧪 Testing saveImageToCache()...\n', 'success');
+
+      const testCases = [
+        {
+          hash: 'test_ai_image',
+          url: 'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/test_12345.jpg',
+          expected: 'SAVED'
+        },
+        {
+          hash: 'test_old_image',
+          url: 'https://loremflickr.com/800/450/news',
+          expected: 'SKIPPED'
+        },
+        {
+          hash: 'test_unsplash',
+          url: 'https://images.unsplash.com/photo-123?w=800',
+          expected: 'SKIPPED'
+        }
+      ];
+
+      for (const test of testCases) {
+        log(`\nTest: ${test.hash}`);
+        log(`URL: ${test.url}`);
+        log(`Expected: ${test.expected}`);
+
+        await saveImageToCache(test.hash, test.url);
+
+        // Verify
+        const saved = await getImageFromCache(test.hash);
+        if (test.expected === 'SAVED') {
+          log(saved ? `✅ SAVED successfully` : `❌ FAILED to save`, saved ? 'success' : 'error');
+        } else {
+          log(saved ? `❌ Should not save` : `✅ SKIPPED correctly`, saved ? 'error' : 'success');
+        }
+      }
+    };
+
+    window.testOldVsNewImages = async () => {
+      log('\n🧪 Comparing Old vs New Image System...\n', 'success');
+
+      try {
+        const q = query(collection(db, 'news_images'), firestoreLimit(10));
+        const snapshot = await getDocs(q);
+
+        let oldImages = 0;
+        let newImages = 0;
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const url = data.imageUrl || '';
+
+          if (url.includes('storage.googleapis.com/stanse-public-assets/news_images')) {
+            newImages++;
+            log(`✅ ${doc.id}: AI-generated`, 'success');
+          } else {
+            oldImages++;
+            log(`⚠️  ${doc.id}: Old (${url.split('/')[2]})`, 'warning');
+          }
+        });
+
+        log(`\n📊 Summary:`);
+        log(`   New AI images: ${newImages}`, 'success');
+        log(`   Old images: ${oldImages}`, 'warning');
+        log(`   Total: ${snapshot.size}`);
+      } catch (error) {
+        log(`\n❌ Error: ${error.message}`, 'error');
+      }
+    };
+
+    log('✅ Test functions loaded. Click buttons to test!\n', 'success');
+  </script>
+</body>
+</html>

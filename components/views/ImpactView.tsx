@@ -55,7 +55,9 @@ export const UnionView: React.FC = () => {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [showDuelModal, setShowDuelModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [walletInitialTab, setWalletInitialTab] = useState<'DEPOSIT' | 'WITHDRAW'>('DEPOSIT');
   const [userCredits, setUserCredits] = useState<number | null>(null); // null = loading
+  const [isCollectiveStatsExpanded, setIsCollectiveStatsExpanded] = useState(true); // Default expanded
   const { t } = useLanguage();
   const { user, demoMode, userProfile } = useAuth();
 
@@ -85,6 +87,13 @@ export const UnionView: React.FC = () => {
   const userDID = user?.email ? PolisAPI.generateUserDID(user.email) : '';
 
   // Fetch data from Polis Protocol backend
+  // Demo mode mock data constants
+  const DEMO_MOCK_STATS = {
+    liveCount: 1247,
+    userStats: { campaigns: 3, streak: 12, redirected: 420 },
+    collectiveStats: { strength: 45201, divested: 1240000 } // divested in cents
+  };
+
   useEffect(() => {
     const fetchBackendData = async () => {
       try {
@@ -93,6 +102,11 @@ export const UnionView: React.FC = () => {
         if (!isHealthy) {
           if (demoMode) {
             console.log('Backend unavailable, using mock data (demo mode ON)');
+            // Set mock data for demo mode when backend is unavailable
+            setCampaigns(MOCK_CAMPAIGNS);
+            setLiveCount(DEMO_MOCK_STATS.liveCount);
+            setUserStats(DEMO_MOCK_STATS.userStats);
+            setCollectiveStats(DEMO_MOCK_STATS.collectiveStats);
           } else {
             console.log('Backend unavailable, showing empty data (demo mode OFF)');
             // In strict mode (demo OFF), clear data to show only real backend data
@@ -138,12 +152,21 @@ export const UnionView: React.FC = () => {
         // Fetch global stats
         const globalStats = await PolisAPI.fetchGlobalStats();
         if (globalStats) {
-          // Display actual backend values directly
-          setLiveCount(globalStats.active_allies_online);
-          setCollectiveStats({
-            strength: globalStats.total_union_strength,
-            divested: Math.round(globalStats.capital_diverted_usd * 100) // Convert to cents
-          });
+          if (demoMode) {
+            // Demo mode ON + backend available: combine mock data with real data
+            setLiveCount(globalStats.active_allies_online + DEMO_MOCK_STATS.liveCount);
+            setCollectiveStats({
+              strength: globalStats.total_union_strength + DEMO_MOCK_STATS.collectiveStats.strength,
+              divested: Math.round(globalStats.capital_diverted_usd * 100) + DEMO_MOCK_STATS.collectiveStats.divested
+            });
+          } else {
+            // Demo mode OFF: display actual backend values only
+            setLiveCount(globalStats.active_allies_online);
+            setCollectiveStats({
+              strength: globalStats.total_union_strength,
+              divested: Math.round(globalStats.capital_diverted_usd * 100)
+            });
+          }
         }
 
         // Fetch user impact if logged in
@@ -151,17 +174,38 @@ export const UnionView: React.FC = () => {
           const userDID = PolisAPI.generateUserDID(user.email);
           const userImpact = await PolisAPI.fetchUserImpact(userDID);
           if (userImpact) {
-            setUserStats({
-              campaigns: userImpact.campaigns,
-              streak: userImpact.streak,
-              redirected: Math.round(userImpact.redirected_usd)
-            });
+            if (demoMode) {
+              // Demo mode ON: combine mock data with real user data
+              setUserStats({
+                campaigns: userImpact.campaigns + DEMO_MOCK_STATS.userStats.campaigns,
+                streak: userImpact.streak + DEMO_MOCK_STATS.userStats.streak,
+                redirected: Math.round(userImpact.redirected_usd) + DEMO_MOCK_STATS.userStats.redirected
+              });
+            } else {
+              // Demo mode OFF: display actual user data only
+              setUserStats({
+                campaigns: userImpact.campaigns,
+                streak: userImpact.streak,
+                redirected: Math.round(userImpact.redirected_usd)
+              });
+            }
+          } else if (demoMode) {
+            // No user impact data but demo mode is ON: show mock data
+            setUserStats(DEMO_MOCK_STATS.userStats);
           }
+        } else if (demoMode) {
+          // Not logged in but demo mode is ON: show mock data
+          setUserStats(DEMO_MOCK_STATS.userStats);
         }
       } catch (error) {
         console.error('Error fetching backend data:', error);
         if (demoMode) {
           console.log('Error occurred, falling back to mock data (demo mode ON)');
+          // Set mock data for demo mode when error occurs
+          setCampaigns(MOCK_CAMPAIGNS);
+          setLiveCount(DEMO_MOCK_STATS.liveCount);
+          setUserStats(DEMO_MOCK_STATS.userStats);
+          setCollectiveStats(DEMO_MOCK_STATS.collectiveStats);
         } else {
           console.log('Error occurred, showing empty data (demo mode OFF)');
           // In strict mode (demo OFF), clear data to show only real backend data
@@ -350,20 +394,22 @@ export const UnionView: React.FC = () => {
 
       {/* DUEL ARENA Entry Card - Using same style as Active Allies */}
       <PixelCard className="relative bg-white" data-tour-id="duel-arena">
-        <div className="absolute top-3 right-3 flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-full">
-          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-          <span className="font-mono text-[10px] font-bold text-red-500 tracking-wider">{t('duel', 'pvp_arena')}</span>
-        </div>
-
-        {/* Main Content - Compact (25% shorter) */}
-        <div className="pt-10 pb-3 px-5">
-          {/* Balance display - aligned with content */}
-          <div className="flex items-center gap-2 mb-3">
+        {/* Top row: Balance left, PVP Arena right */}
+        <div className="flex items-center justify-between px-5 pt-3">
+          <div className="flex items-center gap-2">
             <span className="font-mono text-[10px] font-bold text-gray-500 uppercase">{t('duel', 'balance')}:</span>
             <div className="bg-green-500 text-white px-2 py-0.5 font-mono text-xs font-bold">
               {userCredits === null ? '...' : `$${userCredits}`}
             </div>
           </div>
+          <div className="flex items-center gap-2 px-2 py-1 border border-gray-200 rounded-full">
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+            <span className="font-mono text-[10px] font-bold text-red-500 tracking-wider">{t('duel', 'pvp_arena')}</span>
+          </div>
+        </div>
+
+        {/* Main Content - Compact (25% shorter) */}
+        <div className="pt-3 pb-3 px-5">
           <div className="flex items-center justify-between gap-4 mb-2">
             {/* Left: Title */}
             <div className="flex-1">
@@ -413,14 +459,20 @@ export const UnionView: React.FC = () => {
           {/* Deposit and Withdraw Buttons */}
           <div className="grid grid-cols-2 gap-2">
             <button
-              onClick={() => setShowWalletModal(true)}
+              onClick={() => {
+                setWalletInitialTab('DEPOSIT');
+                setShowWalletModal(true);
+              }}
               className="border-2 border-black bg-white hover:bg-gray-100 transition-colors py-2 flex items-center justify-center gap-1 font-mono text-xs font-bold uppercase"
             >
               <ArrowUpRight size={12} className="rotate-180" />
               {t('duel', 'deposit')}
             </button>
             <button
-              onClick={() => setShowWalletModal(true)}
+              onClick={() => {
+                setWalletInitialTab('WITHDRAW');
+                setShowWalletModal(true);
+              }}
               className="border-2 border-black bg-white hover:bg-gray-100 transition-colors py-2 flex items-center justify-center gap-1 font-mono text-xs font-bold uppercase"
             >
               <ArrowUpRight size={12} />
@@ -526,34 +578,41 @@ export const UnionView: React.FC = () => {
             </div>
         </div>
 
-        {/* Connector */}
-        <div className="bg-black text-white py-2 text-center border-y-2 border-black">
+        {/* Connector - Clickable to toggle collapse */}
+        <button
+          onClick={() => setIsCollectiveStatsExpanded(!isCollectiveStatsExpanded)}
+          className="w-full bg-black text-white py-2 text-center border-y-2 border-black hover:bg-gray-900 transition-colors cursor-pointer"
+        >
              <div className="text-[10px] font-mono tracking-[0.3em] flex items-center justify-center gap-4">
-                <span>▼</span> {t('union', 'amplified')} <span>▼</span>
+                <span className={`transition-transform duration-200 ${isCollectiveStatsExpanded ? '' : 'rotate-180'}`}>▼</span>
+                {t('union', 'amplified')}
+                <span className={`transition-transform duration-200 ${isCollectiveStatsExpanded ? '' : 'rotate-180'}`}>▼</span>
              </div>
-        </div>
+        </button>
 
-        {/* Collective Stats - Typography Focused */}
-        <div className="p-6 space-y-8">
-            {/* Stat 1 */}
-            <div className="flex flex-col items-center">
-                <span className="font-mono text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{t('union', 'union_strength')}</span>
-                <div className="font-pixel text-6xl promax:text-7xl leading-none">
-                    {collectiveStats.strength.toLocaleString()}
-                </div>
-                <div className="h-1 w-16 bg-black mt-4 mb-1"></div>
-            </div>
+        {/* Collective Stats - Typography Focused (Collapsible) */}
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isCollectiveStatsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="p-6 space-y-8">
+              {/* Stat 1 */}
+              <div className="flex flex-col items-center">
+                  <span className="font-mono text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{t('union', 'union_strength')}</span>
+                  <div className="font-pixel text-6xl promax:text-7xl leading-none">
+                      {collectiveStats.strength.toLocaleString()}
+                  </div>
+                  <div className="h-1 w-16 bg-black mt-4 mb-1"></div>
+              </div>
 
-            {/* Stat 2 */}
-            <div className="flex flex-col items-center">
-                <span className="font-mono text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{t('union', 'capital_divested')}</span>
-                <div className="font-pixel text-6xl promax:text-7xl leading-none">
-                    ${(collectiveStats.divested / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-                <p className="text-[10px] font-mono text-gray-500 mt-2 max-w-xs text-center">
-                    {t('union', 'divested_desc')}
-                </p>
-            </div>
+              {/* Stat 2 */}
+              <div className="flex flex-col items-center">
+                  <span className="font-mono text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{t('union', 'capital_divested')}</span>
+                  <div className="font-pixel text-6xl promax:text-7xl leading-none">
+                      ${(collectiveStats.divested / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <p className="text-[10px] font-mono text-gray-500 mt-2 max-w-xs text-center">
+                      {t('union', 'divested_desc')}
+                  </p>
+              </div>
+          </div>
         </div>
       </PixelCard>
 
@@ -585,6 +644,7 @@ export const UnionView: React.FC = () => {
           isOpen={showWalletModal}
           onClose={() => setShowWalletModal(false)}
           currentBalance={userCredits}
+          initialTab={walletInitialTab}
           onDeposit={async (amount: number) => {
             try {
               const result = await addCredits(amount);

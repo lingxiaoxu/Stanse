@@ -8,6 +8,7 @@ interface WalletModalProps {
   currentBalance: number;
   onDeposit: (amount: number) => void;
   onWithdraw: (amount: number) => void;
+  initialTab?: 'DEPOSIT' | 'WITHDRAW';
 }
 
 const ModalHeader: React.FC<{ onClose: () => void; title: string }> = ({ onClose, title }) => (
@@ -32,10 +33,11 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   onClose,
   currentBalance,
   onDeposit,
-  onWithdraw
+  onWithdraw,
+  initialTab = 'DEPOSIT'
 }) => {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'DEPOSIT' | 'WITHDRAW'>('DEPOSIT');
+  const [activeTab, setActiveTab] = useState<'DEPOSIT' | 'WITHDRAW'>(initialTab);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
 
   const handleConfirm = () => {

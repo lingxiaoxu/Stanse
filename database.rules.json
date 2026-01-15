@@ -1,0 +1,22 @@
+{
+  "rules": {
+    "presence": {
+      ".read": "auth != null",
+      "$userId": {
+        ".write": "$userId === auth.uid"
+      }
+    },
+    "matchmaking_queue": {
+      ".read": "auth != null",
+      "$userId": {
+        ".write": "$userId === auth.uid"
+      }
+    },
+    "active_matches": {
+      ".read": "auth != null",
+      "$matchId": {
+        ".write": "auth != null"
+      }
+    }
+  }
+}

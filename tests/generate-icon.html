@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>STANSE Icon Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      background: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .icon-container {
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon-text {
+      font-family: 'VT323', monospace;
+      color: black;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+    /* 1024x1024 version */
+    .icon-1024 {
+      width: 1024px;
+      height: 1024px;
+    }
+    .icon-1024 .icon-text {
+      font-size: 180px;
+    }
+    /* 512x512 version */
+    .icon-512 {
+      width: 512px;
+      height: 512px;
+    }
+    .icon-512 .icon-text {
+      font-size: 90px;
+    }
+    /* 256x256 version */
+    .icon-256 {
+      width: 256px;
+      height: 256px;
+    }
+    .icon-256 .icon-text {
+      font-size: 45px;
+    }
+    .label {
+      font-family: monospace;
+      font-size: 14px;
+      color: #666;
+    }
+    .instructions {
+      font-family: monospace;
+      font-size: 12px;
+      color: #999;
+      max-width: 600px;
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="font-family: monospace;">STANSE Icon Generator</h1>
+
+  <div class="label">1024 x 1024</div>
+  <div class="icon-container icon-1024" id="icon-1024">
+    <span class="icon-text">STANSE</span>
+  </div>
+
+  <div class="label">512 x 512</div>
+  <div class="icon-container icon-512" id="icon-512">
+    <span class="icon-text">STANSE</span>
+  </div>
+
+  <div class="label">256 x 256</div>
+  <div class="icon-container icon-256" id="icon-256">
+    <span class="icon-text">STANSE</span>
+  </div>
+
+  <div class="instructions">
+    Right-click on any icon and select "Save image as..." to download.<br>
+    Or use browser DevTools to screenshot the element at exact dimensions.
+  </div>
+
+  <script>
+    // Optional: Canvas-based PNG generation
+    async function generatePNG(size) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // White background
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, size, size);
+
+      // Text settings
+      ctx.fillStyle = 'black';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Font size based on canvas size
+      const fontSize = size * 0.175;
+      ctx.font = `${fontSize}px VT323`;
+      ctx.letterSpacing = '0.15em';
+
+      // Draw text
+      ctx.fillText('STANSE', size / 2, size / 2);
+
+      // Download
+      const link = document.createElement('a');
+      link.download = `stanse-icon-${size}x${size}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+  </script>
+</body>
+</html>

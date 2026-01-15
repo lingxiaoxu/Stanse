@@ -5,14 +5,55 @@ interface SplashVideoProps {
 }
 
 // Video URLs - GCS for global, R2 for China (Google is blocked in China)
+// Mobile has 5 rotating loading videos, desktop has 4 rotating intro videos
 const VIDEO_URLS = {
   gcs: {
-    mobile: 'https://storage.googleapis.com/stanse-public-assets/videos/stanse_loading.mp4',
-    desktop: 'https://storage.googleapis.com/stanse-public-assets/videos/stanse_intro.mp4'
+    mobile: [
+      'https://storage.googleapis.com/stanse-public-assets/videos/stanse_loading_1.mp4',
+      'https://storage.googleapis.com/stanse-public-assets/videos/stanse_loading_2.mp4',
+      'https://storage.googleapis.com/stanse-public-assets/videos/stanse_loading_3.mp4',
+      'https://storage.googleapis.com/stanse-public-assets/videos/stanse_loading_4.mp4',
+      'https://storage.googleapis.com/stanse-public-assets/videos/stanse_loading_5.mp4',
+    ],
+    desktop: [
+      'https://storage.googleapis.com/stanse-public-assets/videos/stanse_intro_0.mp4',
+      'https://storage.googleapis.com/stanse-public-assets/videos/stanse_intro_1.mp4',
+      'https://storage.googleapis.com/stanse-public-assets/videos/stanse_intro_2.mp4',
+      'https://storage.googleapis.com/stanse-public-assets/videos/stanse_intro_3.mp4',
+      'https://storage.googleapis.com/stanse-public-assets/videos/stanse_intro_4.mp4',
+    ]
   },
   r2: {
-    mobile: 'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_loading.mp4',
-    desktop: 'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_intro.mp4'
+    mobile: [
+      'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_loading_1.mp4',
+      'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_loading_2.mp4',
+      'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_loading_3.mp4',
+      'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_loading_4.mp4',
+      'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_loading_5.mp4',
+    ],
+    desktop: [
+      'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_intro_0.mp4',
+      'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_intro_1.mp4',
+      'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_intro_2.mp4',
+      'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_intro_3.mp4',
+      'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_intro_4.mp4',
+    ]
+  }
+};
+
+// Get the next video index for rotation (stored per device type)
+const getNextVideoIndex = (deviceType: 'mobile' | 'desktop'): number => {
+  const STORAGE_KEY = `stanse_splash_video_index_v2_${deviceType}`; // v2: reset to start from intro_0
+  const TOTAL_VIDEOS = 5; // Both mobile and desktop now have 5 videos
+
+  try {
+    const currentIndex = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+    const nextIndex = (currentIndex + 1) % TOTAL_VIDEOS;
+    localStorage.setItem(STORAGE_KEY, nextIndex.toString());
+    return currentIndex;
+  } catch {
+    // localStorage not available, use random
+    return Math.floor(Math.random() * TOTAL_VIDEOS);
   }
 };
 
@@ -77,8 +118,13 @@ export const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete }) => {
 
   // Select video based on device type and location
   // Use R2 (Cloudflare) for China users, GCS for others
+  // Mobile: rotate through 5 loading videos; Desktop: rotate through 4 intro videos
   const videoSource = useR2 ? VIDEO_URLS.r2 : VIDEO_URLS.gcs;
-  const videoUrl = deviceType === 'mobile' ? videoSource.mobile : videoSource.desktop;
+  const videoDeviceType = deviceType === 'mobile' ? 'mobile' : 'desktop';
+  const [videoIndex] = useState<number>(() => getNextVideoIndex(videoDeviceType));
+  const videoUrl = videoDeviceType === 'mobile'
+    ? videoSource.mobile[videoIndex]
+    : videoSource.desktop[videoIndex];
 
   // Safe complete function to prevent double-calling
   const safeComplete = () => {
@@ -91,8 +137,9 @@ export const SplashVideo: React.FC<SplashVideoProps> = ({ onComplete }) => {
   // Log video source for debugging
   useEffect(() => {
     console.log(`[SplashVideo] Using ${useR2 ? 'R2 (China)' : 'GCS (Global)'} video source`);
+    console.log(`[SplashVideo] Device: ${deviceType}, Video index: ${videoIndex + 1}/5`);
     console.log(`[SplashVideo] Video URL: ${videoUrl}`);
-  }, [useR2, videoUrl]);
+  }, [useR2, deviceType, videoIndex, videoUrl]);
 
   // Timeout fallback - if video doesn't load in 5 seconds, show "tap to start"
   // If still not loaded after 10 seconds, auto-skip

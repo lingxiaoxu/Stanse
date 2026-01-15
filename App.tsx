@@ -22,6 +22,8 @@ import { AppStateProvider } from './contexts/AppStateContext';
 import { recalibrateWithEntityFeedback } from './services/agents/stanceAgent';
 import { getTourSteps } from './data/tourSteps';
 import { markTourCompleted } from './services/userService';
+import { setUserOnline } from './services/presenceService';
+import { recoverUserState } from './services/matchRecoveryService';
 
 // Initial mock state for user profile (used as fallback)
 const INITIAL_PROFILE: PoliticalCoordinates = {
@@ -53,6 +55,27 @@ const StanseApp: React.FC = () => {
 
   // Track tour check state to prevent retriggering when authUserProfile updates
   const tourCheckRef = useRef<{ userId: string; language: string; checked: boolean } | null>(null);
+
+  // Track user online presence and recover state
+  useEffect(() => {
+    if (user) {
+      console.log('[App] Setting up presence for user:', user.uid, authUserProfile?.coordinates);
+
+      // Recover any abandoned state first
+      recoverUserState(user.uid).catch(err => {
+        console.warn('[App] State recovery failed:', err);
+      });
+
+      // Set user online and track activity
+      const cleanup = setUserOnline(user.uid, {
+        email: user.email || undefined,
+        personaLabel: authUserProfile?.coordinates?.label || 'Unknown',
+        stanceType: authUserProfile?.coordinates?.nationalityPrefix || 'Unknown'
+      });
+
+      return cleanup;
+    }
+  }, [user, authUserProfile]);
 
   // Check if tour should be shown after login
   useEffect(() => {

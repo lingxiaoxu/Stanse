@@ -106,6 +106,11 @@ export const FeedView: React.FC = () => {
 
   // Click-based tooltip state
   const [activeTooltip, setActiveTooltip] = useState<'support' | 'oppose' | 'performance' | 'persona' | null>(null);
+
+  // Collapsible section states (default expanded)
+  const [isMarketSignalExpanded, setIsMarketSignalExpanded] = useState(true);
+  const [isPositionsExpanded, setIsPositionsExpanded] = useState(true);
+  const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(true);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const stocksContainerRef = useRef<HTMLDivElement>(null);
   const stocksScrollRef = useRef<HTMLDivElement>(null);
@@ -660,13 +665,17 @@ export const FeedView: React.FC = () => {
                </div>
              ) : (
                <>
-               {/* MARKET SIGNAL Section Header */}
-               <div className="px-3 py-2 border-b-2 border-black bg-white">
-                 <span className="font-mono text-xs font-bold tracking-wider">
-                   - {t('feed', 'market_signal')}
-                 </span>
-               </div>
+               {/* MARKET SIGNAL Section Header - Collapsible */}
+               <button
+                 onClick={() => setIsMarketSignalExpanded(!isMarketSignalExpanded)}
+                 className="w-full px-4 py-4 border-b-2 border-black bg-white hover:bg-gray-50 transition-colors cursor-pointer flex items-center justify-between"
+               >
+                 <h3 className="font-pixel text-2xl">{t('feed', 'market_signal')}</h3>
+                 <span className={`transition-transform duration-200 text-black ${isMarketSignalExpanded ? '' : 'rotate-180'}`}>▼</span>
+               </button>
 
+               {/* MARKET SIGNAL Content - Collapsible */}
+               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isMarketSignalExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
                {/* Persona label bar */}
                <div className="bg-black text-white px-3 py-2 flex items-center gap-2 relative" ref={activeTooltip === 'persona' ? tooltipRef : null}>
                  <span className="font-mono text-[10px] tracking-wider uppercase flex-1">
@@ -682,7 +691,7 @@ export const FeedView: React.FC = () => {
                    onClick={() => setActiveTooltip(activeTooltip === 'persona' ? null : 'persona')}
                  />
                  {activeTooltip === 'persona' && (
-                   <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[250px]">
+                   <div className="absolute right-2 top-full mt-1 z-50 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[250px]">
                      <p className="font-mono text-[10px] leading-relaxed">
                        {t('feed', 'persona_tooltip')}
                      </p>
@@ -828,7 +837,7 @@ export const FeedView: React.FC = () => {
                    />
                  </div>
                  {activeTooltip === 'performance' && (
-                   <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[250px]">
+                   <div className="absolute right-2 bottom-full mb-1 z-50 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[250px]">
                      <p className="font-mono text-[10px] leading-relaxed">
                        {t('feed', 'performance_tooltip')}
                      </p>
@@ -912,14 +921,20 @@ export const FeedView: React.FC = () => {
                   </div>
                </div>
 
-               {/* REPRESENTATIVE POSITIONS Section Header */}
-               <div className="px-3 py-2 border-t-2 border-black bg-white">
-                 <span className="font-mono text-xs font-bold tracking-wider">
-                   - {t('feed', 'representative_positions')}
-                 </span>
                </div>
+               {/* End of MARKET SIGNAL collapsible content */}
 
-               {/* REPRESENTATIVE POSITIONS Content */}
+               {/* REPRESENTATIVE POSITIONS Section Header - Collapsible */}
+               <button
+                 onClick={() => setIsPositionsExpanded(!isPositionsExpanded)}
+                 className={`w-full px-4 py-4 border-black bg-white hover:bg-gray-50 transition-colors cursor-pointer flex items-center justify-between ${isMarketSignalExpanded ? 'border-t-2 border-b-2' : 'border-b-2'}`}
+               >
+                 <h3 className="font-pixel text-2xl">{t('feed', 'representative_positions')}</h3>
+                 <span className={`transition-transform duration-200 text-black ${isPositionsExpanded ? '' : 'rotate-180'}`}>▼</span>
+               </button>
+
+               {/* REPRESENTATIVE POSITIONS Content - Collapsible */}
+               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isPositionsExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
                {!rankings ? (
                  <div className="p-4 text-center">
                    <div className="font-mono text-xs text-gray-500">Loading positions...</div>
@@ -939,7 +954,7 @@ export const FeedView: React.FC = () => {
                          onClick={() => setActiveTooltip(activeTooltip === 'support' ? null : 'support')}
                        />
                        {activeTooltip === 'support' && (
-                         <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[200px]">
+                         <div className="absolute right-2 top-full mt-1 z-50 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[200px]">
                            <p className="font-mono text-[10px] leading-relaxed">{t('feed', 'support_companies_tooltip')}</p>
                          </div>
                        )}
@@ -985,7 +1000,7 @@ export const FeedView: React.FC = () => {
                          onClick={() => setActiveTooltip(activeTooltip === 'oppose' ? null : 'oppose')}
                        />
                        {activeTooltip === 'oppose' && (
-                         <div className="absolute right-2 top-full mt-1 z-20 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[200px]">
+                         <div className="absolute right-2 top-full mt-1 z-50 bg-white text-black border-2 border-black px-3 py-2 shadow-pixel-sm max-w-[200px]">
                            <p className="font-mono text-[10px] leading-relaxed">{t('feed', 'oppose_companies_tooltip')}</p>
                          </div>
                        )}
@@ -1019,29 +1034,35 @@ export const FeedView: React.FC = () => {
                    </div>
                  </div>
                )}
-
-               {/* WHY TODAY? Section Header */}
-               <div className="px-3 py-2 border-t-2 border-black bg-white">
-                 <span className="font-mono text-xs font-bold tracking-wider">
-                   - {t('feed', 'why_today')}
-                 </span>
                </div>
+               {/* End of REPRESENTATIVE POSITIONS collapsible content */}
 
-               {/* WHY TODAY? Content */}
-               <div className="bg-black text-white px-4 py-3">
-                 {loadingAnalysis ? (
-                   <p className="font-mono text-xs text-gray-400">{t('feed', 'analyzing_market')}</p>
-                 ) : todayAnalysis ? (
-                   <p className="font-mono text-xs leading-relaxed">
-                     {todayAnalysis.explanation}
-                   </p>
-                 ) : (
-                   <p className="font-mono text-xs text-gray-400">{t('feed', 'analysis_placeholder')}</p>
-                 )}
+               {/* TODAY'S ANALYSIS Section Header - Collapsible */}
+               <button
+                 onClick={() => setIsAnalysisExpanded(!isAnalysisExpanded)}
+                 className={`w-full px-4 py-4 border-black bg-white hover:bg-gray-50 transition-colors cursor-pointer flex items-center justify-between ${isPositionsExpanded ? 'border-t-2 border-b-2' : 'border-b-2'}`}
+               >
+                 <h3 className="font-pixel text-2xl">{t('feed', 'why_today')}</h3>
+                 <span className={`transition-transform duration-200 text-black ${isAnalysisExpanded ? '' : 'rotate-180'}`}>▼</span>
+               </button>
+
+               {/* TODAY'S ANALYSIS Content - Collapsible */}
+               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isAnalysisExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                 <div className="bg-black text-white px-4 py-3 max-h-[600px] overflow-y-auto">
+                   {loadingAnalysis ? (
+                     <p className="font-mono text-xs text-gray-400">{t('feed', 'analyzing_market')}</p>
+                   ) : todayAnalysis ? (
+                     <p className="font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                       {todayAnalysis.explanation}
+                     </p>
+                   ) : (
+                     <p className="font-mono text-xs text-gray-400">{t('feed', 'analysis_placeholder')}</p>
+                   )}
+                 </div>
                </div>
 
                {/* Footer with update time */}
-               <div className="border-t-2 border-black px-3 py-1 bg-gray-50">
+               <div className={`px-3 py-1 bg-gray-50 ${isAnalysisExpanded ? 'border-t-2 border-black' : ''}`}>
                  <p className="font-mono text-[8px] text-gray-400 text-center">
                    Updated: {marketUpdatedAt?.toLocaleString(LOCALE_MAP[language])}
                  </p>

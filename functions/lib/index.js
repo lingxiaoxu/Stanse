@@ -475,7 +475,7 @@ Status: ${errorCount > 0 ? 'COMPLETED WITH ERRORS' : 'SUCCESS'}
 const matchmaking_1 = require("./duel/matchmaking");
 const settlement_1 = require("./duel/settlement");
 const creditManager_1 = require("./duel/creditManager");
-const questionPopulator_1 = require("./duel/questionPopulator");
+const populate_duel_questions_1 = require("./scripts/populate-duel-questions");
 // DUEL Arena Agents
 const agents_1 = require("./duel/agents");
 /**
@@ -758,7 +758,7 @@ exports.populateDuelQuestions = functions.https.onCall(async (request) => {
         throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
     }
     try {
-        const result = await (0, questionPopulator_1.populateQuestions)();
+        const result = await (0, populate_duel_questions_1.populateQuestions)();
         return result;
     }
     catch (error) {

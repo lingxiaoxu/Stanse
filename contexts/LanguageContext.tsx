@@ -236,7 +236,10 @@ const TRANSLATIONS = {
         confirm_deposit: "Confirm Deposit",
         confirm_withdraw: "Confirm Withdraw",
         payment_note: "Simulates external payment gateway",
-        insufficient_balance: "Insufficient balance"
+        insufficient_balance: "Insufficient balance",
+        safety_belt_active: "Safety Belt",
+        time_up: "TIME UP!",
+        calculating: "Calculating results..."
     },
     feed: {
         market: "Values Market Alignment",
@@ -617,7 +620,10 @@ const TRANSLATIONS = {
         confirm_deposit: "确认充值",
         confirm_withdraw: "确认提现",
         payment_note: "模拟外部支付网关",
-        insufficient_balance: "余额不足"
+        insufficient_balance: "余额不足",
+        safety_belt_active: "安全带保护",
+        time_up: "时间到！",
+        calculating: "正在计算结果..."
     },
     feed: {
         market: "价值观市场对齐度",
@@ -998,7 +1004,10 @@ const TRANSLATIONS = {
         confirm_deposit: "入金確認",
         confirm_withdraw: "出金確認",
         payment_note: "外部決済ゲートウェイのシミュレーション",
-        insufficient_balance: "残高不足"
+        insufficient_balance: "残高不足",
+        safety_belt_active: "セーフティベルト",
+        time_up: "タイムアップ！",
+        calculating: "結果を計算中..."
     },
     feed: {
         market: "価値観市場適合度",
@@ -1379,7 +1388,10 @@ const TRANSLATIONS = {
         confirm_deposit: "Confirmer le Dépôt",
         confirm_withdraw: "Confirmer le Retrait",
         payment_note: "Simule une passerelle de paiement externe",
-        insufficient_balance: "Solde insuffisant"
+        insufficient_balance: "Solde insuffisant",
+        safety_belt_active: "Ceinture de Sécurité",
+        time_up: "TEMPS ÉCOULÉ !",
+        calculating: "Calcul des résultats..."
     },
     feed: {
         market: "Alignement Marché Valeurs",
@@ -1760,7 +1772,10 @@ const TRANSLATIONS = {
         confirm_deposit: "Confirmar Depósito",
         confirm_withdraw: "Confirmar Retiro",
         payment_note: "Simula una pasarela de pago externa",
-        insufficient_balance: "Saldo insuficiente"
+        insufficient_balance: "Saldo insuficiente",
+        safety_belt_active: "Cinturón de Seguridad",
+        time_up: "¡TIEMPO AGOTADO!",
+        calculating: "Calculando resultados..."
     },
     feed: {
         market: "Alineación Mercado Valores",

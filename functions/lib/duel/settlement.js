@@ -344,12 +344,27 @@ async function submitGameplayEvent(data) {
         currentScoreA,
         currentScoreB
     };
+    // Prepare answer object for real-time sync
+    const answerObj = {
+        questionId: data.questionId,
+        questionOrder: data.questionOrder,
+        answerIndex: data.answerIndex,
+        isCorrect,
+        timestamp: data.timestamp,
+        timeElapsed: data.timeElapsed
+    };
     // Update match and create event atomically
     const batch = db.batch();
     batch.set(eventRef, event);
+    // Update scores
     batch.update(matchRef, {
         'result.scoreA': currentScoreA,
         'result.scoreB': currentScoreB
+    });
+    // Add answer to player's answer array for real-time PvP sync
+    const playerKey = isPlayerA ? 'A' : 'B';
+    batch.update(matchRef, {
+        [`answers.${playerKey}`]: admin.firestore.FieldValue.arrayUnion(answerObj)
     });
     await batch.commit();
     console.log(`✅ Recorded answer for ${data.userId} in match ${data.matchId}: ${isCorrect ? 'CORRECT' : 'WRONG'}`);
