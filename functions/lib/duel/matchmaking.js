@@ -50,6 +50,7 @@ const secret_manager_1 = require("@google-cloud/secret-manager");
 const genai_1 = require("@google/genai");
 const creditManager_1 = require("./creditManager");
 const db = admin.firestore();
+const rtdb = admin.database(); // Realtime Database
 const secretClient = new secret_manager_1.SecretManagerServiceClient();
 const PROJECT_ID = 'gen-lang-client-0960644135';
 const GEMINI_SECRET_NAME = 'gemini-api-key';
@@ -57,6 +58,8 @@ const MAX_PING_DIFF = 60; // Maximum ping difference (ms)
 const MAX_FEE_DIFF = 5; // Maximum entry fee difference ($)
 const QUEUE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const AI_OPPONENT_WAIT_TIME = 30 * 1000; // Wait 30s before creating AI opponent
+// Feature flag - use RTDB for queue (complete migration)
+const USE_RTDB_QUEUE = true;
 // Cache for Gemini API key
 let geminiApiKey = null;
 /**
@@ -88,23 +91,55 @@ async function getGeminiApiKey() {
 async function processMatchmakingQueue() {
     const now = new Date();
     const nowIso = now.toISOString();
-    console.log(`🔄 [${nowIso}] Running matchmaking...`);
+    const nowMs = now.getTime();
+    console.log(`🔄 [${nowIso}] Running matchmaking (${USE_RTDB_QUEUE ? 'RTDB' : 'Firestore'})...`);
     try {
-        // Query all waiting users
-        const queueSnapshot = await db
-            .collection('duel_matchmaking_queue')
-            .where('expiresAt', '>', nowIso)
-            .orderBy('expiresAt')
-            .orderBy('joinedAt')
-            .get();
-        if (queueSnapshot.empty) {
-            console.log('  ℹ️  Queue empty');
-            return;
-        }
         const entries = [];
-        queueSnapshot.forEach(doc => {
-            entries.push({ docId: doc.id, ...doc.data() });
-        });
+        if (USE_RTDB_QUEUE) {
+            // ===== RTDB IMPLEMENTATION =====
+            const queueSnapshot = await rtdb.ref('matchmaking_queue').once('value');
+            if (!queueSnapshot.exists()) {
+                console.log('  ℹ️  Queue empty');
+                return;
+            }
+            const queueData = queueSnapshot.val();
+            // Convert to array and filter expired
+            Object.entries(queueData).forEach(([userId, data]) => {
+                if (data.expiresAt > nowMs) {
+                    entries.push({
+                        docId: userId,
+                        userId: data.userId,
+                        stanceType: data.stanceType,
+                        personaLabel: data.personaLabel,
+                        pingMs: data.pingMs,
+                        entryFee: data.entryFee,
+                        safetyBelt: data.safetyBelt,
+                        safetyFee: data.safetyFee,
+                        duration: data.duration,
+                        joinedAt: new Date(data.joinedAt).toISOString(),
+                        expiresAt: new Date(data.expiresAt).toISOString()
+                    });
+                }
+            });
+            // Sort by join time
+            entries.sort((a, b) => a.joinedAt.localeCompare(b.joinedAt));
+        }
+        else {
+            // ===== FIRESTORE IMPLEMENTATION (FALLBACK) =====
+            const queueSnapshot = await db
+                .collection('duel_matchmaking_queue')
+                .where('expiresAt', '>', nowIso)
+                .orderBy('expiresAt')
+                .orderBy('joinedAt')
+                .get();
+            if (queueSnapshot.empty) {
+                console.log('  ℹ️  Queue empty');
+                return;
+            }
+            queueSnapshot.forEach(doc => {
+                entries.push({ docId: doc.id, ...doc.data() });
+            });
+        }
         console.log(`  📊 Found ${entries.length} users in queue`);
         // Try to match pairs
         const matched = []; // Track matched user IDs
@@ -127,8 +162,14 @@ async function processMatchmakingQueue() {
                 // Mark as matched
                 matched.push(userA.userId, userB.userId);
                 // Remove from queue
-                await db.collection('duel_matchmaking_queue').doc(userA.docId).delete();
-                await db.collection('duel_matchmaking_queue').doc(userB.docId).delete();
+                if (USE_RTDB_QUEUE) {
+                    await rtdb.ref(`matchmaking_queue/${userA.userId}`).remove();
+                    await rtdb.ref(`matchmaking_queue/${userB.userId}`).remove();
+                }
+                else {
+                    await db.collection('duel_matchmaking_queue').doc(userA.docId).delete();
+                    await db.collection('duel_matchmaking_queue').doc(userB.docId).delete();
+                }
                 break;
             }
         }
@@ -146,7 +187,13 @@ async function processMatchmakingQueue() {
                     const aiOpponent = await createAIOpponent(user.stanceType, user.pingMs);
                     await createMatch(user, aiOpponent, true);
                     matched.push(user.userId);
-                    await db.collection('duel_matchmaking_queue').doc(user.docId).delete();
+                    // Remove from queue
+                    if (USE_RTDB_QUEUE) {
+                        await rtdb.ref(`matchmaking_queue/${user.userId}`).remove();
+                    }
+                    else {
+                        await db.collection('duel_matchmaking_queue').doc(user.docId).delete();
+                    }
                 }
                 catch (error) {
                     console.error(`  ❌ Failed to create AI opponent: ${error}`);
@@ -300,6 +347,11 @@ async function createMatch(userA, userB, isAIOpponent = false) {
             deductionB: 0
         },
         questionSequenceRef: sequenceId,
+        // Initialize answers array for real-time PvP sync
+        answers: {
+            A: [],
+            B: []
+        },
         audit: {
             version: 'v1',
             notes: isAIOpponent
@@ -333,19 +385,43 @@ async function selectRandomSequence(duration) {
  * Clean up expired queue entries
  */
 async function cleanupExpiredEntries() {
-    const now = new Date().toISOString();
-    const expiredSnapshot = await db
-        .collection('duel_matchmaking_queue')
-        .where('expiresAt', '<=', now)
-        .get();
-    if (expiredSnapshot.empty)
-        return;
-    const batch = db.batch();
-    expiredSnapshot.forEach(doc => {
-        batch.delete(doc.ref);
-    });
-    await batch.commit();
-    console.log(`  🗑️  Cleaned up ${expiredSnapshot.size} expired entries`);
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const nowMs = now.getTime();
+    if (USE_RTDB_QUEUE) {
+        // ===== RTDB CLEANUP =====
+        const queueSnapshot = await rtdb.ref('matchmaking_queue').once('value');
+        if (!queueSnapshot.exists())
+            return;
+        const updates = {};
+        let expiredCount = 0;
+        queueSnapshot.forEach((child) => {
+            const data = child.val();
+            if (data.expiresAt <= nowMs) {
+                updates[`matchmaking_queue/${child.key}`] = null;
+                expiredCount++;
+            }
+        });
+        if (expiredCount > 0) {
+            await rtdb.ref().update(updates);
+            console.log(`  🗑️  Cleaned up ${expiredCount} expired entries (RTDB)`);
+        }
+    }
+    else {
+        // ===== FIRESTORE CLEANUP =====
+        const expiredSnapshot = await db
+            .collection('duel_matchmaking_queue')
+            .where('expiresAt', '<=', nowIso)
+            .get();
+        if (expiredSnapshot.empty)
+            return;
+        const batch = db.batch();
+        expiredSnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+        console.log(`  🗑️  Cleaned up ${expiredSnapshot.size} expired entries (Firestore)`);
+    }
 }
 /**
  * Add user to matchmaking queue
@@ -353,7 +429,8 @@ async function cleanupExpiredEntries() {
  */
 async function joinMatchmakingQueue(data) {
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + QUEUE_TIMEOUT_MS);
+    const nowMs = now.getTime();
+    const expiresAtMs = nowMs + QUEUE_TIMEOUT_MS;
     const safetyFee = data.safetyBelt ? 5 : 0;
     // Validate user has sufficient credits
     const credits = await (0, creditManager_1.getUserCredits)(data.userId);
@@ -361,27 +438,55 @@ async function joinMatchmakingQueue(data) {
     if (credits.balance < required) {
         throw new Error(`Insufficient balance: need ${required}, have ${credits.balance}`);
     }
-    const queueEntry = {
-        userId: data.userId,
-        stanceType: data.stanceType,
-        personaLabel: data.personaLabel,
-        pingMs: data.pingMs,
-        entryFee: data.entryFee,
-        safetyBelt: data.safetyBelt,
-        safetyFee,
-        duration: data.duration,
-        joinedAt: now.toISOString(),
-        expiresAt: expiresAt.toISOString()
-    };
-    await db.collection('duel_matchmaking_queue').doc(data.userId).set(queueEntry);
-    console.log(`✅ User ${data.userId} joined matchmaking queue`);
+    if (USE_RTDB_QUEUE) {
+        // ===== RTDB IMPLEMENTATION =====
+        const queueEntry = {
+            userId: data.userId,
+            stanceType: data.stanceType,
+            personaLabel: data.personaLabel,
+            pingMs: data.pingMs,
+            entryFee: data.entryFee,
+            safetyBelt: data.safetyBelt,
+            safetyFee,
+            duration: data.duration,
+            joinedAt: nowMs,
+            expiresAt: expiresAtMs
+        };
+        await rtdb.ref(`matchmaking_queue/${data.userId}`).set(queueEntry);
+        // Set onDisconnect handler for auto-cleanup
+        await rtdb.ref(`matchmaking_queue/${data.userId}`).onDisconnect().remove();
+        console.log(`✅ User ${data.userId} joined matchmaking queue (RTDB)`);
+    }
+    else {
+        // ===== FIRESTORE IMPLEMENTATION =====
+        const queueEntry = {
+            userId: data.userId,
+            stanceType: data.stanceType,
+            personaLabel: data.personaLabel,
+            pingMs: data.pingMs,
+            entryFee: data.entryFee,
+            safetyBelt: data.safetyBelt,
+            safetyFee,
+            duration: data.duration,
+            joinedAt: now.toISOString(),
+            expiresAt: new Date(expiresAtMs).toISOString()
+        };
+        await db.collection('duel_matchmaking_queue').doc(data.userId).set(queueEntry);
+        console.log(`✅ User ${data.userId} joined matchmaking queue (Firestore)`);
+    }
     return data.userId;
 }
 /**
  * Leave matchmaking queue
  */
 async function leaveMatchmakingQueue(userId) {
-    await db.collection('duel_matchmaking_queue').doc(userId).delete();
-    console.log(`✅ User ${userId} left matchmaking queue`);
+    if (USE_RTDB_QUEUE) {
+        await rtdb.ref(`matchmaking_queue/${userId}`).remove();
+        console.log(`✅ User ${userId} left matchmaking queue (RTDB)`);
+    }
+    else {
+        await db.collection('duel_matchmaking_queue').doc(userId).delete();
+        console.log(`✅ User ${userId} left matchmaking queue (Firestore)`);
+    }
 }
 //# sourceMappingURL=matchmaking.js.map

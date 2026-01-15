@@ -16,6 +16,7 @@ import { NewsEvent } from '../types';
 
 const NEWS_COLLECTION = 'news';
 const NEWS_IMAGES_COLLECTION = 'news_images';
+const NEWS_IMAGE_GENERATION_COLLECTION = 'news_image_generation';
 
 // Hash function to create a unique ID for news based on title
 const hashTitle = (title: string): string => {
@@ -67,14 +68,20 @@ export const saveNewsToCache = async (news: NewsEvent): Promise<void> => {
 
 /**
  * Get cached image for a news title
+ * Now uses AI-generated images from news_image_generation collection
  */
 export const getImageFromCache = async (titleHash: string): Promise<string | null> => {
   try {
+    // First check old cache
     const docRef = doc(db, NEWS_IMAGES_COLLECTION, titleHash);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      return docSnap.data().imageUrl as string;
+      const imageUrl = docSnap.data().imageUrl as string;
+      // Only return if it's from the new AI-generated images (Firebase Storage)
+      if (imageUrl && imageUrl.includes('storage.googleapis.com/stanse-public-assets/news_images')) {
+        return imageUrl;
+      }
     }
     return null;
   } catch (error) {
@@ -85,14 +92,21 @@ export const getImageFromCache = async (titleHash: string): Promise<string | nul
 
 /**
  * Save image to cache
+ * Only saves AI-generated images (from Firebase Storage)
  */
 export const saveImageToCache = async (titleHash: string, imageUrl: string): Promise<void> => {
   try {
+    // Only cache AI-generated images from our Firebase Storage
+    if (!imageUrl.includes('storage.googleapis.com/stanse-public-assets/news_images')) {
+      return; // Skip caching non-AI images
+    }
+
     const docRef = doc(db, NEWS_IMAGES_COLLECTION, titleHash);
 
     await setDoc(docRef, {
       titleHash,
       imageUrl,
+      source: 'ai-generated', // Mark as AI-generated
       createdAt: Timestamp.now()
     });
   } catch (error) {

@@ -525,7 +525,7 @@ Status: ${errorCount > 0 ? 'COMPLETED WITH ERRORS' : 'SUCCESS'}
 import { processMatchmakingQueue, joinMatchmakingQueue, leaveMatchmakingQueue } from './duel/matchmaking';
 import { submitGameplayEvent, finalizeMatch } from './duel/settlement';
 import { getUserCredits, getCreditHistory, releaseCredits, withdrawCredits } from './duel/creditManager';
-import { populateQuestions } from './duel/questionPopulator';
+import { populateQuestions } from './scripts/populate-duel-questions';
 
 // DUEL Arena Agents
 import {

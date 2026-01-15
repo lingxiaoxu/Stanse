@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
+      // SECURITY NOTE: API keys are injected here for frontend Gemini API access
+      // Mitigation: nginx proxy limits access to authorized domains only
+      // Cloud Run deployment has authentication and domain restrictions
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
@@ -24,8 +27,8 @@ export default defineConfig(({ mode }) => {
         rollupOptions: {
           input: {
             main: path.resolve(__dirname, 'index.html'),
-            test: path.resolve(__dirname, 'test-typescript-rankings.html'),
-            'test-enhanced': path.resolve(__dirname, 'test-enhanced-rankings.html')
+            test: path.resolve(__dirname, 'tests/test-typescript-rankings.html'),
+            'test-enhanced': path.resolve(__dirname, 'tests/test-enhanced-rankings.html')
           }
         }
       }

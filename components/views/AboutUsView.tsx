@@ -2,6 +2,40 @@ import React, { useRef, useEffect, useState } from 'react';
 import { PixelCard } from '../ui/PixelCard';
 import { useLanguage } from '../../contexts/LanguageContext';
 
+// Video URLs - 5 rotating intro videos
+const VIDEO_URLS = {
+  gcs: [
+    'https://storage.googleapis.com/stanse-public-assets/videos/stanse_intro_0.mp4',
+    'https://storage.googleapis.com/stanse-public-assets/videos/stanse_intro_1.mp4',
+    'https://storage.googleapis.com/stanse-public-assets/videos/stanse_intro_2.mp4',
+    'https://storage.googleapis.com/stanse-public-assets/videos/stanse_intro_3.mp4',
+    'https://storage.googleapis.com/stanse-public-assets/videos/stanse_intro_4.mp4',
+  ],
+  r2: [
+    'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_intro_0.mp4',
+    'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_intro_1.mp4',
+    'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_intro_2.mp4',
+    'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_intro_3.mp4',
+    'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_intro_4.mp4',
+  ]
+};
+
+// Get the next video index for rotation (each page open shows different video)
+const getNextVideoIndex = (): number => {
+  const STORAGE_KEY = 'stanse_aboutus_video_index_v2'; // v2: reset to start from intro_0
+  const TOTAL_VIDEOS = 5;
+
+  try {
+    const currentIndex = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+    const nextIndex = (currentIndex + 1) % TOTAL_VIDEOS;
+    localStorage.setItem(STORAGE_KEY, nextIndex.toString());
+    return currentIndex;
+  } catch {
+    // localStorage not available, use random
+    return Math.floor(Math.random() * TOTAL_VIDEOS);
+  }
+};
+
 // Detect if user is likely in China (Google services are blocked)
 // Uses timezone and Chinese browser detection - NOT language (Chinese in USA should use GCS)
 const isLikelyInChina = (): boolean => {
@@ -21,11 +55,9 @@ const isLikelyInChina = (): boolean => {
 export const AboutUsView: React.FC = () => {
   const { t } = useLanguage();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoUrl] = useState(() =>
-    isLikelyInChina()
-      ? 'https://pub-d7df9460a68d416f8e9b251939afe4ae.r2.dev/stanse_intro.mp4'
-      : 'https://storage.googleapis.com/stanse-public-assets/videos/stanse_intro.mp4'
-  );
+  const [videoIndex] = useState<number>(() => getNextVideoIndex());
+  const [useR2] = useState<boolean>(isLikelyInChina());
+  const videoUrl = useR2 ? VIDEO_URLS.r2[videoIndex] : VIDEO_URLS.gcs[videoIndex];
 
   // Auto-play video when component mounts
   useEffect(() => {
@@ -35,7 +67,8 @@ export const AboutUsView: React.FC = () => {
         console.warn('[AboutUsView] Auto-play failed:', err);
       });
     }
-  }, []);
+    console.log(`[AboutUsView] Playing video ${videoIndex + 1}/4: ${videoUrl}`);
+  }, [videoIndex, videoUrl]);
 
   return (
     <div className="max-w-[115%] mx-auto w-full pb-20" style={{ maxWidth: 'calc(28rem * 1.15)' }}>

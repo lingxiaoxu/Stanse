@@ -76,3 +76,4 @@ __pycache__/
 
 # Excluded project folders
 stanse---union-duel/
+scripts/security-audit.sh

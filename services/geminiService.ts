@@ -34,96 +34,154 @@ const ai = new GoogleGenAI({
 });
 
 /**
- * Curated high-quality Unsplash images by category
- * Using direct images.unsplash.com URLs (HTTP 200, not redirects)
- * Each category has 10-15 images for maximum variety (60+ total)
+ * AI-Generated news images using Gemini Imagen 4
+ * Generated with photorealistic editorial news photography requirements
+ * Total: 129 images (18-24 per category) - replacing all Unsplash stock photos
  */
 const CATEGORY_IMAGES: Record<string, string[]> = {
   'POLITICS': [
-    'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=800&h=450&fit=crop', // Capitol building
-    'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&h=450&fit=crop', // Government
-    'https://images.unsplash.com/photo-1555848962-6e79363ec58f?w=800&h=450&fit=crop', // Voting
-    'https://images.unsplash.com/photo-1575320181282-9afab399332c?w=800&h=450&fit=crop', // Politics
-    'https://images.unsplash.com/photo-1598885159329-9377168ac375?w=800&h=450&fit=crop', // Democracy
-    'https://images.unsplash.com/photo-1591117207239-788bf8de6c3b?w=800&h=450&fit=crop', // Protest
-    'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&h=450&fit=crop', // Meeting
-    'https://images.unsplash.com/photo-1577003833154-a4d9e5a8bdd1?w=800&h=450&fit=crop', // Congress
-    'https://images.unsplash.com/photo-1591117207239-788bf8de6c3b?w=800&h=450&fit=crop', // Rally
-    'https://images.unsplash.com/photo-1569098644584-210bcd375b59?w=800&h=450&fit=crop', // Legislative
-    'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&h=450&fit=crop', // White House
-    'https://images.unsplash.com/photo-1593115057655-e2091616193a?w=800&h=450&fit=crop', // Elections
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/american_democracy_1768458402889.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/campaign_trail_1768458233204.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/capitol_building_1768458146027.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/congress_session_1768458200694.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/election_night_1768458292061.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/legislative_vote_1768458335011.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/midterm_election_1768458166931.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/political_debate_stage_1768458381705.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/political_protest_1768458281041.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/political_rally_1768458187944.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/presidential_debate_1768457515549.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/senate_chamber_1768458261787.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/state_capitol_1768458302052.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/supreme_court_1768458212298.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/town_hall_1768458313590.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/voter_registration_1768458392095.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/voting_booth_1768458177606.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/POLITICS/white_house_1768458155947.jpg',
   ],
   'TECH': [
-    'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&h=450&fit=crop', // Circuit board
-    'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&h=450&fit=crop', // Robot
-    'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&h=450&fit=crop', // Cybersecurity
-    'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&h=450&fit=crop', // Code matrix
-    'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=450&fit=crop', // Global tech
-    'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&h=450&fit=crop', // Laptop coding
-    'https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=800&h=450&fit=crop', // Coding
-    'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&h=450&fit=crop', // AI Robot
-    'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&h=450&fit=crop', // Data center
-    'https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?w=800&h=450&fit=crop', // Server room
-    'https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?w=800&h=450&fit=crop', // Tech devices
-    'https://images.unsplash.com/photo-1535378620166-273708d44e4c?w=800&h=450&fit=crop', // Innovation
-    'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=800&h=450&fit=crop', // Tech workspace
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/artificial_intelligence_1768458433030.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/cloud_computing_1768458512391.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/coding_programming_1768458466753.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/cryptocurrency_1768458523694.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/cybersecurity_1768458444141.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/data_center_1768458423076.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/digital_transformation_1768458683496.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/electric_vehicles_1768458582884.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/innovation_lab_1768458661503.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/internet_infrastructure_1768458614865.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/quantum_computing_1768458492002.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/robotics_1768458535054.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/semiconductor_chips_1768458571140.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/silicon_valley_1768458413546.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/smartphone_1768458455821.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/social_media_1768458502921.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/software_development_1768458638877.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/space_technology_1768458593016.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/tech_acquisition_1768458626328.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/tech_conference_1768458479352.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/tech_ipo_1768458671840.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/tech_privacy_1768458650100.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/tech_startup_1768458560697.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/TECH/virtual_reality_1768458548517.jpg',
   ],
   'MILITARY': [
-    'https://images.unsplash.com/photo-1579912437766-7896df6d3cd3?w=800&h=450&fit=crop', // Military
-    'https://images.unsplash.com/photo-1580752300992-559f8e6a7b36?w=800&h=450&fit=crop', // Defense
-    'https://images.unsplash.com/photo-1562564055-71e051d33c19?w=800&h=450&fit=crop', // Navy ship
-    'https://images.unsplash.com/photo-1569242840510-9fe6f0112cee?w=800&h=450&fit=crop', // Aircraft
-    'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800&h=450&fit=crop', // Military tech
-    'https://images.unsplash.com/photo-1571172965836-3619c8ad7565?w=800&h=450&fit=crop', // Soldiers
-    'https://images.unsplash.com/photo-1577495508326-19a1b3cf65b7?w=800&h=450&fit=crop', // Jets
-    'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&h=450&fit=crop', // Pentagon
-    'https://images.unsplash.com/photo-1569083689865-f7e0d1d17043?w=800&h=450&fit=crop', // Naval fleet
-    'https://images.unsplash.com/photo-1551076805-e1869033e561?w=800&h=450&fit=crop', // Helicopter
-    'https://images.unsplash.com/photo-1607988795691-3d0147b43231?w=800&h=450&fit=crop', // Tank
-    'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800&h=450&fit=crop', // Drone
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/air_force_base_1768458900247.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/aircraft_carrier_1768458693480.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/army_tanks_1768458807139.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/cyber_warfare_1768458942966.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/defense_budget_1768458757248.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/defense_contractor_1768458920248.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/fighter_jets_1768458704082.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/military_alliance_1768458955194.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/military_base_1768458714030.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/military_deployment_1768458931463.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/military_drone_1768458785620.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/military_helicopter_1768458819186.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/military_parade_1768458857269.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/military_technology_1768458877715.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/military_training_1768458746233.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/naval_base_1768458886977.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/naval_fleet_1768458723714.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/nuclear_weapons_1768458966364.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/pentagon_1768458734703.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/special_forces_1768458831166.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/submarine_1768458795836.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/veterans_1768458772365.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/MILITARY/war_room_1768458868015.jpg',
   ],
   'WORLD': [
-    'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=450&fit=crop', // Earth from space
-    'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=800&h=450&fit=crop', // World map
-    'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800&h=450&fit=crop', // Travel
-    'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=800&h=450&fit=crop', // Diplomacy
-    'https://images.unsplash.com/photo-1478860409698-8707f313ee8b?w=800&h=450&fit=crop', // Globe
-    'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&h=450&fit=crop', // Flags
-    'https://images.unsplash.com/photo-1569163139394-de4798aa62b6?w=800&h=450&fit=crop', // United Nations
-    'https://images.unsplash.com/photo-1589519160732-57fc498494f8?w=800&h=450&fit=crop', // Airport
-    'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=450&fit=crop', // Conference
-    'https://images.unsplash.com/photo-1503149779833-1de50ebe5f8a?w=800&h=450&fit=crop', // International
-    'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=450&fit=crop', // Summit
-    'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=450&fit=crop', // Cooperation
-    'https://images.unsplash.com/photo-1464746133101-a2c3f88e0dd9?w=800&h=450&fit=crop', // Bridge
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/border_crossing_1768459146349.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/climate_change_1768459054178.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/cultural_exchange_1768459242996.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/diplomatic_meeting_1768459093226.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/foreign_embassy_1768459007709.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/global_cooperation_1768459255746.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/global_economy_1768459125279.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/global_migration_1768459220298.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/global_pandemic_1768459077216.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/global_poverty_1768459186785.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/international_aid_1768459114120.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/international_airport_1768458998075.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/international_law_1768459175981.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/international_trade_1768459030466.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/refugee_crisis_1768459043251.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/united_nations_1768458977584.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/world_currency_1768459160133.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/world_health_1768459231293.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/world_heritage_1768459102106.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/world_map_1768459018951.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/WORLD/world_politics_1768459198503.jpg',
   ],
   'BUSINESS': [
-    'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=450&fit=crop', // Business charts
-    'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&h=450&fit=crop', // Skyscraper
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=450&fit=crop', // Office
-    'https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=800&h=450&fit=crop', // Money
-    'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&h=450&fit=crop', // Stock market
-    'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=450&fit=crop', // Analytics
-    'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&h=450&fit=crop', // City business
-    'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=800&h=450&fit=crop', // Corporate
-    'https://images.unsplash.com/photo-1559526324-593bc073d938?w=800&h=450&fit=crop', // Handshake
-    'https://images.unsplash.com/photo-1444653614773-995cb1ef9efa?w=800&h=450&fit=crop', // Wall Street
-    'https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800&h=450&fit=crop', // Finance
-    'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&h=450&fit=crop', // Investment
-    'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=450&fit=crop', // Market
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/business_analytics_1768459410567.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/business_bankruptcy_1768459465150.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/business_contract_1768459500769.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/business_expansion_1768459522691.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/business_handshake_1768459375330.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/business_meeting_1768459299890.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/corporate_headquarters_1768459288576.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/corporate_profits_1768459543135.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/earnings_report_1768459333540.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/economic_recession_1768459533439.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/financial_charts_1768459321263.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/ipo_launch_1768459359814.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/manufacturing_plant_1768459444101.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/market_volatility_1768459511409.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/merger_acquisition_1768459344144.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/retail_stores_1768459433107.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/skyscraper_1768459388856.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/startup_office_1768459311215.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/stock_market_1768459267312.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/supply_chain_1768459454471.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/trading_floor_1768459398635.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/venture_capital_1768459478541.jpg',
+    'https://storage.googleapis.com/stanse-public-assets/news_images/BUSINESS/wall_street_1768459277552.jpg',
   ],
 };
 
-// Default fallback images (high quality general news images)
+// Default fallback images (AI-generated news journalism images)
 const DEFAULT_IMAGES = [
-  'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&h=450&fit=crop', // Newspaper
-  'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=800&h=450&fit=crop', // News desk
-  'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&h=450&fit=crop', // Breaking news
-  'https://images.unsplash.com/photo-1586339949216-35c2747cc36d?w=800&h=450&fit=crop', // Reporter
-  'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&h=450&fit=crop', // Press
-  'https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?w=800&h=450&fit=crop', // Journalism
-  'https://images.unsplash.com/photo-1508921340878-ba53e1f016ec?w=800&h=450&fit=crop', // Headlines
-  'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=450&fit=crop', // Media
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/breaking_news_1768459552717.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/fact_checking_1768459693175.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/headline_news_1768459616305.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/investigative_journalism_1768459736042.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/journalism_1768459582106.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/live_reporting_1768459803244.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/media_bias_1768459778545.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/media_interview_1768459662131.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/news_alert_1768459702922.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/news_anchor_1768459573141.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/news_deadline_1768459672575.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/news_ethics_1768459814811.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/news_studio_1768459627710.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/news_subscription_1768459789696.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/news_van_1768459651403.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/news_website_1768459724912.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/newspaper_print_1768459562073.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/press_badge_1768459755450.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/press_freedom_1768459594284.jpg',
+  'https://storage.googleapis.com/stanse-public-assets/news_images/DEFAULT/reporter_microphone_1768459640341.jpg',
 ];
 
 /**

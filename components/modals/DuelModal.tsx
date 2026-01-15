@@ -16,12 +16,15 @@ import {
   getQuestionSequence,
   submitAnswer,
   finalizeMatch as finalizeMatchFirebase,
-  refundCredits
+  refundCredits,
+  listenForOpponentAnswers
 } from '../../services/duelFirebaseService';
 import { translatePersonaLabel } from '../../services/geminiService';
 import { Shield, X, AlertTriangle, Trophy, Skull, Sparkles, Zap, Scale } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { setInDuelQueue } from '../../services/presenceService';
+import { addActiveMatch, removeActiveMatch } from '../../services/matchStateService';
 
 interface DuelModalProps {
   isOpen: boolean;
@@ -93,9 +96,11 @@ export const DuelModal: React.FC<DuelModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [userPing, setUserPing] = useState(30);
   const matchListenerRef = useRef<(() => void) | null>(null);
+  const opponentAnswerListenerRef = useRef<(() => void) | null>(null);
   const aiOpponentTimeoutRef = useRef<number | null>(null);
   const matchProcessingRef = useRef<boolean>(false);
   const gameEndingRef = useRef<boolean>(false);
+  const isAIOpponentRef = useRef<boolean>(false);
 
   // Track pending match for refund purposes
   const pendingMatchRef = useRef<{ matchId: string; heldAmount: number } | null>(null);
@@ -161,7 +166,7 @@ export const DuelModal: React.FC<DuelModalProps> = ({
       });
   }, [language, userCoordinates, userPersonaLabel]);
 
-  // Reset on open - only runs when modal opens
+  // Reset on open/close - cleanup on close is critical
   useEffect(() => {
     if (isOpen) {
       setGameState(DuelState.LOBBY);
@@ -173,8 +178,53 @@ export const DuelModal: React.FC<DuelModalProps> = ({
       setError(null);
       // Measure user ping
       measurePing().then(ping => setUserPing(ping));
+    } else {
+      // Modal closed - cleanup all state
+      handleModalClose();
     }
   }, [isOpen]);
+
+  const handleModalClose = async () => {
+    console.log('[DuelModal] Modal closing, cleaning up state...');
+
+    const currentMatch = matchRef.current;
+
+    // If in queue, leave it
+    if (gameState === DuelState.MATCHING && user) {
+      try {
+        await leaveMatchmaking();
+        setInDuelQueue(user.uid, false);
+        console.log('[DuelModal] Left matchmaking queue');
+      } catch (e) {
+        console.warn('[DuelModal] Failed to leave queue:', e);
+      }
+    }
+
+    // If in active match, clean up match state
+    if ((gameState === DuelState.GAMEPLAY || gameState === DuelState.PRE_MATCH_CHECK) && currentMatch) {
+      try {
+        const opponentId = currentMatch.isPlayerA ? currentMatch.playerB.id : currentMatch.playerA.id;
+        // Only clean up if it's a real match (not AI)
+        if (!opponentId.startsWith('ai_bot_') && currentMatch.firestoreMatchId) {
+          await removeActiveMatch(currentMatch.firestoreMatchId);
+          console.log('[DuelModal] Cleaned up abandoned match');
+        }
+      } catch (e) {
+        console.log('[DuelModal] Failed to cleanup match (might be already removed):', e.message);
+      }
+    }
+
+    // Clean up all listeners and timers
+    if (matchListenerRef.current) {
+      matchListenerRef.current();
+      matchListenerRef.current = null;
+    }
+    if (opponentAnswerListenerRef.current) {
+      opponentAnswerListenerRef.current();
+      opponentAnswerListenerRef.current = null;
+    }
+    clearTimers();
+  };
 
   // Cleanup on close - separate effect to avoid re-running on gameState change
   useEffect(() => {
@@ -183,6 +233,10 @@ export const DuelModal: React.FC<DuelModalProps> = ({
       if (matchListenerRef.current) {
         matchListenerRef.current();
         matchListenerRef.current = null;
+      }
+      if (opponentAnswerListenerRef.current) {
+        opponentAnswerListenerRef.current();
+        opponentAnswerListenerRef.current = null;
       }
       if (aiOpponentTimeoutRef.current) {
         clearTimeout(aiOpponentTimeoutRef.current);
@@ -211,8 +265,19 @@ export const DuelModal: React.FC<DuelModalProps> = ({
       return;
     }
 
+    // Reset match processing state for new game (important for "Play Again")
+    matchProcessingRef.current = false;
+    gameEndingRef.current = false;
+    setMatch(null);
+    matchRef.current = null;
+
     setGameState(DuelState.MATCHING);
     setError(null);
+
+    // Mark user as in queue in presence system
+    if (user) {
+      setInDuelQueue(user.uid, true);
+    }
 
     try {
       // Join real matchmaking queue via Cloud Function
@@ -231,6 +296,16 @@ export const DuelModal: React.FC<DuelModalProps> = ({
       }
 
       console.log('[DuelModal] Joined queue, listening for match...');
+
+      // Trigger immediate matchmaking check (don't wait for 2s scheduler)
+      setTimeout(async () => {
+        console.log('[DuelModal] Triggering immediate matchmaking check...');
+        try {
+          await checkMatchmaking();
+        } catch (e) {
+          console.warn('[DuelModal] Immediate matchmaking check failed:', e);
+        }
+      }, 1000); // Check after 1 second
 
       // Set up AI opponent timeout - trigger matchmaking check after 32 seconds
       // (slightly longer than server's 30s to ensure server-side AI creation happens first)
@@ -270,6 +345,12 @@ export const DuelModal: React.FC<DuelModalProps> = ({
 
             // Determine if user is player A or B
             const isPlayerA = firestoreMatch.players.A.userId === user.uid;
+            const opponentData = isPlayerA ? firestoreMatch.players.B : firestoreMatch.players.A;
+
+            // Check if opponent is AI (AI userId starts with "ai_bot_")
+            const isAI = opponentData.userId.startsWith('ai_bot_');
+            isAIOpponentRef.current = isAI;
+            console.log(`[DuelModal] Opponent is ${isAI ? 'AI' : 'human'}:`, opponentData.userId);
 
             // Store pending match info for refund in case of error
             const userEntry = isPlayerA ? firestoreMatch.entry.A : firestoreMatch.entry.B;
@@ -327,13 +408,32 @@ export const DuelModal: React.FC<DuelModalProps> = ({
             setMatch(localMatch);
             setGameState(DuelState.PRE_MATCH_CHECK);
 
+            // Mark user as no longer in queue (match found)
+            if (user) {
+              setInDuelQueue(user.uid, false);
+            }
+
             // Clear pending match ref since game is starting successfully
             pendingMatchRef.current = null;
 
             // Start gameplay after pre-match visualization
-            setTimeout(() => {
+            setTimeout(async () => {
               setGameState(DuelState.GAMEPLAY);
               matchStartTimeRef.current = Date.now();
+
+              // Track match in RTDB for monitoring (only on first player to start)
+              try {
+                await addActiveMatch(
+                  firestoreMatch.matchId,
+                  firestoreMatch.players.A.userId,
+                  firestoreMatch.players.B.userId,
+                  firestoreMatch.durationSec
+                );
+              } catch (err) {
+                // Might fail if other player already added it - that's ok
+                console.log('[DuelModal] Match already tracked or failed:', err.message);
+              }
+
               startGameLoop();
             }, 4000);
           } catch (error: any) {
@@ -407,11 +507,76 @@ export const DuelModal: React.FC<DuelModalProps> = ({
 
   const startGameLoop = () => {
     setTimeLeft(config.duration);
+
+    // Setup real-time opponent answer listener if playing against human
+    const currentMatch = matchRef.current;
+    console.log('[DuelModal] startGameLoop - isAI:', isAIOpponentRef.current, 'match:', currentMatch?.firestoreMatchId);
+
+    if (!isAIOpponentRef.current && currentMatch && currentMatch.firestoreMatchId && user) {
+      console.log('[DuelModal] Setting up real-time opponent answer listener for human opponent');
+      opponentAnswerListenerRef.current = listenForOpponentAnswers(
+        currentMatch.firestoreMatchId,
+        user.uid,
+        (answer) => {
+          console.log('[DuelModal] Opponent answered Q' + answer.questionOrder + ':', answer.isCorrect ? 'CORRECT' : 'WRONG');
+
+          // Only process if it's the current question
+          const currentMatch = matchRef.current;
+          if (!currentMatch || answer.questionOrder !== currentMatch.currentQuestionIndex) {
+            console.log('[DuelModal] Ignoring answer for Q' + answer.questionOrder + ' (current: Q' + currentMatch?.currentQuestionIndex + ')');
+            return;
+          }
+
+          // If user is still on this question (ACTIVE state), they were too slow
+          if (roundState === 'ACTIVE') {
+            console.log('[DuelModal] User was too slow! Opponent answered first');
+            // Cancel user's timer
+            if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
+            // Show TOO SLOW message
+            setRoundState('OPPONENT_WON');
+          }
+
+          // Update opponent score immediately
+          setMatch(prev => {
+            if (!prev) return null;
+            const isPlayerA = prev.isPlayerA;
+            const scoreChange = answer.isCorrect ? 1 : -1;
+
+            if (isPlayerA) {
+              // User is A, opponent is B
+              return {
+                ...prev,
+                playerB: { ...prev.playerB, score: prev.playerB.score + scoreChange }
+              };
+            } else {
+              // User is B, opponent is A
+              return {
+                ...prev,
+                playerA: { ...prev.playerA, score: prev.playerA.score + scoreChange }
+              };
+            }
+          });
+
+          // Move to next question after delay (if user was too slow)
+          if (roundState === 'ACTIVE') {
+            setTimeout(() => {
+              nextQuestion();
+            }, 1500);
+          }
+        }
+      );
+    }
+
     startRound();
 
     timerRef.current = window.setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
+          // Clear interval immediately to prevent multiple endGame calls
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
           endGame();
           return 0;
         }
@@ -423,14 +588,18 @@ export const DuelModal: React.FC<DuelModalProps> = ({
   const startRound = () => {
     setRoundState('ACTIVE');
 
-    // Simulate opponent answer (1-4 seconds)
-    const reactionTime = Math.random() * 3000 + 1000;
+    // Only simulate opponent answer if playing against AI
+    if (isAIOpponentRef.current) {
+      // Simulate AI opponent answer (1-4 seconds)
+      const reactionTime = Math.random() * 3000 + 1000;
 
-    if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
+      if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
 
-    opponentTimerRef.current = window.setTimeout(() => {
-      handleOpponentWin();
-    }, reactionTime);
+      opponentTimerRef.current = window.setTimeout(() => {
+        handleOpponentWin();
+      }, reactionTime);
+    }
+    // For human opponents, answers come from Firestore listener (no local simulation)
   };
 
   const handleOpponentWin = () => {
@@ -526,38 +695,170 @@ export const DuelModal: React.FC<DuelModalProps> = ({
 
     clearTimers();
 
+    // Cleanup opponent answer listener if exists
+    if (opponentAnswerListenerRef.current) {
+      opponentAnswerListenerRef.current();
+      opponentAnswerListenerRef.current = null;
+    }
+
     const currentMatch = matchRef.current;
     if (!currentMatch) return;
 
-    let winner: 'A' | 'B' | 'DRAW' = 'DRAW';
-    if (currentMatch.playerA.score > currentMatch.playerB.score) winner = 'A';
-    if (currentMatch.playerB.score > currentMatch.playerA.score) winner = 'B';
+    // Show "FINALIZING" state - waiting for backend result
+    setGameState(DuelState.FINALIZING);
 
-    const finishedMatch = { ...currentMatch, winner, finishedAt: new Date().toISOString() };
-    const { netChangeA } = calculateResults(finishedMatch);
-
-    // Adjust earnings based on whether user is player A or B
-    const userEarnings = currentMatch.isPlayerA ? netChangeA : -netChangeA;
-    finishedMatch.earnings = userEarnings;
-
-    setMatch(finishedMatch);
-    setGameState(DuelState.CASH_ANIMATION);
-
-    // Finalize match in Firestore via Cloud Function
+    // Finalize match in Firestore - backend will calculate authoritative result
     if (currentMatch.firestoreMatchId) {
       try {
         await finalizeMatchFirebase(currentMatch.firestoreMatchId);
-        console.log('[DuelModal] Match finalized in Firestore');
+        console.log('[DuelModal] Match finalized, waiting for backend result...');
+
+        // Real-time listener for backend result (no polling delay)
+        const { doc, onSnapshot } = await import('firebase/firestore');
+        const { db } = await import('../../services/firebase');
+        const matchDocRef = doc(db, 'duel_matches', currentMatch.firestoreMatchId);
+
+        // Listen for result with 10s timeout (防止内存泄漏)
+        const result = await new Promise<any>((resolve, reject) => {
+          let resolved = false;
+
+          const timeout = setTimeout(() => {
+            if (!resolved) {
+              resolved = true;
+              unsubscribe();
+              reject(new Error('Backend result timeout after 10s'));
+            }
+          }, 10000);
+
+          const unsubscribe = onSnapshot(matchDocRef, (snapshot) => {
+            if (snapshot.exists() && !resolved) {
+              const data = snapshot.data();
+              if (data.status === 'finished' && data.result.winner !== null) {
+                resolved = true;
+                clearTimeout(timeout);
+                unsubscribe();
+                resolve(data.result);
+              }
+            }
+          }, (error) => {
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(timeout);
+              reject(error);
+            }
+          });
+        });
+
+        console.log('[DuelModal] Backend result - Winner:', result.winner, 'ScoreA:', result.scoreA, 'ScoreB:', result.scoreB);
+
+        // Determine winner from user's perspective
+        // Always show from "User vs Opponent" view
+        let winner: 'A' | 'B' | 'DRAW';
+        if (result.winner === 'draw') {
+          winner = 'DRAW';
+        } else if (currentMatch.isPlayerA) {
+          // User is A, keep A/B as-is
+          winner = result.winner;
+        } else {
+          // User is B, flip for display (A=user won, B=user lost)
+          winner = result.winner === 'B' ? 'A' : 'B';
+        }
+
+        // Calculate earnings from backend result
+        const { netChangeA } = calculateResults({
+          ...currentMatch,
+          winner: result.winner, // Use backend winner for calculation
+          playerA: { ...currentMatch.playerA, score: result.scoreA },
+          playerB: { ...currentMatch.playerB, score: result.scoreB }
+        });
+
+        const userEarnings = currentMatch.isPlayerA ? netChangeA : -netChangeA;
+
+        // Update match with backend result
+        const finishedMatch = {
+          ...currentMatch,
+          winner, // Display winner (flipped for player B)
+          playerA: { ...currentMatch.playerA, score: result.scoreA },
+          playerB: { ...currentMatch.playerB, score: result.scoreB },
+          earnings: userEarnings,
+          finishedAt: new Date().toISOString()
+        };
+
+        setMatch(finishedMatch);
+
+        // Remove from active matches
+        try {
+          await removeActiveMatch(currentMatch.firestoreMatchId);
+        } catch (e) {
+          console.log('[DuelModal] Match cleanup:', e.message);
+        }
+
+        // Show cash animation then results
+        setGameState(DuelState.CASH_ANIMATION);
+        setTimeout(() => {
+          onCreditsChange(userCredits + userEarnings);
+          setGameState(DuelState.RESULTS);
+        }, 3000);
+
       } catch (e) {
-        console.error('[DuelModal] Failed to finalize match:', e);
+        console.error('[DuelModal] Failed to get backend result, using Firestore fallback:', e);
+
+        // FALLBACK: Read Firestore directly (one-time fetch)
+        try {
+          const { doc, getDoc } = await import('firebase/firestore');
+          const { db } = await import('../../services/firebase');
+          const matchDoc = await getDoc(doc(db, 'duel_matches', currentMatch.firestoreMatchId));
+
+          if (matchDoc.exists()) {
+            const data = matchDoc.data();
+            const result = data.result;
+
+            console.log('[DuelModal] Fallback read - ScoreA:', result.scoreA, 'ScoreB:', result.scoreB, 'Winner:', result.winner);
+
+            // Use backend scores even if winner is not set
+            let winner: 'A' | 'B' | 'DRAW' = result.winner || 'DRAW';
+            if (!result.winner) {
+              // Calculate from scores if backend didn't set winner
+              if (result.scoreA > result.scoreB) winner = 'A';
+              else if (result.scoreB > result.scoreA) winner = 'B';
+              else winner = 'DRAW';
+            }
+
+            const { netChangeA } = calculateResults({
+              ...currentMatch,
+              winner,
+              playerA: { ...currentMatch.playerA, score: result.scoreA },
+              playerB: { ...currentMatch.playerB, score: result.scoreB }
+            });
+
+            const userEarnings = currentMatch.isPlayerA ? netChangeA : -netChangeA;
+
+            setMatch({
+              ...currentMatch,
+              winner: currentMatch.isPlayerA ? winner : (winner === 'A' ? 'B' : winner === 'B' ? 'A' : 'DRAW'),
+              playerA: { ...currentMatch.playerA, score: result.scoreA },
+              playerB: { ...currentMatch.playerB, score: result.scoreB },
+              earnings: userEarnings,
+              finishedAt: new Date().toISOString()
+            });
+
+            setGameState(DuelState.RESULTS);
+            onCreditsChange(userCredits + userEarnings);
+          } else {
+            throw new Error('Match not found in Firestore');
+          }
+        } catch (fallbackError) {
+          console.error('[DuelModal] Firestore fallback failed, using local scores:', fallbackError);
+
+          // LAST RESORT: Use local synced scores
+          const winner = currentMatch.playerA.score > currentMatch.playerB.score ? 'A' :
+                        currentMatch.playerB.score > currentMatch.playerA.score ? 'B' : 'DRAW';
+
+          setMatch({ ...currentMatch, winner, finishedAt: new Date().toISOString() });
+          setGameState(DuelState.RESULTS);
+        }
       }
     }
-
-    // Update credits and show results
-    setTimeout(() => {
-      onCreditsChange(userCredits + userEarnings);
-      setGameState(DuelState.RESULTS);
-    }, 3000);
   };
 
   if (!isOpen) return null;
@@ -837,6 +1138,18 @@ export const DuelModal: React.FC<DuelModalProps> = ({
                 </div>
               </div>
 
+              {/* Entry Fee Info Bar */}
+              <div className="bg-gray-100 border-b-2 border-black px-3 py-1 flex justify-center items-center gap-4">
+                <span className="font-mono text-[10px] text-gray-600">
+                  {t('duel', 'entry_fee')}: <span className="font-bold text-black">${config.entryFee}</span>
+                </span>
+                {config.safetyBelt && (
+                  <span className="font-mono text-[10px] text-yellow-600 flex items-center gap-1">
+                    🛡️ {t('duel', 'safety_belt_active')}
+                  </span>
+                )}
+              </div>
+
               {/* Question and Choices */}
               <div className="p-4 flex-1 flex flex-col pt-4 overflow-y-auto">
                 <div className="relative bg-white border-2 border-black p-4 mb-4 shadow-pixel hover:shadow-pixel-lg transition-all duration-300 min-h-[4rem] flex items-center justify-center text-center">
@@ -867,6 +1180,25 @@ export const DuelModal: React.FC<DuelModalProps> = ({
             </div>
             );
           })()}
+
+          {/* FINALIZING - Waiting for backend result */}
+          {gameState === DuelState.FINALIZING && (
+            <div className="p-6 h-full flex items-center justify-center">
+              <div className="relative bg-white border-2 border-black p-8 shadow-pixel w-full text-center">
+                <div className="absolute -top-1 -left-1 w-2 h-2 bg-black" />
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-black" />
+                <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-black" />
+                <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-black" />
+
+                <div className="font-pixel text-5xl mb-4 uppercase animate-pulse">{t('duel', 'time_up') || 'TIME UP!'}</div>
+                <div className="font-mono text-lg text-gray-600 mb-6">{t('duel', 'calculating') || 'Calculating results...'}</div>
+
+                <div className="flex justify-center gap-4 mt-6">
+                  <div className="w-16 h-16 border-4 border-black bg-black animate-spin"></div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* RESULTS */}
           {gameState === DuelState.RESULTS && match && (
