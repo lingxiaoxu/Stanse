@@ -805,38 +805,10 @@ export const DuelModal: React.FC<DuelModalProps> = ({
     const currentMatch = matchRef.current;
     if (!currentMatch) return;
 
-    // Check if opponent has already answered this question (from cache)
-    const cachedAnswer = opponentAnswerCache.current.get(currentMatch.currentQuestionIndex);
-    if (cachedAnswer && !isAIOpponentRef.current) {
-      console.log(`[DuelModal] 🎯 Found cached opponent answer for Q${currentMatch.currentQuestionIndex}`);
-
-      // Opponent already answered - mark it but DON'T move to next question yet
-      // User still needs to answer first
-      setRoundState('OPPONENT_WON');
-
-      // Update opponent score
-      setMatch(prev => {
-        if (!prev) return null;
-        const isPlayerA = prev.isPlayerA;
-        const scoreChange = cachedAnswer.isCorrect ? 1 : -1;
-
-        if (isPlayerA) {
-          return {
-            ...prev,
-            playerB: { ...prev.playerB, score: prev.playerB.score + scoreChange }
-          };
-        } else {
-          return {
-            ...prev,
-            playerA: { ...prev.playerA, score: prev.playerA.score + scoreChange }
-          };
-        }
-      });
-
-      // DON'T call nextQuestion() here - wait for user to answer
-      console.log(`[DuelModal] ⏳ Opponent already answered Q${currentMatch.currentQuestionIndex}, waiting for user...`);
-      return;
-    }
+    // IMPORTANT: Don't check cache when starting a new round
+    // If RTDB triggered this startRound(), it means both players finished previous question
+    // Cache is only relevant DURING a question, not when entering a new one
+    console.log(`[DuelModal] 🆕 Starting fresh round for Q${currentMatch.currentQuestionIndex}`);
 
     // Only simulate opponent answer if playing against AI
     if (isAIOpponentRef.current) {
