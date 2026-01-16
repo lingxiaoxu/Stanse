@@ -209,7 +209,7 @@ export const sendLocalNotification = (title: string, body: string, options?: Not
   try {
     new Notification(title, {
       body,
-      icon: '/favicon.ico',
+      // Don't use icon to avoid 404 errors
       ...options
     });
     return true;

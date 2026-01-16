@@ -24,7 +24,7 @@ import { Shield, X, AlertTriangle, Trophy, Skull, Sparkles, Zap, Scale } from 'l
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { setInDuelQueue } from '../../services/presenceService';
-import { addActiveMatch, removeActiveMatch } from '../../services/matchStateService';
+import { addActiveMatch, removeActiveMatch, listenForQuestionIndexSync as listenForQuestionIndexSyncRTDB } from '../../services/matchStateService';
 
 interface DuelModalProps {
   isOpen: boolean;
@@ -97,6 +97,7 @@ export const DuelModal: React.FC<DuelModalProps> = ({
   const [userPing, setUserPing] = useState(30);
   const matchListenerRef = useRef<(() => void) | null>(null);
   const opponentAnswerListenerRef = useRef<(() => void) | null>(null);
+  const questionIndexListenerRef = useRef<(() => void) | null>(null); // Sync currentQuestionIndex
   const aiOpponentTimeoutRef = useRef<number | null>(null);
   const matchProcessingRef = useRef<boolean>(false);
   const gameEndingRef = useRef<boolean>(false);
@@ -119,6 +120,10 @@ export const DuelModal: React.FC<DuelModalProps> = ({
   // Cache for opponent answers - stores ALL answers regardless of current question
   // Key: questionOrder, Value: answer data
   const opponentAnswerCache = useRef<Map<number, { isCorrect: boolean; timestamp: string }>>(new Map());
+
+  // Cache for user's own answers (for timestamp comparison)
+  // Key: questionOrder, Value: { isCorrect, timestamp, scoreApplied }
+  const userAnswerCache = useRef<Map<number, { isCorrect: boolean; timestamp: string; scoreApplied: number }>>(new Map());
 
   // Sync match ref
   useEffect(() => {
@@ -231,8 +236,13 @@ export const DuelModal: React.FC<DuelModalProps> = ({
       opponentAnswerListenerRef.current();
       opponentAnswerListenerRef.current = null;
     }
-    // Clear opponent answer cache
+    if (questionIndexListenerRef.current) {
+      questionIndexListenerRef.current();
+      questionIndexListenerRef.current = null;
+    }
+    // Clear answer caches
     opponentAnswerCache.current.clear();
+    userAnswerCache.current.clear();
     clearTimers();
   };
 
@@ -248,12 +258,17 @@ export const DuelModal: React.FC<DuelModalProps> = ({
         opponentAnswerListenerRef.current();
         opponentAnswerListenerRef.current = null;
       }
+      if (questionIndexListenerRef.current) {
+        questionIndexListenerRef.current();
+        questionIndexListenerRef.current = null;
+      }
       if (aiOpponentTimeoutRef.current) {
         clearTimeout(aiOpponentTimeoutRef.current);
         aiOpponentTimeoutRef.current = null;
       }
-      // Clear opponent answer cache
+      // Clear answer caches
       opponentAnswerCache.current.clear();
+      userAnswerCache.current.clear();
       clearTimers();
     };
   }, []);
@@ -429,6 +444,33 @@ export const DuelModal: React.FC<DuelModalProps> = ({
             // Clear pending match ref since game is starting successfully
             pendingMatchRef.current = null;
 
+            // Set up synchronized question index listener IMMEDIATELY (RTDB for real-time sync)
+            // This is the master synchronization mechanism - both players follow RTDB
+            if (!isAI && firestoreMatch.matchId) {
+              console.log('[DuelModal] 🎯 Setting up RTDB currentQuestionIndex sync listener');
+              questionIndexListenerRef.current = listenForQuestionIndexSyncRTDB(
+                firestoreMatch.matchId,
+                (newIndex) => {
+                  console.log(`[DuelModal] 🔄 RTDB sync: Moving to Q${newIndex}`);
+
+                  // Update local match to new question index
+                  setMatch((prev) => {
+                    if (!prev) return null;
+                    if (prev.currentQuestionIndex === newIndex) return prev; // Already there
+
+                    console.log(`[DuelModal] 📍 Synchronized to Q${newIndex} via RTDB`);
+                    return {
+                      ...prev,
+                      currentQuestionIndex: newIndex
+                    };
+                  });
+
+                  // Start new round for the new question
+                  startRound();
+                }
+              );
+            }
+
             // Set up opponent answer listener IMMEDIATELY (before countdown)
             // This ensures we don't miss any answers submitted during pre-match visualization
             if (!isAI && firestoreMatch.matchId && user) {
@@ -460,29 +502,21 @@ export const DuelModal: React.FC<DuelModalProps> = ({
                   // This answer is for the current question - process it immediately
                   console.log(`[DuelModal] ⚡ Processing answer for current question Q${answer.questionOrder}`);
 
-                  // If user is still on this question (ACTIVE state), they were too slow
-                  if (roundState === 'ACTIVE') {
-                    console.log('[DuelModal] 🐌 User was too slow! Opponent answered first');
-                    // Cancel user's timer
-                    if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
-                    // Show TOO SLOW message
-                    setRoundState('OPPONENT_WON');
-                  }
-
-                  // Update opponent score immediately
-                  setMatch(prev => {
+                  // Update opponent score (opponent was FAST)
+                  // Fast player penalty: +1 if correct, -2 if wrong
+                  setMatch((prev) => {
                     if (!prev) return null;
                     const isPlayerA = prev.isPlayerA;
-                    const scoreChange = answer.isCorrect ? 1 : -1;
+                    const scoreChange = answer.isCorrect ? 1 : -2; // PENALTY: -2 for wrong answer when fast
 
                     if (isPlayerA) {
-                      // User is A, opponent is B
+                      // User is A, opponent is B (opponent was fast)
                       return {
                         ...prev,
                         playerB: { ...prev.playerB, score: prev.playerB.score + scoreChange }
                       };
                     } else {
-                      // User is B, opponent is A
+                      // User is B, opponent is A (opponent was fast)
                       return {
                         ...prev,
                         playerA: { ...prev.playerA, score: prev.playerA.score + scoreChange }
@@ -490,11 +524,90 @@ export const DuelModal: React.FC<DuelModalProps> = ({
                     }
                   });
 
-                  // Move to next question after delay (if user was too slow)
+                  // If user is still on this question (ACTIVE = hasn't answered yet)
                   if (roundState === 'ACTIVE') {
-                    setTimeout(() => {
-                      nextQuestion();
-                    }, 1500);
+                    console.log('[DuelModal] 🐌 User TOO SLOW! Opponent answered first');
+                    console.log('[DuelModal] 💥 User loses chance to answer (0 points)');
+
+                    // Cancel user's timer
+                    if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
+
+                    // Show TOO SLOW message (disables clicking)
+                    setRoundState('OPPONENT_WON');
+
+                    // Slow user gets 0 points (no score change)
+                    // Submit a "slow" answer to backend so it knows both players finished
+                    const currentMatch = matchRef.current;
+                    if (currentMatch && currentMatch.firestoreMatchId && user) {
+                      const currentQuestion = currentMatch.questions[currentMatch.currentQuestionIndex];
+                      submitAnswer({
+                        matchId: currentMatch.firestoreMatchId,
+                        questionId: currentQuestion.id,
+                        questionOrder: currentMatch.currentQuestionIndex,
+                        answerIndex: -1, // Special value: no answer (too slow)
+                        timestamp: new Date().toISOString(),
+                        timeElapsed: Date.now() - matchStartTimeRef.current
+                      }).then(() => {
+                        console.log('[DuelModal] ✅ Submitted "too slow" marker to backend');
+                      }).catch((err) => {
+                        console.error('[DuelModal] Failed to submit slow marker:', err);
+                      });
+                    }
+
+                    // DON'T call nextQuestion() - wait for RTDB sync from backend
+                    console.log('[DuelModal] ⏳ Waiting for RTDB to sync next question...');
+                  } else if (roundState === 'USER_ANSWERED') {
+                    // User already answered - opponent just finished
+                    // CRITICAL: Verify who was actually faster using timestamps!
+                    console.log('[DuelModal] 🔍 Both answered, verifying timestamps...');
+
+                    const userAnswer = userAnswerCache.current.get(answer.questionOrder);
+                    if (userAnswer) {
+                      const userTime = new Date(userAnswer.timestamp).getTime();
+                      const opponentTime = new Date(answer.timestamp).getTime();
+
+                      console.log(`[DuelModal] ⏱️ Final timestamp check: User ${userTime} vs Opponent ${opponentTime}`);
+
+                      if (opponentTime < userTime) {
+                        // OPPONENT WAS ACTUALLY FASTER! User needs score adjustment
+                        console.log('[DuelModal] 🔄 CORRECTION: Opponent was faster, adjusting user score');
+                        console.log(`[DuelModal] User score change: ${userAnswer.scoreApplied} → 0 (slow penalty)`);
+
+                        // Revert user's score and apply 0 (slow = no points)
+                        setMatch((prev) => {
+                          if (!prev) return null;
+                          const scoreCorrection = -userAnswer.scoreApplied; // Revert previous score
+
+                          if (prev.isPlayerA) {
+                            return {
+                              ...prev,
+                              playerA: { ...prev.playerA, score: prev.playerA.score + scoreCorrection }
+                            };
+                          } else {
+                            return {
+                              ...prev,
+                              playerB: { ...prev.playerB, score: prev.playerB.score + scoreCorrection }
+                            };
+                          }
+                        });
+
+                        // Update cache with corrected score
+                        userAnswerCache.current.set(answer.questionOrder, {
+                          ...userAnswer,
+                          scoreApplied: 0
+                        });
+
+                        // Show TOO SLOW message briefly
+                        setRoundState('OPPONENT_WON');
+                        console.log('[DuelModal] ⏳ Correction applied, waiting for RTDB sync...');
+                      } else {
+                        // User was indeed faster, proceed normally
+                        console.log('[DuelModal] ✅ User was faster (confirmed), waiting for RTDB sync...');
+                      }
+                    } else {
+                      // No user answer cached (shouldn't happen)
+                      console.warn('[DuelModal] ⚠️ No user answer in cache, waiting for RTDB sync...');
+                    }
                   }
                 }
               );
@@ -687,7 +800,8 @@ export const DuelModal: React.FC<DuelModalProps> = ({
     if (cachedAnswer && !isAIOpponentRef.current) {
       console.log(`[DuelModal] 🎯 Found cached opponent answer for Q${currentMatch.currentQuestionIndex}`);
 
-      // Opponent already answered - apply the cached answer immediately
+      // Opponent already answered - mark it but DON'T move to next question yet
+      // User still needs to answer first
       setRoundState('OPPONENT_WON');
 
       // Update opponent score
@@ -709,11 +823,8 @@ export const DuelModal: React.FC<DuelModalProps> = ({
         }
       });
 
-      // Move to next question after delay
-      setTimeout(() => {
-        nextQuestion();
-      }, 1500);
-
+      // DON'T call nextQuestion() here - wait for user to answer
+      console.log(`[DuelModal] ⏳ Opponent already answered Q${currentMatch.currentQuestionIndex}, waiting for user...`);
       return;
     }
 
@@ -752,27 +863,67 @@ export const DuelModal: React.FC<DuelModalProps> = ({
   };
 
   const handleUserAnswer = async (index: number) => {
-    if (!match || !user || gameState !== DuelState.GAMEPLAY || roundState !== 'ACTIVE') return;
+    if (!match || !user || gameState !== DuelState.GAMEPLAY) return;
+
+    // Allow answering even if roundState is 'OPPONENT_WON' (for timestamp comparison)
+    if (roundState !== 'ACTIVE' && roundState !== 'OPPONENT_WON') return;
 
     if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
 
-    setRoundState('USER_ANSWERED');
     const currentQuestion = match.questions[match.currentQuestionIndex];
     const isCorrect = index === currentQuestion.correctIndex;
+    const userTimestamp = new Date().toISOString();
 
-    // Update local score
-    setMatch(prev => {
+    // Check if opponent already answered (from cache)
+    const opponentAnswer = opponentAnswerCache.current.get(match.currentQuestionIndex);
+
+    let userWasFast = true;
+    let userScoreChange = 0;
+
+    if (opponentAnswer) {
+      // Compare timestamps to determine who was faster
+      const userTime = new Date(userTimestamp).getTime();
+      const opponentTime = new Date(opponentAnswer.timestamp).getTime();
+      userWasFast = userTime < opponentTime;
+
+      console.log(`[DuelModal] ⏱️ Timestamp comparison: User ${userTime} vs Opponent ${opponentTime}`);
+      console.log(`[DuelModal] Result: User was ${userWasFast ? 'FAST' : 'SLOW'}`);
+    }
+
+    if (userWasFast || !opponentAnswer) {
+      // User answered FIRST (or opponent hasn't answered yet)
+      // Fast player: +1 if correct, -2 if WRONG
+      userScoreChange = isCorrect ? 1 : -2;
+      console.log(`[DuelModal] ⚡ User was FAST: ${isCorrect ? 'CORRECT +1' : 'WRONG -2'}`);
+      setRoundState('USER_ANSWERED');
+    } else {
+      // User answered SECOND (was slow)
+      // Slow player: 0 points
+      userScoreChange = 0;
+      console.log(`[DuelModal] 🐌 User was SLOW: 0 points`);
+      setRoundState('OPPONENT_WON'); // Show "TOO SLOW" if not already showing
+    }
+
+    // Cache user's answer with timestamp for later verification
+    userAnswerCache.current.set(match.currentQuestionIndex, {
+      isCorrect,
+      timestamp: userTimestamp,
+      scoreApplied: userScoreChange
+    });
+
+    // Update user score
+    setMatch((prev) => {
       if (!prev) return null;
-      // Update correct player based on isPlayerA
+
       if (prev.isPlayerA) {
         return {
           ...prev,
-          playerA: { ...prev.playerA, score: prev.playerA.score + (isCorrect ? 1 : -1) }
+          playerA: { ...prev.playerA, score: prev.playerA.score + userScoreChange }
         };
       } else {
         return {
           ...prev,
-          playerB: { ...prev.playerB, score: prev.playerB.score + (isCorrect ? 1 : -1) }
+          playerB: { ...prev.playerB, score: prev.playerB.score + userScoreChange }
         };
       }
     });
@@ -785,18 +936,34 @@ export const DuelModal: React.FC<DuelModalProps> = ({
           questionId: currentQuestion.id,
           questionOrder: match.currentQuestionIndex,
           answerIndex: index,
-          timestamp: new Date().toISOString(),
+          timestamp: userTimestamp,
           timeElapsed: Date.now() - matchStartTimeRef.current
         });
-        console.log('[DuelModal] Answer submitted to Firestore');
+        console.log('[DuelModal] ✅ Answer submitted to Firestore');
       } catch (e) {
         console.error('[DuelModal] Failed to submit answer:', e);
       }
     }
 
-    setTimeout(() => {
-      nextQuestion();
-    }, 500);
+    // Check if opponent has also answered
+    const opponentAlsoAnswered = opponentAnswerCache.current.has(match.currentQuestionIndex);
+
+    if (opponentAlsoAnswered || isAIOpponentRef.current) {
+      // Both answered - backend will update RTDB currentQuestionIndex
+      console.log(`[DuelModal] ✅ Both answered Q${match.currentQuestionIndex}, waiting for RTDB sync...`);
+      // DON'T call nextQuestion() - RTDB listener will trigger it
+    } else {
+      // User answered FIRST - waiting for opponent
+      console.log(`[DuelModal] ⏳ User answered first, waiting for opponent on Q${match.currentQuestionIndex}...`);
+      // DON'T call nextQuestion() - RTDB listener will trigger it when opponent answers
+    }
+
+    // For AI opponent, manually trigger next question (no RTDB sync)
+    if (isAIOpponentRef.current) {
+      setTimeout(() => {
+        nextQuestion();
+      }, 500);
+    }
   };
 
   const nextQuestion = () => {
@@ -1254,6 +1421,30 @@ export const DuelModal: React.FC<DuelModalProps> = ({
                     <p className="font-mono text-xs font-bold text-gray-600">
                       {t('duel', 'opponent_first')}
                     </p>
+                    <p className="font-mono text-[10px] text-gray-400 mt-2">
+                      {t('duel', 'no_points')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Waiting for Opponent Overlay (when user answered first) */}
+              {roundState === 'USER_ANSWERED' && (
+                <div className="absolute inset-0 z-20 bg-black/60 flex items-center justify-center backdrop-blur-sm">
+                  <div className="relative bg-white border-2 border-black p-6 text-center shadow-pixel">
+                    <div className="absolute -top-1 -left-1 w-2 h-2 bg-black" />
+                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-black" />
+                    <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-black" />
+                    <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-black" />
+                    <div className="font-pixel text-3xl text-blue-600 uppercase leading-none mb-2">{t('duel', 'waiting')}</div>
+                    <p className="font-mono text-xs font-bold text-gray-600">
+                      {t('duel', 'waiting_opponent')}
+                    </p>
+                    <div className="mt-3 flex justify-center">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse mx-1"></div>
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse mx-1" style={{animationDelay: '0.2s'}}></div>
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse mx-1" style={{animationDelay: '0.4s'}}></div>
+                    </div>
                   </div>
                 </div>
               )}

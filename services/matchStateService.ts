@@ -2,10 +2,11 @@
  * Match State Service
  *
  * Tracks active matches in Realtime Database for monitoring
+ * Also handles real-time synchronization of currentQuestionIndex for PvP matches
  */
 
 import { rtdb } from './firebase';
-import { ref, set, remove, update } from 'firebase/database';
+import { ref, set, remove, update, onValue, off } from 'firebase/database';
 
 /**
  * Add match to active matches tracking
@@ -26,7 +27,8 @@ export async function addActiveMatch(
     firestoreMatchId: matchId,
     startedAt: now,
     expiresAt: now + (duration * 1000),
-    status: 'playing'
+    status: 'playing',
+    currentQuestionIndex: 0 // Initialize at Q0
   });
 
   // Update players' presence status (do NOT update other player's presence - permission denied)
@@ -57,4 +59,49 @@ export async function updateMatchStatus(
   await update(ref(rtdb, `active_matches/${matchId}`), {
     status
   });
+}
+
+/**
+ * Update synchronized currentQuestionIndex in RTDB
+ * Called by backend when both players have answered current question
+ */
+export async function updateCurrentQuestionIndex(
+  matchId: string,
+  newIndex: number
+): Promise<void> {
+  const matchRef = ref(rtdb, `active_matches/${matchId}`);
+  await update(matchRef, {
+    currentQuestionIndex: newIndex,
+    lastUpdated: Date.now()
+  });
+
+  console.log(`[MatchState] 🔄 Updated currentQuestionIndex to ${newIndex} for match ${matchId}`);
+}
+
+/**
+ * Listen for currentQuestionIndex changes in RTDB
+ * Both players use this to stay synchronized
+ */
+export function listenForQuestionIndexSync(
+  matchId: string,
+  onIndexChange: (newIndex: number) => void
+): () => void {
+  const matchRef = ref(rtdb, `active_matches/${matchId}/currentQuestionIndex`);
+  let lastSeenIndex = -1;
+
+  onValue(matchRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const newIndex = snapshot.val() as number;
+
+      if (newIndex !== lastSeenIndex && newIndex >= 0) {
+        console.log(`[MatchState] 🔄 RTDB sync: currentQuestionIndex ${lastSeenIndex} → ${newIndex}`);
+        lastSeenIndex = newIndex;
+        onIndexChange(newIndex);
+      }
+    }
+  });
+
+  return () => {
+    off(matchRef);
+  };
 }

@@ -12,7 +12,8 @@ export interface OnlineUser {
   userId: string;
   email?: string;
   personaLabel?: string;
-  stanceType?: string;
+  stanceType?: string; // Nationality prefix (for backwards compatibility)
+  coreStanceType?: string; // Core persona type (new field)
   lastSeen: number;
   status: 'online' | 'away';
   inDuelQueue?: boolean;
@@ -28,11 +29,14 @@ export function setUserOnline(
     email?: string;
     personaLabel?: string;
     stanceType?: string;
+    coreStanceType?: string;
   }
 ): () => void {
   const userStatusRef = ref(rtdb, `presence/${userId}`);
   const lastSeenRef = ref(rtdb, `presence/${userId}/lastSeen`);
-  const userStatusData = {
+
+  // Build user status data
+  const userStatusData: any = {
     userId,
     email: userData.email,
     personaLabel: userData.personaLabel,
@@ -41,6 +45,11 @@ export function setUserOnline(
     lastSeen: serverTimestamp(),
     inDuelQueue: false
   };
+
+  // Only add coreStanceType if defined (new optional field)
+  if (userData.coreStanceType) {
+    userStatusData.coreStanceType = userData.coreStanceType;
+  }
 
   // Set user as online
   set(userStatusRef, userStatusData);

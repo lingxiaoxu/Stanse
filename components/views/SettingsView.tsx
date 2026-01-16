@@ -8,6 +8,7 @@ import { Language } from '../../types';
 import { disconnectAllSocialMedia, updateUserLocation, getUserLocation, clearUserLocation, StoredLocation, LocationStatus, updateUserNotification, getUserNotification, clearUserNotification, StoredNotification, NotificationStatus, updateUserCamera, getUserCamera, clearUserCamera, StoredCamera, CameraStatus } from '../../services/userService';
 import { requestLocation, detectDeviceType, detectBrowser, getLocationStatusText, checkLocationPermission } from '../../services/locationService';
 import { requestNotificationPermission, checkNotificationPermission, getNotificationStatusText, detectDeviceType as detectNotifDeviceType, detectBrowser as detectNotifBrowser } from '../../services/notificationService';
+import { startBreakingNewsListener, stopBreakingNewsListener } from '../../services/breakingNewsService';
 
 // Default settings values
 const DEFAULT_SETTINGS = {
@@ -193,6 +194,12 @@ export const SettingsView: React.FC = () => {
         console.log('🔔 Firebase save complete, setting status to:', result.status);
         setNotificationStatus(result.status);
 
+        // If granted, start breaking news listener
+        if (result.status === 'granted') {
+          console.log('🔔 Starting breaking news listener from Settings');
+          startBreakingNewsListener(user.uid);
+        }
+
         // If denied or unsupported, turn toggle back off
         if (result.status === 'denied' || result.status === 'unsupported') {
           setNotifications(false);
@@ -213,10 +220,13 @@ export const SettingsView: React.FC = () => {
         setIsRequestingNotification(false);
       }
     } else if (!newValue) {
-      // User turned OFF notifications - clear stored notification
+      // User turned OFF notifications - clear stored notification and stop listener
       try {
         await clearUserNotification(user.uid);
         setNotificationStatus('default');
+        // Stop breaking news listener
+        console.log('🔕 Stopping breaking news listener from Settings');
+        stopBreakingNewsListener();
         // Don't reset the flag - if permission was denied, it stays denied in browser
       } catch (error) {
         console.error('Failed to clear notification:', error);

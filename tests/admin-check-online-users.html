@@ -357,13 +357,22 @@
         const email = user.email || 'Anonymous';
         const displayEmail = email.length > 20 ? email.substring(0, 20) + '...' : email;
 
+        // Calculate time since last heartbeat
+        const now = Date.now();
+        const lastSeen = user.lastSeen || 0;
+        const secondsAgo = Math.floor((now - lastSeen) / 1000);
+        const minutesAgo = Math.floor(secondsAgo / 60);
+        const timeAgo = minutesAgo > 0 ? `${minutesAgo}m ${secondsAgo % 60}s ago` : `${secondsAgo}s ago`;
+
         return `
           <div class="user-card ${user.inDuelQueue ? 'in-queue' : ''}">
             ${user.inDuelQueue ? '<div class="queue-badge">🎯 SEARCHING</div>' : ''}
             <div class="user-header">${displayEmail}</div>
             <div class="user-info">
-              Persona: ${user.personaLabel || 'Unknown'}<br>
-              Stance: ${user.stanceType || 'Unknown'}<br>
+              User ID: ${user.userId || 'Unknown'}<br>
+              Persona: ${user.personaLabel || 'Loading...'}<br>
+              Type: ${user.coreStanceType || 'Unknown'}<br>
+              Last Heartbeat: ${timeAgo}<br>
               Status: ${user.inDuelQueue ? '🔍 Looking for opponent' : '✅ Online'}
             </div>
           </div>

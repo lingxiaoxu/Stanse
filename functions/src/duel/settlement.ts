@@ -414,14 +414,18 @@ export async function submitGameplayEvent(data: {
   }
 
   const question = questionDoc.data() as { correctIndex: number };
-  const isCorrect = data.answerIndex === question.correctIndex;
+
+  // Special case: answerIndex=-1 means user was too slow (lost chance to answer)
+  const isTooSlowMarker = data.answerIndex === -1;
+  const isCorrect = !isTooSlowMarker && (data.answerIndex === question.correctIndex);
 
   // Determine which player (A or B)
   const isPlayerA = data.userId === match.players.A.userId;
 
-  // Calculate new scores
-  const currentScoreA = match.result.scoreA + (isPlayerA && isCorrect ? 1 : isPlayerA ? -1 : 0);
-  const currentScoreB = match.result.scoreB + (!isPlayerA && isCorrect ? 1 : !isPlayerA ? -1 : 0);
+  // Calculate new scores (too slow = 0 points, no change)
+  const scoreChange = isTooSlowMarker ? 0 : (isCorrect ? 1 : -1);
+  const currentScoreA = match.result.scoreA + (isPlayerA ? scoreChange : 0);
+  const currentScoreB = match.result.scoreB + (!isPlayerA ? scoreChange : 0);
 
   // Create gameplay event
   const eventRef = matchRef.collection('gameplay_events').doc();
@@ -484,6 +488,30 @@ export async function submitGameplayEvent(data: {
     });
 
     console.log(`✅ Answer appended at index ${data.questionOrder} for player ${playerKey}`);
+
+    // CRITICAL: Check if BOTH players have answered this question
+    // If yes, update RTDB currentQuestionIndex to trigger synchronized transition
+    const answersA = matchData.answers?.A || [];
+    const answersB = matchData.answers?.B || [];
+
+    // After our update, check if both arrays have this question answered
+    const bothAnsweredThisQuestion = (newAnswers.length > data.questionOrder) &&
+                                      (playerKey === 'A' ? answersB.length > data.questionOrder : answersA.length > data.questionOrder);
+
+    if (bothAnsweredThisQuestion) {
+      console.log(`🔄 Both players answered Q${data.questionOrder}, syncing to next question...`);
+
+      // Update RTDB to trigger both clients to move to next question
+      const rtdb = admin.database();
+      const rtdbMatchRef = rtdb.ref(`active_matches/${data.matchId}`);
+
+      await rtdbMatchRef.update({
+        currentQuestionIndex: data.questionOrder + 1,
+        lastUpdated: admin.database.ServerValue.TIMESTAMP
+      });
+
+      console.log(`✅ RTDB updated: currentQuestionIndex → ${data.questionOrder + 1}`);
+    }
   });
 
   console.log(`✅ Recorded answer for ${data.userId} in match ${data.matchId}: ${isCorrect ? 'CORRECT' : 'WRONG'}`);

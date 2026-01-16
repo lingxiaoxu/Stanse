@@ -14,6 +14,14 @@ import {
 import { db } from './firebase';
 import { PoliticalCoordinates, BrandAlignment, OnboardingAnswers, SocialMediaConnection, SocialPlatform } from '../types';
 
+// Notification Settings
+export interface NotificationSettings {
+  emailNotificationsEnabled: boolean;
+  breakingNewsEnabled: boolean;
+  lastNotificationSent?: string; // ISO timestamp
+  notificationFrequency?: 'immediate' | 'hourly' | 'daily'; // Default: hourly
+}
+
 // User Profile
 export interface UserProfile {
   id: string;
@@ -22,6 +30,7 @@ export interface UserProfile {
   coordinates: PoliticalCoordinates;
   onboarding?: OnboardingAnswers;
   hasCompletedOnboarding: boolean;
+  notificationSettings?: NotificationSettings; // New: Breaking news notifications
   tourCompleted?: {
     EN?: boolean;
     ZH?: boolean;
@@ -1210,4 +1219,36 @@ export const expireUserCameraSession = async (userId: string): Promise<void> => 
     console.error(`📷 Error expiring user camera session for ${userId}:`, error);
     // Don't throw - this is a best-effort operation
   }
+};
+
+// ==================== Notification Settings ====================
+
+/**
+ * Update user notification settings
+ */
+export const updateNotificationSettings = async (
+  userId: string,
+  settings: Partial<NotificationSettings>
+): Promise<void> => {
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, {
+    notificationSettings: settings,
+    updatedAt: serverTimestamp()
+  });
+};
+
+/**
+ * Get user notification settings
+ */
+export const getNotificationSettings = async (
+  userId: string
+): Promise<NotificationSettings | null> => {
+  const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
+
+  if (userSnap.exists()) {
+    const data = userSnap.data();
+    return data.notificationSettings || null;
+  }
+  return null;
 };
