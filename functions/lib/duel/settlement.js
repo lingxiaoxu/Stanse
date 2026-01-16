@@ -353,20 +353,36 @@ async function submitGameplayEvent(data) {
         timestamp: data.timestamp,
         timeElapsed: data.timeElapsed
     };
-    // Update match and create event atomically
-    const batch = db.batch();
-    batch.set(eventRef, event);
-    // Update scores
-    batch.update(matchRef, {
-        'result.scoreA': currentScoreA,
-        'result.scoreB': currentScoreB
+    // CRITICAL: Use transaction to ensure answers are stored in correct order
+    // arrayUnion does NOT guarantee order - we must use array index assignment!
+    await db.runTransaction(async (transaction) => {
+        const matchSnapshot = await transaction.get(matchRef);
+        if (!matchSnapshot.exists) {
+            throw new Error('Match not found during answer submission');
+        }
+        const matchData = matchSnapshot.data();
+        const playerKey = isPlayerA ? 'A' : 'B';
+        const currentAnswers = matchData.answers?.[playerKey] || [];
+        // VERIFY: questionOrder should match array length (next index)
+        if (data.questionOrder !== currentAnswers.length) {
+            console.error(`🔴 ORDER VIOLATION! Expected questionOrder ${currentAnswers.length} but got ${data.questionOrder}`);
+            console.error(`🔴 Current answers array length: ${currentAnswers.length}`);
+            console.error(`🔴 This indicates out-of-order submission or duplicate answer`);
+            // STRICT: Reject out-of-order submissions
+            throw new Error(`Invalid questionOrder: expected ${currentAnswers.length}, got ${data.questionOrder}`);
+        }
+        // Build new answers array with this answer appended
+        const newAnswers = [...currentAnswers, answerObj];
+        // Write event
+        transaction.set(eventRef, event);
+        // Update match with new scores AND new answers array
+        transaction.update(matchRef, {
+            'result.scoreA': currentScoreA,
+            'result.scoreB': currentScoreB,
+            [`answers.${playerKey}`]: newAnswers // Replace entire array to guarantee order
+        });
+        console.log(`✅ Answer appended at index ${data.questionOrder} for player ${playerKey}`);
     });
-    // Add answer to player's answer array for real-time PvP sync
-    const playerKey = isPlayerA ? 'A' : 'B';
-    batch.update(matchRef, {
-        [`answers.${playerKey}`]: admin.firestore.FieldValue.arrayUnion(answerObj)
-    });
-    await batch.commit();
     console.log(`✅ Recorded answer for ${data.userId} in match ${data.matchId}: ${isCorrect ? 'CORRECT' : 'WRONG'}`);
 }
 /**
