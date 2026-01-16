@@ -366,13 +366,19 @@ async function submitGameplayEvent(data) {
         const matchData = matchSnapshot.data();
         const playerKey = isPlayerA ? 'A' : 'B';
         const currentAnswers = matchData.answers?.[playerKey] || [];
+        // Check if this is an AI match (opponent is AI bot)
+        const opponentIsAI = isPlayerA ? isAIBot(matchData.players.B.userId) : isAIBot(matchData.players.A.userId);
         // VERIFY: questionOrder should match array length (next index)
-        if (data.questionOrder !== currentAnswers.length) {
+        // SKIP validation for AI matches (AI answers are not stored in Firestore)
+        if (!opponentIsAI && data.questionOrder !== currentAnswers.length) {
             console.error(`🔴 ORDER VIOLATION! Expected questionOrder ${currentAnswers.length} but got ${data.questionOrder}`);
             console.error(`🔴 Current answers array length: ${currentAnswers.length}`);
             console.error(`🔴 This indicates out-of-order submission or duplicate answer`);
             // STRICT: Reject out-of-order submissions
             throw new Error(`Invalid questionOrder: expected ${currentAnswers.length}, got ${data.questionOrder}`);
+        }
+        else if (opponentIsAI) {
+            console.log(`✅ AI match detected, skipping questionOrder validation`);
         }
         // Build new answers array with this answer appended
         const newAnswers = [...currentAnswers, answerObj];
@@ -387,30 +393,40 @@ async function submitGameplayEvent(data) {
         console.log(`✅ Answer appended at index ${data.questionOrder} for player ${playerKey}`);
     });
     // CRITICAL: After transaction, check if BOTH players have answered this question
-    // Need to re-read match to get latest state after transaction
+    // ONLY for human vs human matches (not AI matches)
     const updatedMatch = await matchRef.get();
     if (updatedMatch.exists) {
         const updatedData = updatedMatch.data();
-        const answersA = updatedData.answers?.A || [];
-        const answersB = updatedData.answers?.B || [];
-        // Check if both players have answered up to and including this questionOrder
-        const bothAnsweredThisQuestion = (answersA.length > data.questionOrder) &&
-            (answersB.length > data.questionOrder);
-        console.log(`📊 After answer submission: answersA.length=${answersA.length}, answersB.length=${answersB.length}, questionOrder=${data.questionOrder}`);
-        console.log(`📊 Both answered Q${data.questionOrder}? ${bothAnsweredThisQuestion}`);
-        if (bothAnsweredThisQuestion) {
-            console.log(`🔄 Both players answered Q${data.questionOrder}, syncing to Q${data.questionOrder + 1}...`);
-            // Update RTDB to trigger both clients to move to next question
-            const rtdb = admin.database();
-            const rtdbMatchRef = rtdb.ref(`active_matches/${data.matchId}`);
-            await rtdbMatchRef.update({
-                currentQuestionIndex: data.questionOrder + 1,
-                lastUpdated: admin.database.ServerValue.TIMESTAMP
-            });
-            console.log(`✅ RTDB updated: currentQuestionIndex → ${data.questionOrder + 1}`);
+        // Check if this is an AI match
+        const playerAIsAI = isAIBot(updatedData.players.A.userId);
+        const playerBIsAI = isAIBot(updatedData.players.B.userId);
+        const isAIMatch = playerAIsAI || playerBIsAI;
+        if (!isAIMatch) {
+            // Human vs Human match - sync via RTDB
+            const answersA = updatedData.answers?.A || [];
+            const answersB = updatedData.answers?.B || [];
+            // Check if both players have answered up to and including this questionOrder
+            const bothAnsweredThisQuestion = (answersA.length > data.questionOrder) &&
+                (answersB.length > data.questionOrder);
+            console.log(`📊 PvP match - answersA.length=${answersA.length}, answersB.length=${answersB.length}, questionOrder=${data.questionOrder}`);
+            console.log(`📊 Both answered Q${data.questionOrder}? ${bothAnsweredThisQuestion}`);
+            if (bothAnsweredThisQuestion) {
+                console.log(`🔄 Both players answered Q${data.questionOrder}, syncing to Q${data.questionOrder + 1}...`);
+                // Update RTDB to trigger both clients to move to next question
+                const rtdb = admin.database();
+                const rtdbMatchRef = rtdb.ref(`active_matches/${data.matchId}`);
+                await rtdbMatchRef.update({
+                    currentQuestionIndex: data.questionOrder + 1,
+                    lastUpdated: admin.database.ServerValue.TIMESTAMP
+                });
+                console.log(`✅ RTDB updated: currentQuestionIndex → ${data.questionOrder + 1}`);
+            }
+            else {
+                console.log(`⏳ Waiting for other player to answer Q${data.questionOrder}...`);
+            }
         }
         else {
-            console.log(`⏳ Waiting for other player to answer Q${data.questionOrder}...`);
+            console.log(`🤖 AI match detected, skipping RTDB sync`);
         }
     }
     console.log(`✅ Recorded answer for ${data.userId} in match ${data.matchId}: ${isCorrect ? 'CORRECT' : 'WRONG'}`);
