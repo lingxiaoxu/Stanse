@@ -871,7 +871,8 @@ export const DuelModal: React.FC<DuelModalProps> = ({
           questionOrder: currentMatch.currentQuestionIndex,
           answerIndex: aiAnswerIndex,
           timestamp: new Date().toISOString(),
-          timeElapsed: Date.now() - matchStartTimeRef.current
+          timeElapsed: Date.now() - matchStartTimeRef.current,
+          aiUserId: currentMatch.playerB.id  // Pass AI's userId for backend to record correctly
         });
         console.log(`[DuelModal] 🤖 AI answer submitted: Q${currentMatch.currentQuestionIndex}, ${isCorrect ? 'CORRECT' : 'WRONG'}`);
       } catch (e) {

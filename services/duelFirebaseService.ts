@@ -285,6 +285,7 @@ export async function submitAnswer(params: {
   answerIndex: number;
   timestamp: string;
   timeElapsed: number;
+  aiUserId?: string; // Optional: for submitting AI answers
 }): Promise<boolean> {
   try {
     const submitDuelAnswer = httpsCallable(functions, 'submitDuelAnswer');
