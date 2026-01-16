@@ -866,11 +866,12 @@ export const DuelModal: React.FC<DuelModalProps> = ({
     const currentQuestion = currentMatch.questions[currentMatch.currentQuestionIndex];
 
     // Update local AI score (for UI display)
+    // Unified scoring: +1 for correct, -2 for wrong
     setMatch(prev => {
       if (!prev) return null;
       return {
         ...prev,
-        playerB: { ...prev.playerB, score: prev.playerB.score + (isCorrect ? 1 : -1) }
+        playerB: { ...prev.playerB, score: prev.playerB.score + (isCorrect ? 1 : -2) }
       };
     });
 
