@@ -306,60 +306,22 @@ function canMatch(userA: QueueEntry, userB: QueueEntry): boolean {
  */
 async function createMatch(userA: QueueEntry, userB: QueueEntry, isAIOpponent: boolean = false): Promise<string> {
   const now = new Date().toISOString();
+
+  // ANTI-DUPLICATION: Check if these users already have a pending match
+  const existingMatches = await db.collection('duel_matches')
+    .where('participantIds', 'array-contains', userA.userId)
+    .where('status', 'in', ['ready', 'in_progress'])
+    .get();
+
+  for (const doc of existingMatches.docs) {
+    const match = doc.data();
+    if (match.participantIds.includes(userB.userId)) {
+      console.warn(`⚠️ Duplicate match detected! Users ${userA.userId.substr(-6)} and ${userB.userId.substr(-6)} already have match ${doc.id}`);
+      return doc.id;  // Return existing match ID instead of creating new one
+    }
+  }
+
   const matchId = `match_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-
-  // CRITICAL: Set RTDB lock BEFORE any operations to prevent race conditions
-  // Use RTDB for atomic operations (much faster than Firestore)
-  const lockRefA = rtdb.ref(`matchmaking_locks/${userA.userId}`);
-  const lockRefB = rtdb.ref(`matchmaking_locks/${userB.userId}`);
-
-  try {
-    // Try to acquire locks atomically
-    const lockValueA = await lockRefA.transaction((current) => {
-      if (current !== null) {
-        // Lock already exists, abort
-        return undefined;
-      }
-      return matchId;  // Set lock to matchId
-    });
-
-    if (!lockValueA.committed) {
-      console.warn(`⚠️ User A already locked, aborting match creation`);
-      return '';  // User A already being matched
-    }
-
-    const lockValueB = await lockRefB.transaction((current) => {
-      if (current !== null) {
-        // Lock already exists, abort and release A's lock
-        return undefined;
-      }
-      return matchId;  // Set lock to matchId
-    });
-
-    if (!lockValueB.committed) {
-      console.warn(`⚠️ User B already locked, releasing A's lock`);
-      await lockRefA.remove();
-      return '';  // User B already being matched
-    }
-
-    console.log(`  🔒 Acquired locks for both users`);
-
-    // ANTI-DUPLICATION: Double-check if these users already have a pending match
-    const existingMatches = await db.collection('duel_matches')
-      .where('participantIds', 'array-contains', userA.userId)
-      .where('status', 'in', ['ready', 'in_progress'])
-      .get();
-
-    for (const doc of existingMatches.docs) {
-      const match = doc.data();
-      if (match.participantIds.includes(userB.userId)) {
-        console.warn(`⚠️ Duplicate match found! Returning existing ${doc.id}`);
-        // Release locks and return existing match
-        await lockRefA.remove();
-        await lockRefB.remove();
-        return doc.id;
-      }
-    }
 
   // Hold credits for human players only
   try {
@@ -450,20 +412,7 @@ async function createMatch(userA: QueueEntry, userB: QueueEntry, isAIOpponent: b
   await db.collection('duel_matches').doc(matchId).set(matchData);
 
   console.log(`✅ Created match ${matchId}${isAIOpponent ? ' (vs AI)' : ''}`);
-
-  // Release locks after match is created
-  await lockRefA.remove();
-  await lockRefB.remove();
-  console.log(`  🔓 Released matchmaking locks`);
-
   return matchId;
-  } catch (error) {
-    // Cleanup locks on error
-    console.error(`❌ Error creating match, releasing locks:`, error);
-    await lockRefA.remove();
-    await lockRefB.remove();
-    throw error;
-  }
 }
 
 /**
