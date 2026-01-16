@@ -283,26 +283,48 @@ async function executeSettlement(
   const playerAIsBot = isAIBot(match.players.A.userId);
   const playerBIsBot = isAIBot(match.players.B.userId);
 
-  // Release held credits first (only for human players)
-  if (!playerAIsBot && match.holds.A > 0) {
-    await releaseCredits(match.players.A.userId, match.holds.A, matchId);
-  }
-  if (!playerBIsBot && match.holds.B > 0) {
-    await releaseCredits(match.players.B.userId, match.holds.B, matchId);
+  // Apply final credit changes (only for human players)
+  // IMPORTANT: Don't RELEASE then DEDUCT - that causes double operations
+  // Instead: directly DEDUCT losers, REWARD winners (reward includes their hold)
+
+  if (!playerAIsBot) {
+    if (settlement.deductionA > 0) {
+      // Player A lost - deduct from their held credits
+      await deductCredits(match.players.A.userId, settlement.deductionA, matchId, 'Match loss');
+      console.log(`  💰 Player A deducted ${settlement.deductionA} credits`);
+    } else if (settlement.rewardA > 0) {
+      // Player A won or drew - release hold and add reward
+      await releaseCredits(match.players.A.userId, match.holds.A, matchId);
+      if (settlement.rewardA > match.holds.A) {
+        // Add additional reward beyond their own hold
+        await rewardCredits(match.players.A.userId, settlement.rewardA - match.holds.A, matchId);
+      }
+      console.log(`  💰 Player A rewarded ${settlement.rewardA} credits total`);
+    } else {
+      // Drew - just release hold
+      await releaseCredits(match.players.A.userId, match.holds.A, matchId);
+      console.log(`  💰 Player A credits released (drew)`);
+    }
   }
 
-  // Apply deductions and rewards (only for human players)
-  if (!playerAIsBot && settlement.deductionA > 0) {
-    await deductCredits(match.players.A.userId, settlement.deductionA, matchId, 'Match loss');
-  }
-  if (!playerBIsBot && settlement.deductionB > 0) {
-    await deductCredits(match.players.B.userId, settlement.deductionB, matchId, 'Match loss');
-  }
-  if (!playerAIsBot && settlement.rewardA > 0) {
-    await rewardCredits(match.players.A.userId, settlement.rewardA, matchId);
-  }
-  if (!playerBIsBot && settlement.rewardB > 0) {
-    await rewardCredits(match.players.B.userId, settlement.rewardB, matchId);
+  if (!playerBIsBot) {
+    if (settlement.deductionB > 0) {
+      // Player B lost - deduct from their held credits
+      await deductCredits(match.players.B.userId, settlement.deductionB, matchId, 'Match loss');
+      console.log(`  💰 Player B deducted ${settlement.deductionB} credits`);
+    } else if (settlement.rewardB > 0) {
+      // Player B won or drew - release hold and add reward
+      await releaseCredits(match.players.B.userId, match.holds.B, matchId);
+      if (settlement.rewardB > match.holds.B) {
+        // Add additional reward beyond their own hold
+        await rewardCredits(match.players.B.userId, settlement.rewardB - match.holds.B, matchId);
+      }
+      console.log(`  💰 Player B rewarded ${settlement.rewardB} credits total`);
+    } else {
+      // Drew - just release hold
+      await releaseCredits(match.players.B.userId, match.holds.B, matchId);
+      console.log(`  💰 Player B credits released (drew)`);
+    }
   }
 
   // Update match document

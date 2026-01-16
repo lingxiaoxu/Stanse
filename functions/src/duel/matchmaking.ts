@@ -156,20 +156,23 @@ export async function processMatchmakingQueue(): Promise<void> {
         // Found a match!
         console.log(`  ✅ Matched ${userA.userId} with ${userB.userId}`);
 
-        // Create match
-        await createMatch(userA, userB);
-
-        // Mark as matched
+        // CRITICAL: Mark as matched IMMEDIATELY before creating match
+        // This prevents another matchmaking run from matching these users again
         matched.push(userA.userId, userB.userId);
 
-        // Remove from queue
+        // Remove from queue BEFORE creating match (prevents race condition)
         if (USE_RTDB_QUEUE) {
           await rtdb.ref(`matchmaking_queue/${userA.userId}`).remove();
           await rtdb.ref(`matchmaking_queue/${userB.userId}`).remove();
+          console.log(`  🔒 Locked users in matchmaking (removed from queue)`);
         } else {
           await db.collection('duel_matchmaking_queue').doc(userA.docId).delete();
           await db.collection('duel_matchmaking_queue').doc(userB.docId).delete();
         }
+
+        // Create match (after queue removal to prevent duplicate matching)
+        await createMatch(userA, userB);
+        console.log(`  ✅ Match created successfully`);
 
         break;
       }
@@ -303,6 +306,21 @@ function canMatch(userA: QueueEntry, userB: QueueEntry): boolean {
  */
 async function createMatch(userA: QueueEntry, userB: QueueEntry, isAIOpponent: boolean = false): Promise<string> {
   const now = new Date().toISOString();
+
+  // ANTI-DUPLICATION: Check if these users already have a pending match
+  const existingMatches = await db.collection('duel_matches')
+    .where('participantIds', 'array-contains', userA.userId)
+    .where('status', 'in', ['ready', 'in_progress'])
+    .get();
+
+  for (const doc of existingMatches.docs) {
+    const match = doc.data();
+    if (match.participantIds.includes(userB.userId)) {
+      console.warn(`⚠️ Duplicate match detected! Users ${userA.userId.substr(-6)} and ${userB.userId.substr(-6)} already have match ${doc.id}`);
+      return doc.id;  // Return existing match ID instead of creating new one
+    }
+  }
+
   const matchId = `match_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
   // Hold credits for human players only
