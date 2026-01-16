@@ -24,6 +24,8 @@ import { getTourSteps } from './data/tourSteps';
 import { markTourCompleted } from './services/userService';
 import { setUserOnline } from './services/presenceService';
 import { recoverUserState } from './services/matchRecoveryService';
+import { startBreakingNewsListener, stopBreakingNewsListener } from './services/breakingNewsService';
+import { checkNotificationPermission } from './services/notificationService';
 
 // Initial mock state for user profile (used as fallback)
 const INITIAL_PROFILE: PoliticalCoordinates = {
@@ -70,12 +72,33 @@ const StanseApp: React.FC = () => {
       const cleanup = setUserOnline(user.uid, {
         email: user.email || undefined,
         personaLabel: authUserProfile?.coordinates?.label || 'Unknown',
-        stanceType: authUserProfile?.coordinates?.nationalityPrefix || 'Unknown'
+        stanceType: authUserProfile?.coordinates?.nationalityPrefix || 'Unknown',
+        coreStanceType: authUserProfile?.coordinates?.coreStanceType
       });
 
       return cleanup;
     }
   }, [user, authUserProfile]);
+
+  // Start breaking news listener if notifications are enabled
+  useEffect(() => {
+    if (user) {
+      // Check if user has granted notification permission
+      const notificationPermission = checkNotificationPermission();
+
+      if (notificationPermission === 'granted') {
+        console.log('🔔 Starting breaking news listener');
+        startBreakingNewsListener(user.uid);
+
+        return () => {
+          console.log('🔕 Stopping breaking news listener');
+          stopBreakingNewsListener();
+        };
+      } else {
+        console.log('🔕 Notifications not granted, skipping breaking news listener');
+      }
+    }
+  }, [user]);
 
   // Check if tour should be shown after login
   useEffect(() => {

@@ -651,9 +651,12 @@ export const UnionView: React.FC = () => {
               if (result) {
                 setUserCredits(result.balance);
                 console.log(`Deposited $${amount}, new balance: $${result.balance}`);
+                return { success: true, newBalance: result.balance };
               }
+              return { success: false, error: 'Failed to deposit credits' };
             } catch (error) {
               console.error('Deposit failed:', error);
+              return { success: false, error: error instanceof Error ? error.message : 'Deposit failed' };
             }
           }}
           onWithdraw={async (amount: number) => {
@@ -662,9 +665,12 @@ export const UnionView: React.FC = () => {
               if (result) {
                 setUserCredits(result.balance);
                 console.log(`Withdrew $${amount}, new balance: $${result.balance}`);
+                return { success: true, newBalance: result.balance };
               }
+              return { success: false, error: 'Failed to withdraw credits' };
             } catch (error) {
               console.error('Withdraw failed:', error);
+              return { success: false, error: error instanceof Error ? error.message : 'Withdraw failed' };
             }
           }}
         />

@@ -4,7 +4,7 @@
  * Real-time matching of online users based on:
  * - Different political stanceType (ensure opposing views)
  * - Similar network ping (±60ms for fairness)
- * - Similar entry fee (±$5 for balanced stakes)
+ * - Similar entry fee (±$1 for balanced stakes)
  * - Same duration preference
  */
 
@@ -21,7 +21,7 @@ const PROJECT_ID = 'gen-lang-client-0960644135';
 const GEMINI_SECRET_NAME = 'gemini-api-key';
 
 const MAX_PING_DIFF = 60; // Maximum ping difference (ms)
-const MAX_FEE_DIFF = 5; // Maximum entry fee difference ($)
+const MAX_FEE_DIFF = 1; // Maximum entry fee difference ($)
 const QUEUE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const AI_OPPONENT_WAIT_TIME = 30 * 1000; // Wait 30s before creating AI opponent
 
@@ -240,7 +240,7 @@ async function createAIOpponent(userStanceType: string, userPingMs: number): Pro
   let personaLabel = 'AI Opponent';
   try {
     const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash',
       contents: `Generate a short (2-3 words) political persona label for someone with stance type "${aiStanceType}". Just return the label, nothing else. Examples: "Progressive Globalist", "Conservative Nationalist"`
     });
 
@@ -290,7 +290,7 @@ function canMatch(userA: QueueEntry, userB: QueueEntry): boolean {
     return false;
   }
 
-  // Entry fee must be similar (±$5)
+  // Entry fee must be similar (±$1)
   if (Math.abs(userA.entryFee - userB.entryFee) > MAX_FEE_DIFF) {
     return false;
   }

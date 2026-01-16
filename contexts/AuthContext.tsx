@@ -227,6 +227,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await stopHeartbeat(user.uid, heartbeatIntervalRef.current);
       }
 
+      // Clear presence from RTDB
+      if (user?.uid) {
+        const { rtdb } = await import('../services/firebase');
+        const { ref, remove } = await import('firebase/database');
+        const presenceRef = ref(rtdb, `presence/${user.uid}`);
+        await remove(presenceRef).catch(err => {
+          console.warn('[Logout] Failed to clear presence:', err);
+        });
+        console.log('[Logout] Cleared presence for user:', user.uid);
+      }
+
       await logOut();
       setUserProfile(null);
     } catch (err: any) {

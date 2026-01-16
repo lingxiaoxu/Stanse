@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
+exports.cleanupStalePresence = exports.checkBreakingNews = exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -128,6 +128,7 @@ exports.processTrialEndCharges = functions.scheduler.onSchedule({
         let skippedPromoCount = 0;
         let skippedTrialCount = 0;
         let errorCount = 0;
+        let totalRevenue = 0; // Track actual revenue collected
         const errors = [];
         for (const doc of snapshot.docs) {
             const subData = doc.data();
@@ -163,12 +164,15 @@ exports.processTrialEndCharges = functions.scheduler.onSchedule({
                 // Add billing record
                 const historyRef = db.collection('user_subscriptions').doc(userId).collection('history');
                 const periodString = `${trialEndDate.getFullYear()}-${String(trialEndDate.getMonth() + 1).padStart(2, '0')}`;
-                await historyRef.add({
+                const historyDoc = await historyRef.add({
                     type: 'TRIAL_END_CHARGE',
                     amount: proratedAmount,
                     period: periodString,
                     timestamp: now.toISOString()
                 });
+                // Read back the actual charged amount from billing history for accuracy
+                const savedHistory = await historyDoc.get();
+                const actualChargedAmount = savedHistory.data()?.amount || proratedAmount;
                 // Get user email for event tracking
                 let userEmail = '';
                 try {
@@ -187,7 +191,7 @@ exports.processTrialEndCharges = functions.scheduler.onSchedule({
                         timestamp: now.toISOString(),
                         metadata: {
                             convertedToActive: true,
-                            chargedAmount: proratedAmount
+                            chargedAmount: actualChargedAmount
                         }
                     });
                     console.log(`📊 Event tracked: TRIAL_END for ${userId}`);
@@ -198,10 +202,11 @@ exports.processTrialEndCharges = functions.scheduler.onSchedule({
                 // Clear trialEndsAt
                 await doc.ref.update({
                     trialEndsAt: admin.firestore.FieldValue.delete(),
-                    latestAmount: proratedAmount,
+                    latestAmount: actualChargedAmount,
                     updatedAt: now.toISOString()
                 });
-                console.log(`✅ Charged ${userId}: $${proratedAmount.toFixed(2)}`);
+                console.log(`✅ Charged ${userId}: $${actualChargedAmount.toFixed(2)}`);
+                totalRevenue += actualChargedAmount; // Use actual amount from billing history
                 processedCount++;
             }
             catch (error) {
@@ -211,7 +216,6 @@ exports.processTrialEndCharges = functions.scheduler.onSchedule({
             }
         }
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-        const totalRevenue = processedCount * MONTHLY_PRICE; // Approximate (actual amounts vary)
         const avgRevenue = processedCount > 0 ? totalRevenue / processedCount : 0;
         const totalSkipped = skippedPromoCount + skippedTrialCount;
         // Calculate potential revenue and loss
@@ -890,4 +894,14 @@ exports.validateDuelQuestions = functions.https.onCall(async (request) => {
         throw new functions.https.HttpsError('internal', error.message);
     }
 });
+// ========================================
+// Breaking News Notifications (Independent System)
+// ========================================
+var breaking_news_checker_1 = require("./breaking-news-checker");
+Object.defineProperty(exports, "checkBreakingNews", { enumerable: true, get: function () { return breaking_news_checker_1.checkBreakingNews; } });
+// ========================================
+// Presence Cleanup
+// ========================================
+var cleanup_stale_presence_1 = require("./cleanup-stale-presence");
+Object.defineProperty(exports, "cleanupStalePresence", { enumerable: true, get: function () { return cleanup_stale_presence_1.cleanupStalePresence; } });
 //# sourceMappingURL=index.js.map

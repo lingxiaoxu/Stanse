@@ -102,6 +102,25 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
+    // 新闻原文 - 存储未 summarize 的原始新闻内容（用于 breaking news 检测）
+    match /news_original/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Breaking News 通知 - 认证用户可以读取和更新（标记为已读）
+    match /breaking_news_notifications/{notificationId} {
+      allow read: if request.auth != null;
+      allow update: if request.auth != null; // Allow marking as read
+      allow create, delete: if false; // Only Cloud Functions
+    }
+
+    // 通知日志 - 认证用户可以读取
+    match /notification_logs/{logId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only Cloud Functions
+    }
+
     // 新闻图片缓存 - 认证用户可以读写
     match /news_images/{document=**} {
       allow read, write: if request.auth != null;

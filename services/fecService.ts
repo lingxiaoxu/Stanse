@@ -262,7 +262,7 @@ Return ONLY a JSON array of strings, like this:
 Do not include any other text, explanations, or markdown formatting.`;
 
     const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash',
       contents: prompt,
     });
 
@@ -308,7 +308,7 @@ Examples:
 - "King" and "BURGER KING" → NO (unless the user is specifically searching for Burger King)`;
 
     const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash',
       contents: prompt,
     });
 

@@ -140,7 +140,7 @@ DISTRACTOR3: Flag of South Korea with yin-yang symbol and trigrams
 
 Now generate for ${category}/${difficulty}:`;
         const result = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-2.5-flash',
             contents: prompt
         });
         const text = result.text || '';
@@ -224,7 +224,7 @@ async function generateAllQuestions() {
                     imageGenModel: 'placeholder', // Will be 'imagen-3' in production
                     imageSize: '512x512',
                     stylePrompt: 'Clean, professional, recognizable',
-                    generatedBy: 'gemini-2.0-flash-exp'
+                    generatedBy: 'gemini-2.5-flash'
                 }
             };
             // Write to Firestore

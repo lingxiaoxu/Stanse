@@ -105,6 +105,7 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
       let skippedPromoCount = 0;
       let skippedTrialCount = 0;
       let errorCount = 0;
+      let totalRevenue = 0; // Track actual revenue collected
       const errors: string[] = [];
 
       for (const doc of snapshot.docs) {
@@ -152,12 +153,16 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
           const historyRef = db.collection('user_subscriptions').doc(userId).collection('history');
           const periodString = `${trialEndDate.getFullYear()}-${String(trialEndDate.getMonth() + 1).padStart(2, '0')}`;
 
-          await historyRef.add({
+          const historyDoc = await historyRef.add({
             type: 'TRIAL_END_CHARGE',
             amount: proratedAmount,
             period: periodString,
             timestamp: now.toISOString()
           });
+
+          // Read back the actual charged amount from billing history for accuracy
+          const savedHistory = await historyDoc.get();
+          const actualChargedAmount = savedHistory.data()?.amount || proratedAmount;
 
           // Get user email for event tracking
           let userEmail = '';
@@ -177,7 +182,7 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
               timestamp: now.toISOString(),
               metadata: {
                 convertedToActive: true,
-                chargedAmount: proratedAmount
+                chargedAmount: actualChargedAmount
               }
             });
             console.log(`📊 Event tracked: TRIAL_END for ${userId}`);
@@ -188,11 +193,12 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
           // Clear trialEndsAt
           await doc.ref.update({
             trialEndsAt: admin.firestore.FieldValue.delete(),
-            latestAmount: proratedAmount,
+            latestAmount: actualChargedAmount,
             updatedAt: now.toISOString()
           });
 
-          console.log(`✅ Charged ${userId}: $${proratedAmount.toFixed(2)}`);
+          console.log(`✅ Charged ${userId}: $${actualChargedAmount.toFixed(2)}`);
+          totalRevenue += actualChargedAmount; // Use actual amount from billing history
           processedCount++;
         } catch (error: any) {
           console.error(`❌ Failed to process ${userId}:`, error);
@@ -202,7 +208,6 @@ export const processTrialEndCharges = functions.scheduler.onSchedule(
       }
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-      const totalRevenue = processedCount * MONTHLY_PRICE; // Approximate (actual amounts vary)
       const avgRevenue = processedCount > 0 ? totalRevenue / processedCount : 0;
       const totalSkipped = skippedPromoCount + skippedTrialCount;
 
@@ -1034,3 +1039,13 @@ export const validateDuelQuestions = functions.https.onCall(
     }
   }
 );
+
+// ========================================
+// Breaking News Notifications (Independent System)
+// ========================================
+export { checkBreakingNews } from './breaking-news-checker';
+
+// ========================================
+// Presence Cleanup
+// ========================================
+export { cleanupStalePresence } from './cleanup-stale-presence';

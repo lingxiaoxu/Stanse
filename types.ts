@@ -460,6 +460,11 @@ export interface FirestoreDuelMatch {
 
   questionSequenceRef: string; // Reference to question sequence doc
 
+  // Synchronized current question index (for real-time PvP)
+  // Both players monitor this field to stay in sync
+  // Updated when BOTH players answer the current question
+  currentQuestionIndex: number;
+
   // Player answers during match (for real-time PvP)
   answers?: {
     A?: Array<{

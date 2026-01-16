@@ -111,7 +111,7 @@ CRITICAL REQUIREMENTS:
 - Do not use bullet points, just flowing prose`;
 
     const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash',
       contents: prompt
     });
 
