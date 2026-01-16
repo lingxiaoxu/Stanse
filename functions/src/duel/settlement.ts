@@ -632,6 +632,17 @@ export async function finalizeMatch(matchId: string): Promise<void> {
     return;
   }
 
+  // Check if this is an abandoned match (no answers from either player)
+  const matchData = match as any;
+  const answersA = matchData.answers?.A || [];
+  const answersB = matchData.answers?.B || [];
+
+  if (answersA.length === 0 && answersB.length === 0) {
+    console.log(`  ⚠️  Abandoned match detected (no answers), cancelling and refunding...`);
+    await cancelMatch(matchId, match, 'Match abandoned - no gameplay');
+    return;
+  }
+
   // Update status to in_progress if still ready (gameplay started)
   if (match.status === 'ready') {
     await matchRef.update({ status: 'in_progress' });
