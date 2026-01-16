@@ -204,15 +204,19 @@ export const DuelModal: React.FC<DuelModalProps> = ({
 
     const currentMatch = matchRef.current;
 
-    // If in queue, leave it
+    // If in queue, leave it IMMEDIATELY (don't wait for async completion)
     if (gameState === DuelState.MATCHING && user) {
-      try {
-        await leaveMatchmaking();
-        await setInDuelQueue(user.uid, false);
-        console.log('[DuelModal] Left matchmaking queue');
-      } catch (e) {
+      // Immediately clear presence flag (synchronous RTDB update)
+      setInDuelQueue(user.uid, false).catch(e => {
+        console.error('[DuelModal] Failed to clear queue presence:', e);
+      });
+
+      // Also call backend to leave queue
+      leaveMatchmaking().catch(e => {
         console.warn('[DuelModal] Failed to leave queue:', e);
-      }
+      });
+
+      console.log('[DuelModal] Initiated queue cleanup (async)');
     }
 
     // If in active match, clean up match state
