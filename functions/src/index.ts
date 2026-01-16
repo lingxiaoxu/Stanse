@@ -829,9 +829,17 @@ export const submitDuelAnswer = functions.https.onCall(
     }
 
     try {
+      // Support submitting on behalf of AI opponent (for AI matches)
+      // If aiUserId is provided and starts with 'ai_bot_', use it instead of auth.uid
+      let actualUserId = auth.uid;
+      if (data.aiUserId && data.aiUserId.startsWith('ai_bot_')) {
+        actualUserId = data.aiUserId;
+        console.log(`🤖 Submitting answer on behalf of AI: ${data.aiUserId}`);
+      }
+
       await submitGameplayEvent({
         matchId: data.matchId,
-        userId: auth.uid,
+        userId: actualUserId,
         questionId: data.questionId,
         questionOrder: data.questionOrder,
         answerIndex: data.answerIndex,

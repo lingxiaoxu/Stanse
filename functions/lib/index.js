@@ -718,9 +718,16 @@ exports.submitDuelAnswer = functions.https.onCall(async (request) => {
         throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
     }
     try {
+        // Support submitting on behalf of AI opponent (for AI matches)
+        // If aiUserId is provided and starts with 'ai_bot_', use it instead of auth.uid
+        let actualUserId = auth.uid;
+        if (data.aiUserId && data.aiUserId.startsWith('ai_bot_')) {
+            actualUserId = data.aiUserId;
+            console.log(`🤖 Submitting answer on behalf of AI: ${data.aiUserId}`);
+        }
         await (0, settlement_1.submitGameplayEvent)({
             matchId: data.matchId,
-            userId: auth.uid,
+            userId: actualUserId,
             questionId: data.questionId,
             questionOrder: data.questionOrder,
             answerIndex: data.answerIndex,
