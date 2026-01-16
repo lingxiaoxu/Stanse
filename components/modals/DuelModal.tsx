@@ -800,6 +800,12 @@ export const DuelModal: React.FC<DuelModalProps> = ({
   };
 
   const startRound = () => {
+    // Don't start new rounds if game has ended
+    if (gameState !== DuelState.GAMEPLAY) {
+      console.log(`[DuelModal] ⚠️ Ignoring startRound - gameState is ${gameState}`);
+      return;
+    }
+
     setRoundState('ACTIVE');
 
     const currentMatch = matchRef.current;
@@ -973,10 +979,15 @@ export const DuelModal: React.FC<DuelModalProps> = ({
 
     clearTimers();
 
-    // Cleanup opponent answer listener if exists
+    // Cleanup all listeners immediately when game ends
     if (opponentAnswerListenerRef.current) {
       opponentAnswerListenerRef.current();
       opponentAnswerListenerRef.current = null;
+    }
+    if (questionIndexListenerRef.current) {
+      questionIndexListenerRef.current();
+      questionIndexListenerRef.current = null;
+      console.log('[DuelModal] 🔇 Cleaned up RTDB question index listener');
     }
 
     const currentMatch = matchRef.current;
