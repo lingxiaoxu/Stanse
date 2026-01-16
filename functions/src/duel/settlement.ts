@@ -104,10 +104,14 @@ function calculateScores(events: GameplayEvent[], userIdA: string, userIdB: stri
   let scoreB = 0;
 
   for (const event of events) {
+    // Unified scoring rule: +1 for correct, -2 for wrong
+    // "Too slow" markers (answerIndex=-1) don't add events, so they're 0 by default
+    const scoreChange = event.isCorrect ? 1 : -2;
+
     if (event.playerId === userIdA) {
-      scoreA += event.isCorrect ? 1 : -1;
+      scoreA += scoreChange;
     } else if (event.playerId === userIdB) {
-      scoreB += event.isCorrect ? 1 : -1;
+      scoreB += scoreChange;
     }
   }
 
@@ -422,8 +426,8 @@ export async function submitGameplayEvent(data: {
   // Determine which player (A or B)
   const isPlayerA = data.userId === match.players.A.userId;
 
-  // Calculate new scores (too slow = 0 points, no change)
-  const scoreChange = isTooSlowMarker ? 0 : (isCorrect ? 1 : -1);
+  // Calculate new scores with unified rule: +1 correct, -2 wrong, 0 for too slow
+  const scoreChange = isTooSlowMarker ? 0 : (isCorrect ? 1 : -2);
   const currentScoreA = match.result.scoreA + (isPlayerA ? scoreChange : 0);
   const currentScoreB = match.result.scoreB + (!isPlayerA ? scoreChange : 0);
 
