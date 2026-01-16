@@ -370,6 +370,13 @@ export function listenForOpponentAnswers(
       // Get opponent's answers
       const opponentAnswers = matchData.answers?.[opponentPlayer] || [];
 
+      // OPTIMIZATION: Skip processing if no new answers
+      // This avoids redundant processing when user submits their own answer
+      if (opponentAnswers.length === lastProcessedIndex + 1) {
+        // No new opponent answers, snapshot triggered by our own answer or score update
+        return;
+      }
+
       console.log(`[listenForOpponentAnswers] 📊 Snapshot: ${opponentAnswers.length} total, lastIndex=${lastProcessedIndex}, expected=${expectedAnswerCount}, processed=${processedAnswerIds.size}`);
 
       // VERIFICATION: Check if opponent has answered (any answers exist)
