@@ -107,18 +107,32 @@ function calculateScores(events, userIdA, userIdB) {
 async function settleMatch(matchId) {
     console.log(`💰 Settling match ${matchId}...`);
     const matchRef = db.collection('duel_matches').doc(matchId);
-    const matchDoc = await matchRef.get();
-    if (!matchDoc.exists) {
-        throw new Error(`Match ${matchId} not found`);
+    // CRITICAL: Use transaction to atomically check and lock settlement
+    let match;
+    try {
+        match = await db.runTransaction(async (transaction) => {
+            const matchDoc = await transaction.get(matchRef);
+            if (!matchDoc.exists) {
+                throw new Error(`Match ${matchId} not found`);
+            }
+            const matchData = matchDoc.data();
+            if (matchData.status === 'finished' || matchData.status === 'settling') {
+                console.log(`  ℹ️  Match already settled or currently settling`);
+                throw new Error('ALREADY_SETTLED'); // Special error to exit gracefully
+            }
+            // Atomically mark as settling to prevent concurrent settlement
+            transaction.update(matchRef, { status: 'settling' });
+            console.log(`  🔒 Locked match for settlement (atomic)`);
+            return matchData;
+        });
     }
-    const match = matchDoc.data();
-    if (match.status === 'finished' || match.status === 'settling') {
-        console.log(`  ℹ️  Match already settled or currently settling`);
-        return;
+    catch (error) {
+        if (error.message === 'ALREADY_SETTLED') {
+            console.log(`  ⏭️  Skipping already settled match`);
+            return; // Exit gracefully
+        }
+        throw error; // Re-throw other errors
     }
-    // Mark as settling to prevent concurrent settlement
-    await matchRef.update({ status: 'settling' });
-    console.log(`  🔒 Locked match for settlement`);
     // Fetch all gameplay events
     const eventsSnapshot = await matchRef
         .collection('gameplay_events')
