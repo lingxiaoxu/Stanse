@@ -479,17 +479,20 @@ export const DuelModal: React.FC<DuelModalProps> = ({
                 firestoreMatch.matchId,
                 user.uid,
                 (answer) => {
-                  // CRITICAL: Ignore "too slow" markers (answerIndex=-1)
-                  // These are coordination signals, not real answers
+                  const currentMatch = matchRef.current;
+                  if (!currentMatch) return;
+
+                  // Handle "too slow" markers (answerIndex=-1)
+                  // These indicate opponent was slow and submitted completion marker
                   if (answer.answerIndex === -1) {
-                    console.log(`[DuelModal] 🚫 Ignoring "too slow" marker from opponent for Q${answer.questionOrder}`);
+                    console.log(`[DuelModal] 📥 Received "too slow" marker from opponent for Q${answer.questionOrder}`);
+                    console.log(`[DuelModal] ✅ Opponent completed Q${answer.questionOrder} (was slow), waiting for RTDB sync...`);
+                    // Don't cache or update scores, but backend will update RTDB
+                    // Just acknowledge that opponent finished
                     return;
                   }
 
                   console.log('[DuelModal] 📥 Opponent REAL answer received: Q' + answer.questionOrder + ':', answer.isCorrect ? 'CORRECT' : 'WRONG');
-
-                  const currentMatch = matchRef.current;
-                  if (!currentMatch) return;
 
                   // ALWAYS cache the answer, regardless of current question
                   // This ensures we don't lose answers that arrive early
