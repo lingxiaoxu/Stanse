@@ -479,7 +479,14 @@ export const DuelModal: React.FC<DuelModalProps> = ({
                 firestoreMatch.matchId,
                 user.uid,
                 (answer) => {
-                  console.log('[DuelModal] 📥 Opponent answer received: Q' + answer.questionOrder + ':', answer.isCorrect ? 'CORRECT' : 'WRONG');
+                  // CRITICAL: Ignore "too slow" markers (answerIndex=-1)
+                  // These are coordination signals, not real answers
+                  if (answer.answerIndex === -1) {
+                    console.log(`[DuelModal] 🚫 Ignoring "too slow" marker from opponent for Q${answer.questionOrder}`);
+                    return;
+                  }
+
+                  console.log('[DuelModal] 📥 Opponent REAL answer received: Q' + answer.questionOrder + ':', answer.isCorrect ? 'CORRECT' : 'WRONG');
 
                   const currentMatch = matchRef.current;
                   if (!currentMatch) return;
