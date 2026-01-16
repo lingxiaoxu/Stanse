@@ -488,18 +488,26 @@ export async function submitGameplayEvent(data: {
     });
 
     console.log(`✅ Answer appended at index ${data.questionOrder} for player ${playerKey}`);
+  });
 
-    // CRITICAL: Check if BOTH players have answered this question
-    // If yes, update RTDB currentQuestionIndex to trigger synchronized transition
-    const answersA = matchData.answers?.A || [];
-    const answersB = matchData.answers?.B || [];
+  // CRITICAL: After transaction, check if BOTH players have answered this question
+  // Need to re-read match to get latest state after transaction
+  const updatedMatch = await matchRef.get();
+  if (updatedMatch.exists) {
+    const updatedData = updatedMatch.data() as any;
+    const answersA = updatedData.answers?.A || [];
+    const answersB = updatedData.answers?.B || [];
 
-    // After our update, check if both arrays have this question answered
-    const bothAnsweredThisQuestion = (newAnswers.length > data.questionOrder) &&
-                                      (playerKey === 'A' ? answersB.length > data.questionOrder : answersA.length > data.questionOrder);
+    // Check if both players have answered up to and including this questionOrder
+    const bothAnsweredThisQuestion =
+      (answersA.length > data.questionOrder) &&
+      (answersB.length > data.questionOrder);
+
+    console.log(`📊 After answer submission: answersA.length=${answersA.length}, answersB.length=${answersB.length}, questionOrder=${data.questionOrder}`);
+    console.log(`📊 Both answered Q${data.questionOrder}? ${bothAnsweredThisQuestion}`);
 
     if (bothAnsweredThisQuestion) {
-      console.log(`🔄 Both players answered Q${data.questionOrder}, syncing to next question...`);
+      console.log(`🔄 Both players answered Q${data.questionOrder}, syncing to Q${data.questionOrder + 1}...`);
 
       // Update RTDB to trigger both clients to move to next question
       const rtdb = admin.database();
@@ -511,8 +519,10 @@ export async function submitGameplayEvent(data: {
       });
 
       console.log(`✅ RTDB updated: currentQuestionIndex → ${data.questionOrder + 1}`);
+    } else {
+      console.log(`⏳ Waiting for other player to answer Q${data.questionOrder}...`);
     }
-  });
+  }
 
   console.log(`✅ Recorded answer for ${data.userId} in match ${data.matchId}: ${isCorrect ? 'CORRECT' : 'WRONG'}`);
 }
