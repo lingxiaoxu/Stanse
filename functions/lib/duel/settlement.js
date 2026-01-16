@@ -112,10 +112,13 @@ async function settleMatch(matchId) {
         throw new Error(`Match ${matchId} not found`);
     }
     const match = matchDoc.data();
-    if (match.status === 'finished') {
-        console.log(`  ℹ️  Match already settled`);
+    if (match.status === 'finished' || match.status === 'settling') {
+        console.log(`  ℹ️  Match already settled or currently settling`);
         return;
     }
+    // Mark as settling to prevent concurrent settlement
+    await matchRef.update({ status: 'settling' });
+    console.log(`  🔒 Locked match for settlement`);
     // Fetch all gameplay events
     const eventsSnapshot = await matchRef
         .collection('gameplay_events')
