@@ -488,7 +488,7 @@ const agents_1 = require("./duel/agents");
  * Also creates AI opponents for users waiting > 30 seconds
  */
 exports.runDuelMatchmaking = functions.scheduler.onSchedule({
-    schedule: 'every 5 seconds', // High frequency for instant matching
+    schedule: 'every 1 minutes', // Background cleanup (immediate checks via joinDuelQueue)
     timeZone: 'UTC',
     region: 'us-central1'
 }, async () => {
