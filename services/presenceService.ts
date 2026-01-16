@@ -104,9 +104,10 @@ export function setUserOnline(
 /**
  * Update user's duel queue status
  */
-export function setInDuelQueue(userId: string, inQueue: boolean): void {
+export async function setInDuelQueue(userId: string, inQueue: boolean): Promise<void> {
   const queueStatusRef = ref(rtdb, `presence/${userId}/inDuelQueue`);
-  set(queueStatusRef, inQueue);
+  await set(queueStatusRef, inQueue);
+  console.log(`[Presence] Set inDuelQueue=${inQueue} for ${userId.substr(-6)}`);
 }
 
 /**

@@ -208,7 +208,7 @@ export const DuelModal: React.FC<DuelModalProps> = ({
     if (gameState === DuelState.MATCHING && user) {
       try {
         await leaveMatchmaking();
-        setInDuelQueue(user.uid, false);
+        await setInDuelQueue(user.uid, false);
         console.log('[DuelModal] Left matchmaking queue');
       } catch (e) {
         console.warn('[DuelModal] Failed to leave queue:', e);
@@ -322,7 +322,7 @@ export const DuelModal: React.FC<DuelModalProps> = ({
 
     // Mark user as in queue in presence system
     if (user) {
-      setInDuelQueue(user.uid, true);
+      setInDuelQueue(user.uid, true).catch(e => console.error('[DuelModal] Failed to set queue status:', e));
     }
 
     try {
@@ -456,7 +456,7 @@ export const DuelModal: React.FC<DuelModalProps> = ({
 
             // Mark user as no longer in queue (match found)
             if (user) {
-              setInDuelQueue(user.uid, false);
+              setInDuelQueue(user.uid, false).catch(e => console.error('[DuelModal] Failed to clear queue status:', e));
             }
 
             // Clear pending match ref since game is starting successfully
