@@ -549,7 +549,7 @@ import {
  */
 export const runDuelMatchmaking = functions.scheduler.onSchedule(
   {
-    schedule: 'every 1 minutes',
+    schedule: 'every 5 seconds',  // High frequency for instant matching
     timeZone: 'UTC',
     region: 'us-central1'
   },
