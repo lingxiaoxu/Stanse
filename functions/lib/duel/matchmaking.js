@@ -296,7 +296,22 @@ async function createMatch(userA, userB, isAIOpponent = false) {
         const match = doc.data();
         if (match.participantIds.includes(userB.userId)) {
             console.warn(`⚠️ Duplicate match detected! Users ${userA.userId.substr(-6)} and ${userB.userId.substr(-6)} already have match ${doc.id}`);
-            return doc.id; // Return existing match ID instead of creating new one
+            // Check if the existing match has any gameplay (answers)
+            const existingMatchData = match;
+            const hasGameplay = (existingMatchData.answers?.A?.length > 0) || (existingMatchData.answers?.B?.length > 0);
+            if (hasGameplay) {
+                // Active match with gameplay - return it
+                console.log(`  ✅ Existing match has gameplay, using it`);
+                return doc.id;
+            }
+            else {
+                // Abandoned match with no gameplay - cancel it and create new one
+                console.log(`  🗑️  Existing match is abandoned (no gameplay), cancelling it`);
+                await db.collection('duel_matches').doc(doc.id).update({
+                    status: 'cancelled'
+                });
+                // Don't return, continue to create new match
+            }
         }
     }
     const matchId = `match_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
