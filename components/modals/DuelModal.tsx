@@ -500,37 +500,44 @@ export const DuelModal: React.FC<DuelModalProps> = ({
               );
             }
 
-            // PRELOAD ALL QUESTIONS during countdown to reduce latency
-            // This ensures both players have all resources loaded before game starts
-            console.log('[DuelModal] 🔄 Preloading all question images...');
-            const preloadPromises: Promise<void>[] = [];
+            // PRELOAD ALL QUESTIONS IN SEQUENTIAL ORDER
+            // This ensures Q0 loads before Q1, Q1 before Q2, etc.
+            // Critical for ensuring first questions are ready immediately
+            console.log('[DuelModal] 🔄 Preloading question images in sequential order...');
 
-            questions.forEach((q, qIndex) => {
-              // Each question has 4 choice images to preload
-              q.choices.forEach((imageUrl, choiceIndex) => {
-                const promise = new Promise<void>((resolve) => {
-                  const img = new Image();
-                  img.onload = () => {
-                    console.log(`[DuelModal] ✅ Preloaded Q${qIndex} choice ${choiceIndex}`);
-                    resolve();
-                  };
-                  img.onerror = () => {
-                    console.warn(`[DuelModal] ⚠️ Failed to preload Q${qIndex} choice ${choiceIndex}`);
-                    resolve(); // Continue even if image fails
-                  };
-                  img.src = imageUrl;
+            const totalImages = questions.length * 4;
+            console.log(`[DuelModal] 🔄 Total images to preload: ${totalImages} (${questions.length} questions × 4 choices)`);
+
+            // Preload questions sequentially: Q0, then Q1, then Q2, etc.
+            (async () => {
+              for (let qIndex = 0; qIndex < questions.length; qIndex++) {
+                const question = questions[qIndex];
+                if (!question) continue;
+
+                // Preload all 4 choices for this question in parallel
+                const choicePromises = question.choices.map((imageUrl, choiceIndex) => {
+                  return new Promise<void>((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                      console.log(`[DuelModal] ✅ Preloaded Q${qIndex} choice ${choiceIndex}`);
+                      resolve();
+                    };
+                    img.onerror = () => {
+                      console.warn(`[DuelModal] ⚠️ Failed Q${qIndex} choice ${choiceIndex}`);
+                      resolve(); // Continue even if fails
+                    };
+                    img.src = imageUrl;
+                  });
                 });
-                preloadPromises.push(promise);
-              });
-            });
 
-            // Start preloading in parallel (don't wait for completion)
-            const totalImages = preloadPromises.length;
-            console.log(`[DuelModal] 🔄 Starting to preload ${totalImages} images...`);
-            Promise.all(preloadPromises).then(() => {
-              console.log(`[DuelModal] ✅ All ${totalImages} images preloaded successfully`);
-            }).catch((err) => {
-              console.warn('[DuelModal] ⚠️ Some images failed to preload:', err);
+                // Wait for all 4 choices of this question to load before moving to next question
+                await Promise.all(choicePromises);
+                console.log(`[DuelModal] ✅ Question ${qIndex} fully loaded (4/4 choices)`);
+              }
+
+              console.log(`[DuelModal] ✅ All ${totalImages} images preloaded successfully in order`);
+            })().catch((err) => {
+              console.error('[DuelModal] ⚠️ Error during sequential preloading:', err);
             });
 
             // Start 3-2-1 countdown before gameplay begins
