@@ -451,6 +451,12 @@ export const DuelModal: React.FC<DuelModalProps> = ({
               questionIndexListenerRef.current = listenForQuestionIndexSyncRTDB(
                 firestoreMatch.matchId,
                 (newIndex) => {
+                  // Only process if game is still active
+                  if (gameEndingRef.current) {
+                    console.log(`[DuelModal] ⚠️ Ignoring RTDB sync - game has ended`);
+                    return;
+                  }
+
                   console.log(`[DuelModal] 🔄 RTDB sync: Moving to Q${newIndex}`);
 
                   // Update local match to new question index
@@ -801,8 +807,8 @@ export const DuelModal: React.FC<DuelModalProps> = ({
 
   const startRound = () => {
     // Don't start new rounds if game has ended
-    if (gameState !== DuelState.GAMEPLAY) {
-      console.log(`[DuelModal] ⚠️ Ignoring startRound - gameState is ${gameState}`);
+    if (gameEndingRef.current) {
+      console.log(`[DuelModal] ⚠️ Ignoring startRound - game has ended`);
       return;
     }
 
