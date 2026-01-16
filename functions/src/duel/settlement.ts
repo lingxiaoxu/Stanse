@@ -481,16 +481,23 @@ export async function submitGameplayEvent(data: {
         throw new Error(`Cannot skip to question ${data.questionOrder}`);
       }
 
-      // Allow late submission (network race condition) - idempotent
+      // Handle late submission (network race condition)
       if (data.questionOrder < currentAnswers.length) {
-        console.warn(`⚠️ Late submission: Q${data.questionOrder} already answered (length: ${currentAnswers.length})`);
-        console.warn(`⚠️ Network race condition detected, operation is idempotent - returning success`);
-        // Early return - don't modify array, but return success
-        return;
+        console.warn(`⚠️ Late submission: Q${data.questionOrder} already in array (length: ${currentAnswers.length})`);
+        console.warn(`⚠️ IMPORTANT: Creating event for scoring, but NOT modifying array (idempotent)`);
+
+        // CRITICAL: Create gameplay_event even for late submissions
+        // Backend's calculateScores() needs ALL events to compute correct final score
+        transaction.set(eventRef, event);
+
+        // Don't update answers array (already contains this question from faster player)
+        // Don't update result.scoreA/B (will be recalculated in finalize from all events)
+        console.log(`✅ Late submission: event created, array unchanged`);
+        return;  // Exit transaction - event created but array not modified
       }
 
       // Normal case: questionOrder === currentAnswers.length
-      console.log(`✅ PvP answer validated: Q${data.questionOrder}`);
+      console.log(`✅ PvP answer in-order: Q${data.questionOrder}`);
     } else {
       console.log(`✅ AI match: flexible validation`);
     }
