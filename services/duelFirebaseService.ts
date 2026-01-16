@@ -337,6 +337,11 @@ export function listenForMatchResult(
  * Listen for opponent's answers in real-time during match
  * Callback fires whenever opponent submits a new answer
  * Returns unsubscribe function
+ *
+ * ROBUST IMPLEMENTATION:
+ * - Tracks both answer IDs (for deduplication) AND array index (for order verification)
+ * - Verifies answer count matches expected progression
+ * - Detects and recovers from missed updates
  */
 export function listenForOpponentAnswers(
   matchId: string,
@@ -350,7 +355,9 @@ export function listenForOpponentAnswers(
   }) => void
 ): Unsubscribe {
   const matchRef = doc(db, 'duel_matches', matchId);
-  let lastProcessedCount = 0;
+  const processedAnswerIds = new Set<string>();
+  let lastProcessedIndex = -1; // Track the last array index we processed
+  let expectedAnswerCount = 0; // Track expected number of answers
 
   return onSnapshot(matchRef, (snapshot) => {
     if (snapshot.exists()) {
@@ -363,20 +370,70 @@ export function listenForOpponentAnswers(
       // Get opponent's answers
       const opponentAnswers = matchData.answers?.[opponentPlayer] || [];
 
-      // Only process new answers (not previously seen)
-      if (opponentAnswers.length > lastProcessedCount) {
-        const newAnswers = opponentAnswers.slice(lastProcessedCount);
-        newAnswers.forEach((answer: any) => {
-          console.log(`[listenForOpponentAnswers] Opponent answered Q${answer.questionOrder}:`, answer.isCorrect ? 'correct' : 'wrong');
-          onOpponentAnswer({
-            questionId: answer.questionId,
-            questionOrder: answer.questionOrder,
-            answerIndex: answer.answerIndex,
-            isCorrect: answer.isCorrect,
-            timestamp: answer.timestamp
-          });
+      console.log(`[listenForOpponentAnswers] 📊 Snapshot: ${opponentAnswers.length} total, lastIndex=${lastProcessedIndex}, expected=${expectedAnswerCount}, processed=${processedAnswerIds.size}`);
+
+      // VERIFICATION: Check if opponent has answered (any answers exist)
+      const opponentHasAnswered = opponentAnswers.length > 0;
+
+      // VERIFICATION: Detect if we missed updates (array grew by more than 1)
+      const missedUpdates = opponentAnswers.length > (lastProcessedIndex + 2);
+      if (missedUpdates) {
+        console.warn(`[listenForOpponentAnswers] ⚠️ MISSED UPDATES DETECTED! Array jumped from ${lastProcessedIndex + 1} to ${opponentAnswers.length}`);
+      }
+
+      // VERIFICATION: Check for count mismatch (ID set size vs array index)
+      if (processedAnswerIds.size !== lastProcessedIndex + 1 && lastProcessedIndex >= 0) {
+        console.warn(`[listenForOpponentAnswers] ⚠️ COUNT MISMATCH! Processed IDs: ${processedAnswerIds.size}, Index: ${lastProcessedIndex + 1}`);
+      }
+
+      // Process answers in order from lastProcessedIndex + 1 onwards
+      // We trust the array index as source of truth - each position represents one answer
+      for (let i = lastProcessedIndex + 1; i < opponentAnswers.length; i++) {
+        const answer = opponentAnswers[i];
+
+        // Create unique ID for logging and duplicate detection (but don't skip based on it!)
+        const answerId = `${answer.questionId}_${answer.timestamp}`;
+
+        // DIAGNOSTIC: Check if we've seen this exact answer before
+        // This helps detect bugs but we DON'T skip - we process based on index
+        const isDuplicate = processedAnswerIds.has(answerId);
+        if (isDuplicate) {
+          console.warn(`[listenForOpponentAnswers] ⚠️ DUPLICATE ID detected at index ${i}: ${answerId}`);
+          console.warn(`[listenForOpponentAnswers] ⚠️ This might indicate a bug, but we'll process it anyway based on array position`);
+        }
+
+        // VERIFICATION: Check if questionOrder matches array index
+        // Firestore writes are sequential: answers.A[0] = Q0, answers.A[1] = Q1, etc.
+        if (answer.questionOrder !== i) {
+          console.error(`[listenForOpponentAnswers] 🔴 CRITICAL ORDER MISMATCH! Array index ${i} but questionOrder is ${answer.questionOrder}`);
+          console.error(`[listenForOpponentAnswers] 🔴 This indicates backend data corruption!`);
+        }
+
+        console.log(`[listenForOpponentAnswers] ✅ NEW answer [${i}] Q${answer.questionOrder}:`, answer.isCorrect ? 'CORRECT' : 'WRONG', `(ID: ${answerId}${isDuplicate ? ' - DUPLICATE ID' : ''})`);
+
+        // Mark as processed (for duplicate detection only)
+        processedAnswerIds.add(answerId);
+        lastProcessedIndex = i;
+        expectedAnswerCount++;
+
+        // ALWAYS deliver to callback - we trust the array index
+        onOpponentAnswer({
+          questionId: answer.questionId,
+          questionOrder: answer.questionOrder,
+          answerIndex: answer.answerIndex,
+          isCorrect: answer.isCorrect,
+          timestamp: answer.timestamp
         });
-        lastProcessedCount = opponentAnswers.length;
+      }
+
+      // VERIFICATION: Final consistency check
+      if (processedAnswerIds.size !== opponentAnswers.length && opponentAnswers.length > 0) {
+        console.warn(`[listenForOpponentAnswers] 🔴 SYNC WARNING: Processed ${processedAnswerIds.size} IDs but array has ${opponentAnswers.length} items`);
+      }
+
+      // Log status
+      if (opponentHasAnswered) {
+        console.log(`[listenForOpponentAnswers] ✓ Opponent progress: ${processedAnswerIds.size}/${opponentAnswers.length} answers synced`);
       }
     }
   });
