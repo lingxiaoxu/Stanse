@@ -189,6 +189,8 @@ export const DuelModal: React.FC<DuelModalProps> = ({
       gameEndingRef.current = false;
       pendingMatchRef.current = null;
       setError(null);
+      // Reset match state for fresh start
+      resetMatchState();
       // Measure user ping
       measurePing().then(ping => setUserPing(ping));
     } else {
@@ -244,6 +246,9 @@ export const DuelModal: React.FC<DuelModalProps> = ({
     opponentAnswerCache.current.clear();
     userAnswerCache.current.clear();
     clearTimers();
+
+    // Reset match state
+    resetMatchState();
   };
 
   // Cleanup on close - separate effect to avoid re-running on gameState change
@@ -280,7 +285,20 @@ export const DuelModal: React.FC<DuelModalProps> = ({
     if (preMatchCountdownRef.current) clearInterval(preMatchCountdownRef.current);
   };
 
+  const resetMatchState = () => {
+    // Reset all match-related state for fresh start
+    setMatch(null);
+    gameEndingRef.current = false;
+    opponentAnswerCache.current.clear();
+    userAnswerCache.current.clear();
+    setRoundState('ACTIVE');
+    console.log('[DuelModal] 🔄 Match state reset for new game');
+  };
+
   const handleStartMatchmaking = async () => {
+    // Reset match state before starting new matchmaking
+    resetMatchState();
+
     // Check authentication first
     if (!user) {
       setError('Please log in to play DUEL Arena');
@@ -1624,7 +1642,10 @@ export const DuelModal: React.FC<DuelModalProps> = ({
                 <PixelButton onClick={handleStartMatchmaking} className="w-full text-lg uppercase">
                   {t('duel', 'rematch')}
                 </PixelButton>
-                <PixelButton onClick={() => setGameState(DuelState.LOBBY)} variant="outline" className="w-full text-lg uppercase">
+                <PixelButton onClick={() => {
+                  resetMatchState();
+                  setGameState(DuelState.LOBBY);
+                }} variant="outline" className="w-full text-lg uppercase">
                   {t('duel', 'back_to_lobby')}
                 </PixelButton>
               </div>
