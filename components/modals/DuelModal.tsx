@@ -836,13 +836,18 @@ export const DuelModal: React.FC<DuelModalProps> = ({
     // For human opponents, answers come from Firestore listener (no local simulation)
   };
 
-  const handleOpponentWin = () => {
+  const handleOpponentWin = async () => {
     if (roundState !== 'ACTIVE') return;
     setRoundState('OPPONENT_WON');
 
-    // Opponent has 90% accuracy
-    const isCorrect = Math.random() > 0.1;
+    const currentMatch = matchRef.current;
+    if (!currentMatch) return;
 
+    // AI opponent has 90% accuracy
+    const isCorrect = Math.random() > 0.1;
+    const currentQuestion = currentMatch.questions[currentMatch.currentQuestionIndex];
+
+    // Update local AI score (for UI display)
     setMatch(prev => {
       if (!prev) return null;
       return {
@@ -850,6 +855,29 @@ export const DuelModal: React.FC<DuelModalProps> = ({
         playerB: { ...prev.playerB, score: prev.playerB.score + (isCorrect ? 1 : -1) }
       };
     });
+
+    // CRITICAL: Submit AI answer to backend for correct final scoring
+    // This is ONLY for AI matches - handleOpponentWin is never called in PvP
+    if (currentMatch.firestoreMatchId && user) {
+      try {
+        // Pick answer index: correct one, or random wrong one
+        const aiAnswerIndex = isCorrect
+          ? currentQuestion.correctIndex
+          : (currentQuestion.correctIndex + Math.floor(Math.random() * 3) + 1) % 4;
+
+        await submitAnswer({
+          matchId: currentMatch.firestoreMatchId,
+          questionId: currentQuestion.id,
+          questionOrder: currentMatch.currentQuestionIndex,
+          answerIndex: aiAnswerIndex,
+          timestamp: new Date().toISOString(),
+          timeElapsed: Date.now() - matchStartTimeRef.current
+        });
+        console.log(`[DuelModal] 🤖 AI answer submitted: Q${currentMatch.currentQuestionIndex}, ${isCorrect ? 'CORRECT' : 'WRONG'}`);
+      } catch (e) {
+        console.error('[DuelModal] Failed to submit AI answer:', e);
+      }
+    }
 
     setTimeout(() => {
       nextQuestion();
