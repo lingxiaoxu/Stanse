@@ -104,8 +104,12 @@ function calculateScores(events: GameplayEvent[], userIdA: string, userIdB: stri
   let scoreB = 0;
 
   for (const event of events) {
+    // Skip "too slow" markers (answerIndex=-1) - these are 0 points
+    if (event.answerIndex === -1) {
+      continue;
+    }
+
     // Unified scoring rule: +1 for correct, -2 for wrong
-    // "Too slow" markers (answerIndex=-1) don't add events, so they're 0 by default
     const scoreChange = event.isCorrect ? 1 : -2;
 
     if (event.playerId === userIdA) {
