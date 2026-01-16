@@ -366,18 +366,20 @@ async function submitGameplayEvent(data) {
         const matchData = matchSnapshot.data();
         const playerKey = isPlayerA ? 'A' : 'B';
         const currentAnswers = matchData.answers?.[playerKey] || [];
-        // Check if this is an AI match (opponent is AI bot)
-        const opponentIsAI = isPlayerA ? isAIBot(matchData.players.B.userId) : isAIBot(matchData.players.A.userId);
+        // Check if this is an AI match (either player is AI bot)
+        const playerAIsAI = isAIBot(matchData.players.A.userId);
+        const playerBIsAI = isAIBot(matchData.players.B.userId);
+        const isAIMatch = playerAIsAI || playerBIsAI;
         // VERIFY: questionOrder should match array length (next index)
-        // SKIP validation for AI matches (AI answers are not stored in Firestore)
-        if (!opponentIsAI && data.questionOrder !== currentAnswers.length) {
+        // SKIP validation for AI matches (AI answers can arrive out of order due to local simulation)
+        if (!isAIMatch && data.questionOrder !== currentAnswers.length) {
             console.error(`🔴 ORDER VIOLATION! Expected questionOrder ${currentAnswers.length} but got ${data.questionOrder}`);
             console.error(`🔴 Current answers array length: ${currentAnswers.length}`);
             console.error(`🔴 This indicates out-of-order submission or duplicate answer`);
-            // STRICT: Reject out-of-order submissions
+            // STRICT: Reject out-of-order submissions for PvP
             throw new Error(`Invalid questionOrder: expected ${currentAnswers.length}, got ${data.questionOrder}`);
         }
-        else if (opponentIsAI) {
+        else if (isAIMatch) {
             console.log(`✅ AI match detected, skipping questionOrder validation`);
         }
         // Build new answers array with this answer appended
