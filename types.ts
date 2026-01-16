@@ -425,7 +425,7 @@ export interface DuelMatch {
 export interface FirestoreDuelMatch {
   matchId: string;
   createdAt: string;
-  status: 'matching' | 'ready' | 'in_progress' | 'finished' | 'cancelled';
+  status: 'matching' | 'ready' | 'in_progress' | 'settling' | 'finished' | 'cancelled';
 
   gameType: 'picture_trivia_v1';
   durationSec: 30 | 45;
