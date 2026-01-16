@@ -287,97 +287,142 @@ function canMatch(userA, userB) {
  */
 async function createMatch(userA, userB, isAIOpponent = false) {
     const now = new Date().toISOString();
-    // ANTI-DUPLICATION: Check if these users already have a pending match
-    const existingMatches = await db.collection('duel_matches')
-        .where('participantIds', 'array-contains', userA.userId)
-        .where('status', 'in', ['ready', 'in_progress'])
-        .get();
-    for (const doc of existingMatches.docs) {
-        const match = doc.data();
-        if (match.participantIds.includes(userB.userId)) {
-            console.warn(`⚠️ Duplicate match detected! Users ${userA.userId.substr(-6)} and ${userB.userId.substr(-6)} already have match ${doc.id}`);
-            return doc.id; // Return existing match ID instead of creating new one
-        }
-    }
     const matchId = `match_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    // Hold credits for human players only
+    // CRITICAL: Set RTDB lock BEFORE any operations to prevent race conditions
+    // Use RTDB for atomic operations (much faster than Firestore)
+    const lockRefA = rtdb.ref(`matchmaking_locks/${userA.userId}`);
+    const lockRefB = rtdb.ref(`matchmaking_locks/${userB.userId}`);
     try {
-        await (0, creditManager_1.holdCredits)(userA.userId, userA.entryFee + userA.safetyFee, matchId);
-        // Only hold credits for userB if not AI
-        if (!isAIOpponent && userB.userId.startsWith('ai_bot_') === false) {
-            await (0, creditManager_1.holdCredits)(userB.userId, userB.entryFee + userB.safetyFee, matchId);
+        // Try to acquire locks atomically
+        const lockValueA = await lockRefA.transaction((current) => {
+            if (current !== null) {
+                // Lock already exists, abort
+                return undefined;
+            }
+            return matchId; // Set lock to matchId
+        });
+        if (!lockValueA.committed) {
+            console.warn(`⚠️ User A already locked, aborting match creation`);
+            return ''; // User A already being matched
         }
+        const lockValueB = await lockRefB.transaction((current) => {
+            if (current !== null) {
+                // Lock already exists, abort and release A's lock
+                return undefined;
+            }
+            return matchId; // Set lock to matchId
+        });
+        if (!lockValueB.committed) {
+            console.warn(`⚠️ User B already locked, releasing A's lock`);
+            await lockRefA.remove();
+            return ''; // User B already being matched
+        }
+        console.log(`  🔒 Acquired locks for both users`);
+        // ANTI-DUPLICATION: Double-check if these users already have a pending match
+        const existingMatches = await db.collection('duel_matches')
+            .where('participantIds', 'array-contains', userA.userId)
+            .where('status', 'in', ['ready', 'in_progress'])
+            .get();
+        for (const doc of existingMatches.docs) {
+            const match = doc.data();
+            if (match.participantIds.includes(userB.userId)) {
+                console.warn(`⚠️ Duplicate match found! Returning existing ${doc.id}`);
+                // Release locks and return existing match
+                await lockRefA.remove();
+                await lockRefB.remove();
+                return doc.id;
+            }
+        }
+        // Hold credits for human players only
+        try {
+            await (0, creditManager_1.holdCredits)(userA.userId, userA.entryFee + userA.safetyFee, matchId);
+            // Only hold credits for userB if not AI
+            if (!isAIOpponent && userB.userId.startsWith('ai_bot_') === false) {
+                await (0, creditManager_1.holdCredits)(userB.userId, userB.entryFee + userB.safetyFee, matchId);
+            }
+        }
+        catch (error) {
+            console.error(`❌ Failed to hold credits for match ${matchId}:`, error);
+            throw error;
+        }
+        // Select random pre-assembled sequence
+        const sequenceId = await selectRandomSequence(userA.duration);
+        // Create match document
+        const matchData = {
+            matchId,
+            createdAt: now,
+            status: 'ready',
+            gameType: 'picture_trivia_v1',
+            durationSec: userA.duration,
+            // For client-side queries (array-contains)
+            participantIds: [userA.userId, userB.userId],
+            players: {
+                A: {
+                    userId: userA.userId,
+                    stanceType: userA.stanceType,
+                    personaLabel: userA.personaLabel,
+                    pingMs: userA.pingMs
+                },
+                B: {
+                    userId: userB.userId,
+                    stanceType: userB.stanceType,
+                    personaLabel: userB.personaLabel,
+                    pingMs: userB.pingMs
+                }
+            },
+            entry: {
+                A: {
+                    fee: userA.entryFee,
+                    safetyBelt: userA.safetyBelt,
+                    safetyFee: userA.safetyFee
+                },
+                B: {
+                    fee: userB.entryFee,
+                    safetyBelt: userB.safetyBelt,
+                    safetyFee: userB.safetyFee
+                }
+            },
+            holds: {
+                A: userA.entryFee + userA.safetyFee,
+                B: userB.entryFee + userB.safetyFee
+            },
+            result: {
+                winner: null,
+                scoreA: 0,
+                scoreB: 0,
+                victoryReward: 0,
+                deductionA: 0,
+                deductionB: 0
+            },
+            questionSequenceRef: sequenceId,
+            // Initialize answers array for real-time PvP sync
+            answers: {
+                A: [],
+                B: []
+            },
+            audit: {
+                version: 'v1',
+                notes: isAIOpponent
+                    ? `User vs AI opponent (no real users available after ${AI_OPPONENT_WAIT_TIME / 1000}s wait)`
+                    : `Real user matchmaking`,
+                isAIOpponent: isAIOpponent || false
+            }
+        };
+        await db.collection('duel_matches').doc(matchId).set(matchData);
+        console.log(`✅ Created match ${matchId}${isAIOpponent ? ' (vs AI)' : ''}`);
+        // Release locks after match is created
+        await lockRefA.remove();
+        await lockRefB.remove();
+        console.log(`  🔓 Released matchmaking locks`);
+        return matchId;
     }
     catch (error) {
-        console.error(`❌ Failed to hold credits for match ${matchId}:`, error);
+        // Cleanup locks on error
+        console.error(`❌ Error creating match, releasing locks:`, error);
+        await lockRefA.remove();
+        await lockRefB.remove();
         throw error;
     }
-    // Select random pre-assembled sequence
-    const sequenceId = await selectRandomSequence(userA.duration);
-    // Create match document
-    const matchData = {
-        matchId,
-        createdAt: now,
-        status: 'ready',
-        gameType: 'picture_trivia_v1',
-        durationSec: userA.duration,
-        // For client-side queries (array-contains)
-        participantIds: [userA.userId, userB.userId],
-        players: {
-            A: {
-                userId: userA.userId,
-                stanceType: userA.stanceType,
-                personaLabel: userA.personaLabel,
-                pingMs: userA.pingMs
-            },
-            B: {
-                userId: userB.userId,
-                stanceType: userB.stanceType,
-                personaLabel: userB.personaLabel,
-                pingMs: userB.pingMs
-            }
-        },
-        entry: {
-            A: {
-                fee: userA.entryFee,
-                safetyBelt: userA.safetyBelt,
-                safetyFee: userA.safetyFee
-            },
-            B: {
-                fee: userB.entryFee,
-                safetyBelt: userB.safetyBelt,
-                safetyFee: userB.safetyFee
-            }
-        },
-        holds: {
-            A: userA.entryFee + userA.safetyFee,
-            B: userB.entryFee + userB.safetyFee
-        },
-        result: {
-            winner: null,
-            scoreA: 0,
-            scoreB: 0,
-            victoryReward: 0,
-            deductionA: 0,
-            deductionB: 0
-        },
-        questionSequenceRef: sequenceId,
-        // Initialize answers array for real-time PvP sync
-        answers: {
-            A: [],
-            B: []
-        },
-        audit: {
-            version: 'v1',
-            notes: isAIOpponent
-                ? `User vs AI opponent (no real users available after ${AI_OPPONENT_WAIT_TIME / 1000}s wait)`
-                : `Real user matchmaking`,
-            isAIOpponent: isAIOpponent || false
-        }
-    };
-    await db.collection('duel_matches').doc(matchId).set(matchData);
-    console.log(`✅ Created match ${matchId}${isAIOpponent ? ' (vs AI)' : ''}`);
-    return matchId;
 }
 /**
  * Select random pre-assembled sequence for match duration
