@@ -127,7 +127,7 @@ export const requestNotificationPermission = async (): Promise<NotificationResul
       // Show a test notification to confirm it works
       try {
         new Notification('Stanse', {
-          body: 'Notifications enabled! You\'ll receive campaign updates.',
+          body: 'Notifications enabled!',
           icon: '/favicon.ico',
           tag: 'stanse-welcome'
         });
