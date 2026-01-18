@@ -161,6 +161,15 @@ export function startHeartbeat(
     displayName?: string
   }
 ): NodeJS.Timeout {
+  // Check if backend is available (disable heartbeat if localhost:8080 is not running)
+  const isLocalhost = window.location.hostname === 'localhost';
+
+  if (isLocalhost) {
+    console.log('⚠️ Heartbeat disabled: Backend server not running on localhost:8080');
+    // Return a dummy interval that does nothing
+    return setInterval(() => {}, 999999) as NodeJS.Timeout;
+  }
+
   // Send initial heartbeat
   sendHeartbeat(firebaseUid, true, userProfile);
 
@@ -194,6 +203,9 @@ export function setupVisibilityListener(
   }
 ) {
   const handleVisibilityChange = () => {
+    // Skip heartbeat on localhost
+    if (window.location.hostname === 'localhost') return;
+
     if (document.hidden) {
       // Page is hidden - send offline status
       sendHeartbeat(firebaseUid, false, userProfile);

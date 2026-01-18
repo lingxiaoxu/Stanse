@@ -550,7 +550,7 @@ Example: ["Apple Inc.", "Apple Computer Inc.", "Apple"]
 """
 
     try:
-        url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={gemini_api_key}'
+        url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}'
         payload = {
             'contents': [{'parts': [{'text': prompt}]}],
             'generationConfig': {'temperature': 0.3, 'maxOutputTokens': 200}

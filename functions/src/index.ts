@@ -1054,6 +1054,16 @@ export const validateDuelQuestions = functions.https.onCall(
 export { checkBreakingNews } from './breaking-news-checker';
 
 // ========================================
+// Google News RSS Fetcher
+// ========================================
+export { fetchGoogleNewsRSS } from './news-rss-fetcher';
+
+// ========================================
+// Scheduled News Fetcher (runs 4x daily)
+// ========================================
+export { scheduledNewsFetch } from './scheduled-news-fetcher';
+
+// ========================================
 // Presence Cleanup
 // ========================================
 export { cleanupStalePresence } from './cleanup-stale-presence';

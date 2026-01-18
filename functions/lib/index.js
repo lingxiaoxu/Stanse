@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cleanupStalePresence = exports.checkBreakingNews = exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
+exports.cleanupStalePresence = exports.scheduledNewsFetch = exports.fetchGoogleNewsRSS = exports.checkBreakingNews = exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -906,6 +906,16 @@ exports.validateDuelQuestions = functions.https.onCall(async (request) => {
 // ========================================
 var breaking_news_checker_1 = require("./breaking-news-checker");
 Object.defineProperty(exports, "checkBreakingNews", { enumerable: true, get: function () { return breaking_news_checker_1.checkBreakingNews; } });
+// ========================================
+// Google News RSS Fetcher
+// ========================================
+var news_rss_fetcher_1 = require("./news-rss-fetcher");
+Object.defineProperty(exports, "fetchGoogleNewsRSS", { enumerable: true, get: function () { return news_rss_fetcher_1.fetchGoogleNewsRSS; } });
+// ========================================
+// Scheduled News Fetcher (runs 4x daily)
+// ========================================
+var scheduled_news_fetcher_1 = require("./scheduled-news-fetcher");
+Object.defineProperty(exports, "scheduledNewsFetch", { enumerable: true, get: function () { return scheduled_news_fetcher_1.scheduledNewsFetch; } });
 // ========================================
 // Presence Cleanup
 // ========================================

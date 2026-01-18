@@ -43,6 +43,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.settleMatch = settleMatch;
+exports.cancelMatch = cancelMatch;
 exports.submitGameplayEvent = submitGameplayEvent;
 exports.finalizeMatch = finalizeMatch;
 const admin = __importStar(require("firebase-admin"));

@@ -26,6 +26,9 @@ import { setUserOnline } from './services/presenceService';
 import { recoverUserState } from './services/matchRecoveryService';
 import { startBreakingNewsListener, stopBreakingNewsListener } from './services/breakingNewsService';
 import { checkNotificationPermission } from './services/notificationService';
+import { testCollectionLinking, cleanAllNews } from './utils/testCollectionLinking';
+import { testLanguageSwitch, compareLanguages } from './utils/testLanguageSwitch';
+import { checkRSSStatus, testRSSNow } from './utils/monitorRSS';
 
 // Initial mock state for user profile (used as fallback)
 const INITIAL_PROFILE: PoliticalCoordinates = {
@@ -99,6 +102,25 @@ const StanseApp: React.FC = () => {
       }
     }
   }, [user]);
+
+  // Expose test functions to window for browser console testing
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).testCollectionLinking = testCollectionLinking;
+      (window as any).testLanguageSwitch = testLanguageSwitch;
+      (window as any).compareLanguages = compareLanguages;
+      (window as any).cleanAllNews = cleanAllNews;
+      (window as any).checkRSSStatus = checkRSSStatus;
+      (window as any).testRSSNow = testRSSNow;
+      console.log('🧪 Test functions available:');
+      console.log('   - window.testCollectionLinking()');
+      console.log('   - window.testLanguageSwitch(\'ja\')');
+      console.log('   - window.compareLanguages()');
+      console.log('   - window.cleanAllNews()');
+      console.log('   - window.checkRSSStatus()');
+      console.log('   - window.testRSSNow(\'en\')');
+    }
+  }, []);
 
   // Check if tour should be shown after login
   useEffect(() => {

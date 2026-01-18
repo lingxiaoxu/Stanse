@@ -27,6 +27,7 @@ export interface RawNewsItem {
   language: 'en' | 'zh' | 'ja' | 'fr' | 'es';
   category?: string;
   imageUrl?: string;
+  sourceType?: 'rss' | 'grounding' | '6park' | 'breaking';  // Track where news came from
 }
 
 export interface ProcessedNewsItem extends NewsEvent {
@@ -34,6 +35,7 @@ export interface ProcessedNewsItem extends NewsEvent {
   embedding?: number[];
   originalLanguage: string;
   sources: string[];
+  sourceType?: 'rss' | 'grounding' | '6park' | 'breaking';  // Track where news came from
   relevanceScore?: number;
 }
 
