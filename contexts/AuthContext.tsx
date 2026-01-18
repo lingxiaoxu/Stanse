@@ -294,6 +294,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Don't throw - allow onboarding to complete even if Polis registration fails
       }
 
+      // Generate persona embedding in background (fire-and-forget)
+      try {
+        const { generateAndSavePersonaEmbedding } = await import('../services/userPersonaService');
+        console.log('[PersonaEmbedding] Starting background generation...');
+        generateAndSavePersonaEmbedding(user.uid, answers, coordinates).catch(embeddingErr => {
+          console.error('[PersonaEmbedding] ❌ Background generation failed:', embeddingErr);
+        });
+      } catch (importErr) {
+        console.error('[PersonaEmbedding] ❌ Failed to import persona service:', importErr);
+      }
+
       // Update local state
       setUserProfile((prev) =>
         prev ? {

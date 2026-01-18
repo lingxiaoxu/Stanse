@@ -324,6 +324,18 @@ service cloud.firestore {
       }
     }
 
+    // User Persona Embeddings - users can read/write only their own persona embeddings
+    // Structure: user_persona_embeddings/{userId} with history subcollection
+    // Pattern: Main document stores current embedding, history/{timestamp} stores all versions
+    match /user_persona_embeddings/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // History subcollection - users can read/write their own embedding history
+      match /history/{historyId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
     // ==================== DUEL Arena System ====================
 
     // User Credits - Main document with current balance + history subcollection

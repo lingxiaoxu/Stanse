@@ -1022,28 +1022,36 @@ export const calculateCoordinatesFromOnboarding = async (
 export const fetchPersonalizedNews = async (
   userProfile: PoliticalCoordinates,
   page: number = 0,
-  categories: string[] = ['politics', 'technology', 'military', 'international', 'business']
+  categories: string[] = ['politics', 'technology', 'military', 'international', 'business'],
+  language: string = 'en',
+  userId?: string
 ): Promise<NewsEvent[]> => {
   // Use new Agent architecture
   if (USE_AGENT_ARCHITECTURE) {
     try {
-      console.log('Using Agent architecture for news fetching...');
+      console.log(`Using Agent architecture for news fetching (${language})...`);
       const forceRefresh = page === 0; // Only force refresh on first page
-      const result = await getPersonalizedNewsFeed(userProfile, forceRefresh, 10);
+      const result = await getPersonalizedNewsFeed(userProfile, forceRefresh, 10, language, userId);
 
       if (result.success && result.data && result.data.length > 0) {
         console.log(`Agent returned ${result.data.length} news items`);
         return result.data;
       } else {
-        console.warn('Agent returned no data, falling back to legacy:', result.error);
+        console.warn('Agent returned no data:', result.error);
+        // Don't generate fake news - return empty array
+        return [];
       }
     } catch (agentError) {
-      console.error('Agent architecture failed, falling back to legacy:', agentError);
+      console.error('Agent architecture failed:', agentError);
+      // Don't generate fake news - return empty array
+      return [];
     }
   }
 
-  // Legacy fallback (original implementation)
-  return fetchPersonalizedNewsLegacy(userProfile, page, categories);
+  // DEPRECATED: Legacy fake news generation disabled
+  // Only use cached news or real news from agents
+  console.warn('No real news available, returning empty array');
+  return [];
 };
 
 /**
@@ -1224,7 +1232,8 @@ export const triggerNewsImageCleanup = async (): Promise<{ cleaned: number; tota
  * This deletes ALL news and fetches fresh real news from agents
  */
 export const cleanAndRepopulateNews = async (
-  userProfile: PoliticalCoordinates
+  userProfile: PoliticalCoordinates,
+  language: string = 'en'
 ): Promise<{ deleted: number; fetched: number }> => {
   console.log('=== CLEANING AND REPOPULATING NEWS ===');
 
@@ -1234,9 +1243,9 @@ export const cleanAndRepopulateNews = async (
   console.log(`Deleted ${deleteResult.deleted} fake news items`);
 
   // Step 2: Force fetch fresh real news using agent architecture
-  console.log('Step 2: Fetching real news from agents (Google Search Grounding + 6park)...');
+  console.log(`Step 2: Fetching real news from agents (language: ${language})...`);
   try {
-    const result = await getPersonalizedNewsFeed(userProfile, true, 15); // force refresh, get 15 items
+    const result = await getPersonalizedNewsFeed(userProfile, true, 15, language); // force refresh, get 15 items
 
     if (result.success && result.data) {
       console.log(`Successfully fetched ${result.data.length} real news items`);

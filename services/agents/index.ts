@@ -58,27 +58,49 @@ import { orchestratorLogger } from './logger';
 export const getPersonalizedNewsFeed = async (
   userProfile: PoliticalCoordinates,
   forceRefresh: boolean = false,
-  maxItems: number = 10
+  maxItems: number = 10,
+  language: string = 'en',
+  userId?: string
 ): Promise<AgentResponse<NewsEvent[]>> => {
   const startTime = Date.now();
   const opId = orchestratorLogger.operationStart('getPersonalizedNewsFeed', {
     forceRefresh,
     maxItems,
+    language,
+    userId: userId || 'anonymous',
     userStance: { economic: userProfile.economic, social: userProfile.social }
   });
 
   try {
+    // Fetch user persona embedding for semantic personalization
+    let userEmbedding: number[] | null = null;
+    if (userId) {
+      try {
+        const { getPersonaEmbedding } = await import('../userPersonaService');
+        const personaData = await getPersonaEmbedding(userId);
+        if (personaData && personaData.embedding && personaData.embedding.length === 768) {
+          userEmbedding = personaData.embedding;
+          orchestratorLogger.info('getPersonalizedNewsFeed', `Using persona embedding for user ${userId}`);
+        } else {
+          orchestratorLogger.info('getPersonalizedNewsFeed', 'No valid persona embedding found, using category-only scoring');
+        }
+      } catch (error: any) {
+        orchestratorLogger.warn('getPersonalizedNewsFeed', `Failed to fetch persona embedding: ${error.message}`);
+      }
+    }
+
     let newsItems: ProcessedNewsItem[] = [];
 
     // Check cache first (unless force refresh)
     if (!forceRefresh) {
-      orchestratorLogger.info('getPersonalizedNewsFeed', 'Checking cache...');
-      const cachedNews = await getCachedNews(maxItems * 2);
+      orchestratorLogger.info('getPersonalizedNewsFeed', `Checking cache for language: ${language}...`);
+      // Get cached news for this language, max 12 hours old (more timely)
+      const cachedNews = await getCachedNews(maxItems * 2, language, 12);
       if (cachedNews.length >= maxItems) {
-        orchestratorLogger.info('getPersonalizedNewsFeed', `Using ${cachedNews.length} cached news items`);
+        orchestratorLogger.info('getPersonalizedNewsFeed', `Using ${cachedNews.length} cached ${language} news items (shared cache)`);
         newsItems = cachedNews;
       } else {
-        orchestratorLogger.info('getPersonalizedNewsFeed', `Cache insufficient: ${cachedNews.length} items`);
+        orchestratorLogger.info('getPersonalizedNewsFeed', `Cache insufficient: ${cachedNews.length} ${language} items (need ${maxItems})`);
       }
     } else {
       orchestratorLogger.info('getPersonalizedNewsFeed', 'Force refresh requested, skipping cache');
@@ -86,8 +108,8 @@ export const getPersonalizedNewsFeed = async (
 
     // Fetch fresh news if cache is empty or stale
     if (newsItems.length < maxItems) {
-      orchestratorLogger.info('getPersonalizedNewsFeed', 'Fetching fresh news from agents...');
-      const fetchResult = await fetchAllNews();
+      orchestratorLogger.info('getPersonalizedNewsFeed', `Fetching fresh news from agents (${language})...`);
+      const fetchResult = await fetchAllNews(undefined, language);
 
       if (fetchResult.success && fetchResult.data) {
         orchestratorLogger.info('getPersonalizedNewsFeed', `Fetched ${fetchResult.data.length} news items`);
@@ -98,12 +120,13 @@ export const getPersonalizedNewsFeed = async (
       }
     }
 
-    // Personalize the feed
+    // Personalize the feed (with user embedding if available)
     orchestratorLogger.info('getPersonalizedNewsFeed', `Personalizing ${newsItems.length} news items...`);
     const personalizedResult = await personalizeNewsFeed(
       newsItems,
       userProfile,
-      maxItems
+      maxItems,
+      userEmbedding
     );
 
     if (!personalizedResult.success || !personalizedResult.data) {
