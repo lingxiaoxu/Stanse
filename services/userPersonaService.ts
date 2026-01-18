@@ -56,6 +56,7 @@ export interface PersonaEmbeddingRecord {
     social: number;
     diplomatic: number;
     label: string;
+    coreStanceType: string;  // One of 8 core types: progressive-globalist, etc.
   };
 
   // Metadata
@@ -64,6 +65,7 @@ export interface PersonaEmbeddingRecord {
     modelVersion: string;         // 'text-embedding-004'
     descriptionWordCount: number;
     embeddingDimensions: number;  // 768
+    nationalityPrefix?: string;   // e.g., "Chinese American"
   };
 
   // Version tracking
@@ -321,13 +323,15 @@ export const savePersonaEmbedding = async (
         economic: coordinates.economic,
         social: coordinates.social,
         diplomatic: coordinates.diplomatic,
-        label: coordinates.label
+        label: coordinates.label,
+        coreStanceType: coordinates.coreStanceType || 'centrist'
       },
       metadata: {
         generatedAt: now.toISOString(),
         modelVersion: 'text-embedding-004',
         descriptionWordCount: description.split(' ').length,
-        embeddingDimensions: embedding.length
+        embeddingDimensions: embedding.length,
+        nationalityPrefix: coordinates.nationalityPrefix
       },
       version: '1.0'
     };
@@ -520,13 +524,15 @@ export const generateAndSavePersonaEmbedding = async (
           economic: coordinates.economic,
           social: coordinates.social,
           diplomatic: coordinates.diplomatic,
-          label: coordinates.label
+          label: coordinates.label,
+          coreStanceType: coordinates.coreStanceType || 'centrist'
         },
         metadata: {
           generatedAt: new Date().toISOString(),
           modelVersion: 'text-embedding-004',
           descriptionWordCount: description.split(' ').length,
-          embeddingDimensions: embedding.length
+          embeddingDimensions: embedding.length,
+          nationalityPrefix: coordinates.nationalityPrefix
         },
         version: '1.0'
       };
