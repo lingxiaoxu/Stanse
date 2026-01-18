@@ -336,6 +336,16 @@ service cloud.firestore {
       }
     }
 
+    // ==================== StanseRadar China News Collection ====================
+    // Special collection for another service in gen-lang-client-0960644135 project
+    // This collection is isolated - only this collection is accessible by external service
+    // Other collections (users, news, etc.) remain protected
+    match /news_stanseradar_china/{document=**} {
+      // Allow public read/write for development (will be restricted in production)
+      // TODO: Replace with service account authentication for production
+      allow read, write: if true;
+    }
+
     // ==================== DUEL Arena System ====================
 
     // User Credits - Main document with current balance + history subcollection
