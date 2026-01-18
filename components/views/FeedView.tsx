@@ -5,7 +5,7 @@ import { PixelCard } from '../ui/PixelCard';
 import { PixelButton } from '../ui/PixelButton';
 import { ValuesCompanyRanking } from '../ui/ValuesCompanyRanking';
 import { NewsEvent } from '../../types';
-import { generatePrismSummary, fetchPersonalizedNews, translatePersonaLabel, cleanAndRepopulateNews } from '../../services/geminiService';
+import { generatePrismSummary, fetchPersonalizedNews, translatePersonaLabel } from '../../services/geminiService';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { CompanyRanking } from '../../services/companyRankingCache';
@@ -442,7 +442,15 @@ export const FeedView: React.FC = () => {
         setFeedProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
-      const fetchedNews = await fetchPersonalizedNews(userProfile.coordinates, page);
+      // Map language enum to string code
+      const languageCode = language.toLowerCase();
+      const fetchedNews = await fetchPersonalizedNews(
+        userProfile.coordinates,
+        page,
+        undefined,
+        languageCode,
+        userProfile.id  // Pass userId for persona embedding
+      );
 
       clearInterval(progressInterval);
 
@@ -558,7 +566,7 @@ export const FeedView: React.FC = () => {
     }
   };
 
-  // Refresh news - cleans old news and fetches fresh real news
+  // Refresh news - fetches fresh news for current language WITHOUT deleting others
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshNews = async () => {
     if (!userProfile?.coordinates) return;
@@ -567,17 +575,17 @@ export const FeedView: React.FC = () => {
     setFeedError(null);
 
     try {
-      console.log('Refreshing news: cleaning and fetching real news...');
-      const result = await cleanAndRepopulateNews(userProfile.coordinates);
-      console.log(`Refresh complete: deleted ${result.deleted}, fetched ${result.fetched}`);
+      console.log('Refreshing news for current language...');
 
-      // Clear local cache
+      // Clear local cache to force fetch
       localStorage.removeItem('stanse_news_cache');
       localStorage.removeItem('stanse_last_stance_hash');
 
-      // Refresh the feed
+      // Refresh the feed (will fetch news in current language)
       setCurrentPage(0);
       await fetchNews(0, false);
+
+      console.log('Refresh complete!');
     } catch (error: any) {
       console.error('Error refreshing news:', error);
       setFeedError(error.message || 'Failed to refresh news');
