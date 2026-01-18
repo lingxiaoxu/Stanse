@@ -459,20 +459,27 @@ export const shouldRegeneratePersona = async (
 /**
  * Main function: Generate and save user persona embedding
  * Called after onboarding completion (fire-and-forget)
+ *
+ * @param forceRegenerate - If true, regenerate even if coordinates haven't changed (for onboarding resubmission)
  */
 export const generateAndSavePersonaEmbedding = async (
   userId: string,
   answers: OnboardingAnswers,
   coordinates: PoliticalCoordinates,
-  maxRetries: number = 2
+  maxRetries: number = 2,
+  forceRegenerate: boolean = false
 ): Promise<PersonaEmbeddingRecord | null> => {
   let lastError: Error | null = null;
 
-  // Check if regeneration is needed
-  const shouldRegenerate = await shouldRegeneratePersona(userId, coordinates);
-  if (!shouldRegenerate) {
-    console.log('[PersonaService] ℹ️ Persona embedding is current, skipping regeneration');
-    return await getPersonaEmbedding(userId);
+  // Check if regeneration is needed (skip check if forced)
+  if (!forceRegenerate) {
+    const shouldRegenerate = await shouldRegeneratePersona(userId, coordinates);
+    if (!shouldRegenerate) {
+      console.log('[PersonaService] ℹ️ Persona embedding is current, skipping regeneration');
+      return await getPersonaEmbedding(userId);
+    }
+  } else {
+    console.log('[PersonaService] 🔄 Force regenerate requested (onboarding resubmission)');
   }
 
   // Retry loop with exponential backoff

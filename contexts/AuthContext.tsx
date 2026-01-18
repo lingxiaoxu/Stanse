@@ -295,10 +295,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // Generate persona embedding in background (fire-and-forget)
+      // Force regeneration since user completed/resubmitted onboarding
       try {
         const { generateAndSavePersonaEmbedding } = await import('../services/userPersonaService');
-        console.log('[PersonaEmbedding] Starting background generation...');
-        generateAndSavePersonaEmbedding(user.uid, answers, coordinates).catch(embeddingErr => {
+        console.log('[PersonaEmbedding] Starting background generation (force=true)...');
+        generateAndSavePersonaEmbedding(
+          user.uid,
+          answers,
+          coordinates,
+          2,      // maxRetries
+          true    // forceRegenerate - always regenerate on onboarding completion
+        ).catch(embeddingErr => {
           console.error('[PersonaEmbedding] ❌ Background generation failed:', embeddingErr);
         });
       } catch (importErr) {
