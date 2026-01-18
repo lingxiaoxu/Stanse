@@ -216,14 +216,21 @@ const calculateRelevanceScore = (
 
   // If embeddings are available, combine with semantic similarity
   let finalScore = categoryScore;
+  let semanticScore = 0;
+  let similarity = 0;
+
   if (userEmbedding && newsItem.embedding && newsItem.embedding.length > 0) {
-    const similarity = cosineSimilarity(userEmbedding, newsItem.embedding);
+    similarity = cosineSimilarity(userEmbedding, newsItem.embedding);
     // Semantic similarity contributes up to 30% of final score
     // Category score contributes 70%
-    const semanticScore = similarity * 100; // Convert 0-1 similarity to 0-100 score
+    semanticScore = similarity * 100; // Convert 0-1 similarity to 0-100 score
     finalScore = categoryScore * 0.7 + semanticScore * 0.3;
     publishingLogger.debug('calculateRelevanceScore',
-      `Using embeddings: category=${categoryScore.toFixed(1)}, semantic=${semanticScore.toFixed(1)}, final=${finalScore.toFixed(1)}`
+      `"${newsItem.title.slice(0, 40)}..." → Category: ${categoryScore.toFixed(1)}, Similarity: ${(similarity * 100).toFixed(1)}%, Semantic: ${semanticScore.toFixed(1)}, Final: ${finalScore.toFixed(1)}`
+    );
+  } else {
+    publishingLogger.debug('calculateRelevanceScore',
+      `"${newsItem.title.slice(0, 40)}..." → Category-only: ${categoryScore.toFixed(1)} (no embedding)`
     );
   }
 
@@ -235,7 +242,14 @@ const calculateRelevanceScore = (
   const variance = ((hashSeed % 100) / 100 - 0.5) * 5; // ±2.5 points deterministic variance
   finalScore += variance;
 
-  return Math.max(0, Math.min(100, finalScore));
+  const clampedScore = Math.max(0, Math.min(100, finalScore));
+
+  // Log final score with all components
+  publishingLogger.debug('calculateRelevanceScore',
+    `Final: ${clampedScore.toFixed(1)} = Category(${categoryScore.toFixed(1)}) * 0.7 + Semantic(${semanticScore.toFixed(1)}) * 0.3 + Variance(${variance.toFixed(1)})`
+  );
+
+  return clampedScore;
 };
 
 /**
@@ -282,6 +296,14 @@ export const personalizeNewsFeed = async (
 
     // Sort by relevance
     scoredNews.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
+
+    // Log top 10 scored news for debugging
+    publishingLogger.info('personalizeNewsFeed',
+      `Top ${Math.min(10, scoredNews.length)} scored news:\n` +
+      scoredNews.slice(0, 10).map((item, idx) =>
+        `  ${idx + 1}. [${item.category}] "${item.title.slice(0, 50)}..." - Score: ${item.relevanceScore?.toFixed(1)}`
+      ).join('\n')
+    );
 
     // Ensure category diversity - at least one from each if available
     const categories = ['POLITICS', 'TECH', 'MILITARY', 'WORLD', 'BUSINESS'];
