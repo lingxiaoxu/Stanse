@@ -327,11 +327,16 @@ async function createMatch(userA: QueueEntry, userB: QueueEntry, isAIOpponent: b
         console.log(`  ✅ Existing match has gameplay, using it`);
         return doc.id;
       } else {
-        // Abandoned match with no gameplay - cancel it and create new one
-        console.log(`  🗑️  Existing match is abandoned (no gameplay), cancelling it`);
-        await db.collection('duel_matches').doc(doc.id).update({
-          status: 'cancelled'
-        });
+        // Abandoned match with no gameplay - cancel it and refund credits
+        console.log(`  🗑️  Existing match is abandoned (no gameplay), cancelling and refunding...`);
+
+        // Import cancelMatch function
+        const { cancelMatch } = await import('./settlement');
+
+        // Cancel match and refund all held credits
+        await cancelMatch(doc.id, match as any, 'Duplicate detection - abandoned match');
+
+        console.log(`  ✅ Abandoned match cancelled and credits refunded`);
         // Don't return, continue to create new match
       }
     }

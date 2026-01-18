@@ -367,7 +367,7 @@ async function executeSettlement(
 /**
  * Cancel match and refund all credits
  */
-async function cancelMatch(
+export async function cancelMatch(
   matchId: string,
   match: MatchDocument,
   reason: string
