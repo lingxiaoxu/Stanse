@@ -10,7 +10,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 import { RawNewsItem, ProcessedNewsItem, AgentResponse } from './types';
-import { saveNewsToCache, createTitleHash, getNewsFromCache } from '../newsCache';
+import { saveNewsToCache, createTitleHash, getNewsFromCache, saveImageToCache } from '../newsCache';
 import { newsLogger } from './logger';
 import { generateNewsImage } from '../geminiService';
 
@@ -154,7 +154,8 @@ export const fetchNewsWithGrounding = async (
           source: sourceMatch ? sourceMatch[1].trim() : 'Google News',
           publishedAt: new Date(),
           language: 'en' as const,
-          category: validCategories.includes(category) ? category : 'WORLD'
+          category: validCategories.includes(category) ? category : 'WORLD',
+          sourceType: 'grounding' as const  // Mark as Google Search Grounding
         });
       }
     }
@@ -212,33 +213,62 @@ export const fetchNewsWithGrounding = async (
 };
 
 /**
- * Fetch news from Google News RSS
+ * Fetch news from Google News RSS via Cloud Function
  */
 export const fetchGoogleNewsRSS = async (
-  topic: string = 'WORLD'
+  categories: string[] = ['WORLD', 'POLITICS', 'TECH', 'BUSINESS', 'MILITARY'],
+  language: string = 'en'
 ): Promise<AgentResponse<RawNewsItem[]>> => {
-  const opId = newsLogger.operationStart('fetchRSS', { topic });
+  const opId = newsLogger.operationStart('fetchRSS', { categories, language });
   const startTime = Date.now();
 
   try {
-    // Google News RSS URLs by topic
-    const rssUrls: Record<string, string> = {
-      'WORLD': 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pWVXlnQVAB',
-      'POLITICS': 'https://news.google.com/rss/topics/CAAqIQgKIhtDQkFTRGdvSUwyMHZNRFZ4ZERBU0FtVnVLQUFQAQ',
-      'TECH': 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB',
-      'BUSINESS': 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtVnVHZ0pWVXlnQVAB',
-    };
+    newsLogger.debug('fetchRSS', `Calling Cloud Function for language: ${language}`);
 
-    const _rssUrl = rssUrls[topic] || rssUrls['WORLD'];
+    // Call Firebase Cloud Function
+    const { httpsCallable } = await import('firebase/functions');
+    const { functions } = await import('../firebase');
 
-    // Fetch RSS using a CORS proxy or server-side
-    // For now, we'll use the grounding method as primary
-    // This is a placeholder for when we add server-side RSS parsing
-    newsLogger.warn('fetchRSS', 'RSS fetching not implemented yet, requires server-side', { topic });
+    const fetchRSSFunction = httpsCallable(functions, 'fetchGoogleNewsRSS');
+
+    const result = await fetchRSSFunction({
+      language,
+      categories,
+      maxPerCategory: 5
+    });
+
+    const data = result.data as any;
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to fetch RSS');
+    }
+
+    // Convert to RawNewsItem format
+    const newsItems: RawNewsItem[] = data.data.map((item: any) => ({
+      title: item.title,
+      summary: item.summary,
+      url: item.url,
+      source: item.source,
+      publishedAt: new Date(item.publishedAt),
+      language: language as 'en' | 'zh' | 'ja' | 'fr' | 'es',
+      category: item.category,
+      sourceType: 'rss' as const  // Mark as RSS source
+    }));
+
+    newsLogger.operationSuccess(opId, 'fetchRSS', {
+      newsCount: newsItems.length,
+      categories: [...new Set(newsItems.map(n => n.category))]
+    });
+
+    newsLogger.summary('fetchRSS', {
+      totalNews: newsItems.length,
+      language,
+      processingTimeMs: Date.now() - startTime
+    } as any);
 
     return {
-      success: false,
-      error: 'RSS fetching requires server-side implementation',
+      success: true,
+      data: newsItems,
       metadata: {
         source: 'google-news-rss',
         timestamp: new Date(),
@@ -246,7 +276,7 @@ export const fetchGoogleNewsRSS = async (
       }
     };
   } catch (error: any) {
-    newsLogger.operationFailed(opId, 'fetchRSS', error, { topic });
+    newsLogger.operationFailed(opId, 'fetchRSS', error, { categories, language });
     return {
       success: false,
       error: error.message,
@@ -260,11 +290,11 @@ export const fetchGoogleNewsRSS = async (
 };
 
 /**
- * Scrape news from 6park (Chinese news)
+ * Scrape news from 666parks (Chinese news)
  * Uses Gemini to extract and translate content
  */
 export const fetch6ParkNews = async (): Promise<AgentResponse<RawNewsItem[]>> => {
-  const opId = newsLogger.operationStart('fetch6Park', { source: '6park.com' });
+  const opId = newsLogger.operationStart('fetch6Park', { source: '666parks.com' });
   const startTime = Date.now();
 
   try {
@@ -273,7 +303,7 @@ export const fetch6ParkNews = async (): Promise<AgentResponse<RawNewsItem[]>> =>
     // IMPORTANT: Google Search Grounding does NOT support JSON response format
     // We must use plain text and parse manually
     const prompt = `
-      Search for the latest Chinese news headlines from 6park.com (留园网), Sina, Sohu, or similar Chinese news aggregators.
+      Search for the latest Chinese news headlines from 666parks.com (新留园), Sina, Sohu, or similar Chinese news aggregators.
 
       Find 5-8 important news stories about:
       - China politics and government
@@ -325,7 +355,8 @@ export const fetch6ParkNews = async (): Promise<AgentResponse<RawNewsItem[]>> =>
           source: '6park/Chinese Media',
           publishedAt: new Date(),
           language: 'zh' as const,
-          category: validCategories.includes(category) ? category : 'WORLD'
+          category: validCategories.includes(category) ? category : 'WORLD',
+          sourceType: '6park' as const  // Mark as 6park source
         });
       }
     }
@@ -385,6 +416,33 @@ export const processNewsItems = async (
         newsLogger.debug('processNews', `Cache hit for: ${item.title.slice(0, 40)}...`);
         cached++;
 
+        // Fix: Check if cached summary has HTML garbage
+        // Check HTML for RSS news OR if sourceType unknown (legacy data)
+        let cleanSummary = cachedItem.summary;
+        const cachedSourceType = (cachedItem as any).sourceType || item.sourceType;
+        const isRSSorUnknown = cachedSourceType === 'rss' || !cachedSourceType;
+        const hasHTMLGarbage = cleanSummary && (
+          cleanSummary.includes('&lt;') ||
+          cleanSummary.includes('&gt;') ||
+          cleanSummary.includes('<a href') ||
+          cleanSummary.includes('href=')
+        );
+
+        if (isRSSorUnknown && hasHTMLGarbage) {
+          newsLogger.debug('processNews', `RSS cached item has HTML garbage, regenerating summary for: ${item.title.slice(0, 40)}...`);
+          try {
+            const summaryResponse = await ai.models.generateContent({
+              model: 'gemini-2.5-flash',
+              contents: `Generate a concise 1-2 sentence news summary (max 150 characters) for this headline: "${cachedItem.title}". Only return the summary, nothing else.`,
+            });
+            cleanSummary = summaryResponse.text?.trim() || cachedItem.title;
+            newsLogger.debug('processNews', `Regenerated AI summary for RSS cached item: ${cleanSummary.slice(0, 50)}...`);
+          } catch (error: any) {
+            newsLogger.warn('processNews', `AI summary failed for cached item, using title: ${error.message}`);
+            cleanSummary = cachedItem.title;
+          }
+        }
+
         // Fix: Ensure cached items have imageUrl (for legacy data without images)
         let imageUrl = cachedItem.imageUrl;
         if (!imageUrl) {
@@ -397,6 +455,7 @@ export const processNewsItems = async (
 
         return {
           ...cachedItem,
+          summary: cleanSummary,  // Use cleaned summary
           titleHash,
           imageUrl,
           originalLanguage: item.language,
@@ -404,10 +463,75 @@ export const processNewsItems = async (
         } as ProcessedNewsItem;
       }
 
+      // Clean HTML entities from summary (only for RSS news - Google News RSS has HTML garbage)
+      // Grounding and 6park news are already clean
+      let cleanedSummary = item.summary;
+      const isRSSNews = item.sourceType === 'rss';
+      const hasHTMLGarbage = item.summary && (
+        item.summary.includes('&lt;') ||
+        item.summary.includes('&gt;') ||
+        item.summary.includes('<a href') ||
+        item.summary.includes('href=')
+      );
+
+      if (isRSSNews && hasHTMLGarbage) {
+        // RSS HTML garbage detected - first clean it
+        newsLogger.debug('processNews', `RSS HTML garbage detected for: ${item.title.slice(0, 40)}...`);
+        cleanedSummary = item.title; // Fallback to title first
+      }
+
+      // For RSS news: Fetch actual article content using grounding and generate proper summary
+      if (isRSSNews && item.url) {
+        newsLogger.debug('processNews', `Fetching article via grounding for RSS: ${item.title.slice(0, 40)}...`);
+        try {
+          const groundingResponse = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Read the news article at this URL and generate a concise 2-3 sentence summary (max 200 characters) that explains what happened, who is involved, and why it matters.
+
+URL: ${item.url}
+
+Article title: ${item.title}
+
+Only return the summary, nothing else.`,
+            config: {
+              tools: [{ googleSearch: {} }],  // Enable grounding to fetch URL content
+            }
+          });
+
+          const groundedSummary = groundingResponse.text?.trim();
+
+          if (groundedSummary && groundedSummary.length > 20) {
+            cleanedSummary = groundedSummary;
+            newsLogger.debug('processNews', `Grounded summary: ${cleanedSummary.slice(0, 50)}...`);
+          } else {
+            // Grounding returned empty - fallback to title-based AI summary
+            newsLogger.warn('processNews', 'Grounding empty, using title-based summary');
+            const titleResponse = await ai.models.generateContent({
+              model: 'gemini-2.5-flash',
+              contents: `Generate a concise 2-3 sentence news summary (max 200 characters) for this headline: "${item.title}". Only return the summary.`,
+            });
+            cleanedSummary = titleResponse.text?.trim() || item.title;
+          }
+        } catch (error: any) {
+          newsLogger.warn('processNews', `Grounding failed, using title-based summary: ${error.message}`);
+          // Fallback: Generate summary from title only
+          try {
+            const titleResponse = await ai.models.generateContent({
+              model: 'gemini-2.5-flash',
+              contents: `Generate a concise 2-3 sentence news summary (max 200 characters) for this headline: "${item.title}". Only return the summary.`,
+            });
+            cleanedSummary = titleResponse.text?.trim() || item.title;
+          } catch (fallbackError: any) {
+            newsLogger.error('processNews', `All summary generation failed: ${fallbackError.message}`);
+            cleanedSummary = item.title;
+          }
+        }
+      }
+
       // OPTIMIZATION: Translate title and summary in parallel
       const [englishTitle, englishSummary] = await Promise.all([
         item.language === 'en' ? Promise.resolve(item.title) : translateToEnglish(item.title, item.language),
-        item.language === 'en' ? Promise.resolve(item.summary) : translateToEnglish(item.summary, item.language)
+        item.language === 'en' ? Promise.resolve(cleanedSummary) : translateToEnglish(cleanedSummary, item.language)
       ]);
 
       if (item.language !== 'en') {
@@ -421,6 +545,10 @@ export const processNewsItems = async (
         newsLogger.debug('processNews', `Generating AI image for: ${englishTitle.slice(0, 40)}...`);
         imageUrl = await generateNewsImage(englishTitle, item.category || 'WORLD');
         newsLogger.debug('processNews', `Successfully generated AI image for: ${englishTitle.slice(0, 40)}...`);
+
+        // Cache the image URL to news_images collection
+        await saveImageToCache(titleHash, imageUrl);
+        newsLogger.debug('processNews', `Cached image for: ${englishTitle.slice(0, 40)}...`);
       } catch (error: any) {
         // Fallback to SVG geometric pattern if Imagen fails
         newsLogger.warn('processNews', `Imagen failed for "${englishTitle.slice(0, 40)}...", using fallback: ${error.message}`);
@@ -440,6 +568,7 @@ export const processNewsItems = async (
         category: item.category?.toUpperCase() || 'WORLD',
         originalLanguage: item.language,
         sources: [item.source],
+        sourceType: item.sourceType,  // Preserve source type (rss, grounding, 6park)
       };
 
       // Save to cache
@@ -478,33 +607,61 @@ const getRelativeDate = (date: Date): string => {
  * Main function: Fetch news from all sources
  */
 export const fetchAllNews = async (
-  categories: string[] = ['politics', 'technology', 'military', 'international', 'business']
+  categories: string[] = ['politics', 'technology', 'military', 'international', 'business'],
+  language: string = 'en'
 ): Promise<AgentResponse<ProcessedNewsItem[]>> => {
-  const opId = newsLogger.operationStart('fetchAllNews', { categories });
+  const opId = newsLogger.operationStart('fetchAllNews', { categories, language });
   const startTime = Date.now();
   const allRawNews: RawNewsItem[] = [];
   const errors: string[] = [];
 
-  // Fetch from Google Search Grounding (primary source)
-  newsLogger.info('fetchAllNews', 'Fetching from Google Search Grounding...');
-  const groundingResult = await fetchNewsWithGrounding(categories);
-  if (groundingResult.success && groundingResult.data) {
-    newsLogger.info('fetchAllNews', `Grounding returned ${groundingResult.data.length} items`);
-    allRawNews.push(...groundingResult.data);
-  } else if (groundingResult.error) {
-    newsLogger.warn('fetchAllNews', `Grounding failed: ${groundingResult.error}`);
-    errors.push(`Grounding: ${groundingResult.error}`);
+  // Map friendly category names to RSS categories
+  const rssCategoryMap: Record<string, string> = {
+    'politics': 'POLITICS',
+    'technology': 'TECH',
+    'tech': 'TECH',
+    'military': 'MILITARY',
+    'international': 'WORLD',
+    'world': 'WORLD',
+    'business': 'BUSINESS'
+  };
+  const rssCategories = categories.map(cat => rssCategoryMap[cat.toLowerCase()] || cat.toUpperCase());
+
+  // Fetch from Google News RSS (primary source for multi-language)
+  newsLogger.info('fetchAllNews', `Fetching from Google News RSS (${language})...`);
+  const rssResult = await fetchGoogleNewsRSS(rssCategories, language);
+  if (rssResult.success && rssResult.data) {
+    newsLogger.info('fetchAllNews', `RSS returned ${rssResult.data.length} items`);
+    allRawNews.push(...rssResult.data);
+  } else if (rssResult.error) {
+    newsLogger.warn('fetchAllNews', `RSS failed: ${rssResult.error}`);
+    errors.push(`RSS: ${rssResult.error}`);
   }
 
-  // Fetch Chinese news from 6park
-  newsLogger.info('fetchAllNews', 'Fetching from 6park Chinese news...');
-  const sixParkResult = await fetch6ParkNews();
-  if (sixParkResult.success && sixParkResult.data) {
-    newsLogger.info('fetchAllNews', `6park returned ${sixParkResult.data.length} items`);
-    allRawNews.push(...sixParkResult.data);
-  } else if (sixParkResult.error) {
-    newsLogger.warn('fetchAllNews', `6park failed: ${sixParkResult.error}`);
-    errors.push(`6park: ${sixParkResult.error}`);
+  // Fetch from Google Search Grounding (fallback for English)
+  if (language === 'en') {
+    newsLogger.info('fetchAllNews', 'Fetching from Google Search Grounding...');
+    const groundingResult = await fetchNewsWithGrounding(categories);
+    if (groundingResult.success && groundingResult.data) {
+      newsLogger.info('fetchAllNews', `Grounding returned ${groundingResult.data.length} items`);
+      allRawNews.push(...groundingResult.data);
+    } else if (groundingResult.error) {
+      newsLogger.warn('fetchAllNews', `Grounding failed: ${groundingResult.error}`);
+      errors.push(`Grounding: ${groundingResult.error}`);
+    }
+  }
+
+  // Fetch Chinese news from 6park (for Chinese language)
+  if (language === 'zh') {
+    newsLogger.info('fetchAllNews', 'Fetching from 6park Chinese news...');
+    const sixParkResult = await fetch6ParkNews();
+    if (sixParkResult.success && sixParkResult.data) {
+      newsLogger.info('fetchAllNews', `6park returned ${sixParkResult.data.length} items`);
+      allRawNews.push(...sixParkResult.data);
+    } else if (sixParkResult.error) {
+      newsLogger.warn('fetchAllNews', `6park failed: ${sixParkResult.error}`);
+      errors.push(`6park: ${sixParkResult.error}`);
+    }
   }
 
   // Process all news
@@ -527,13 +684,13 @@ export const fetchAllNews = async (
   });
 
   newsLogger.summary('fetchAllNews', {
-    groundingNews: groundingResult.data?.length || 0,
-    sixParkNews: sixParkResult.data?.length || 0,
+    rssNews: rssResult.data?.length || 0,
     totalProcessed: processedNews.length,
     duplicatesRemoved,
     finalCount: uniqueNews.length,
+    language,
     processingTimeMs: Date.now() - startTime
-  });
+  } as any);
 
   return {
     success: uniqueNews.length > 0,
