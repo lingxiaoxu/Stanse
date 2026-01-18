@@ -76,13 +76,45 @@ export const getPersonalizedNewsFeed = async (
     let userEmbedding: number[] | null = null;
     if (userId) {
       try {
-        const { getPersonaEmbedding } = await import('../userPersonaService');
-        const personaData = await getPersonaEmbedding(userId);
+        const { getPersonaEmbedding, generateAndSavePersonaEmbedding } = await import('../userPersonaService');
+        const { getUserProfile } = await import('../userService');
+
+        // Try to get existing persona embedding
+        let personaData = await getPersonaEmbedding(userId);
+
+        // Backfill: If no embedding exists but user has completed onboarding, generate it now
+        if (!personaData || !personaData.embedding) {
+          orchestratorLogger.info('getPersonalizedNewsFeed', 'No persona embedding found, checking for onboarding data...');
+
+          const userProfileData = await getUserProfile(userId);
+          if (userProfileData?.hasCompletedOnboarding && userProfileData.onboarding && userProfileData.coordinates) {
+            orchestratorLogger.info('getPersonalizedNewsFeed', 'Backfilling persona embedding for existing user...');
+
+            // Generate embedding (fire-and-forget for first fetch, don't block news)
+            generateAndSavePersonaEmbedding(
+              userId,
+              userProfileData.onboarding,
+              userProfileData.coordinates,
+              1  // Only 1 retry
+            ).then(generated => {
+              if (generated) {
+                orchestratorLogger.info('getPersonalizedNewsFeed', 'Backfill completed successfully');
+              }
+            }).catch(err => {
+              orchestratorLogger.warn('getPersonalizedNewsFeed', `Backfill failed: ${err.message}`);
+            });
+
+            // For this request, fall back to category-only scoring
+            orchestratorLogger.info('getPersonalizedNewsFeed', 'Using category-only scoring (backfill in progress)');
+          }
+        }
+
+        // Use embedding if available
         if (personaData && personaData.embedding && personaData.embedding.length === 768) {
           userEmbedding = personaData.embedding;
           orchestratorLogger.info('getPersonalizedNewsFeed', `Using persona embedding for user ${userId}`);
         } else {
-          orchestratorLogger.info('getPersonalizedNewsFeed', 'No valid persona embedding found, using category-only scoring');
+          orchestratorLogger.info('getPersonalizedNewsFeed', 'No valid persona embedding available, using category-only scoring');
         }
       } catch (error: any) {
         orchestratorLogger.warn('getPersonalizedNewsFeed', `Failed to fetch persona embedding: ${error.message}`);
