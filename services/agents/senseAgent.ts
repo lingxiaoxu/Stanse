@@ -294,11 +294,19 @@ export const generatePrismSummary = async (
   try {
     const prompt = `
       Provide a 'Prism Summary' for the topic: "${topic}".
-      I need three distinct perspectives:
-      1. Support/Proponent narrative.
-      2. Oppose/Critic narrative.
-      3. Neutral/Objective observer narrative.
-      Keep each section under 40 words.
+
+      Generate three distinct perspectives (each under 40 words):
+      - Support/Proponent narrative
+      - Oppose/Critic narrative
+      - Neutral/Objective observer narrative
+
+      CRITICAL: Return plain paragraph text only. Do NOT include:
+      - Bullet points (-, *, •) at the start
+      - Numbers (1., 2., 3.) at the start
+      - Dashes or hyphens at the beginning
+      - Any list formatting
+
+      Each perspective must start directly with content text (e.g., "Trump asserts...", "Critics argue...", "The situation...").
     `;
 
     const responseSchema: Schema = {
@@ -323,19 +331,30 @@ export const generatePrismSummary = async (
 
     const result = JSON.parse(response.text || '{}');
 
+    // Clean up any leading symbols that AI might add despite instructions
+    const cleanText = (text: string): string => {
+      if (!text) return text;
+      // Remove leading dashes, bullets, numbers, and whitespace
+      return text.replace(/^[\s\-•*0-9.)\]]+/, '').trim();
+    };
+
+    const cleanedSupport = cleanText(result.support || '');
+    const cleanedOppose = cleanText(result.oppose || '');
+    const cleanedNeutral = cleanText(result.neutral || '');
+
     senseLogger.operationSuccess(opId, 'generatePrismSummary', {
       topic,
-      hasSupport: !!result.support,
-      hasOppose: !!result.oppose,
-      hasNeutral: !!result.neutral
+      hasSupport: !!cleanedSupport,
+      hasOppose: !!cleanedOppose,
+      hasNeutral: !!cleanedNeutral
     });
 
     return {
       success: true,
       data: {
-        support: result.support || "Data unavailable.",
-        oppose: result.oppose || "Data unavailable.",
-        neutral: result.neutral || "Data unavailable."
+        support: cleanedSupport || "Data unavailable.",
+        oppose: cleanedOppose || "Data unavailable.",
+        neutral: cleanedNeutral || "Data unavailable."
       },
       metadata: {
         source: 'sense-agent',
