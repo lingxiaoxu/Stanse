@@ -18,6 +18,7 @@ import {
   getDoc,
   setDoc,
   query,
+  where,
   orderBy,
   limit,
   getDocs,
@@ -188,14 +189,16 @@ export const findSimilarNews = async (
 };
 
 /**
- * Calculate relevance score based on user's political stance
+ * Calculate relevance score based on user's political stance and content embeddings
+ * Combines category-based scoring with semantic similarity when embeddings are available
  */
 const calculateRelevanceScore = (
   newsItem: ProcessedNewsItem,
-  userStance: PoliticalCoordinates
+  userStance: PoliticalCoordinates,
+  userEmbedding?: number[] | null
 ): number => {
-  // Base score
-  let score = 50;
+  // Base score from category preferences
+  let categoryScore = 50;
 
   // Category preferences based on stance
   const categoryWeights: Record<string, (stance: PoliticalCoordinates) => number> = {
@@ -208,13 +211,31 @@ const calculateRelevanceScore = (
 
   const categoryWeight = categoryWeights[newsItem.category];
   if (categoryWeight) {
-    score = categoryWeight(userStance);
+    categoryScore = categoryWeight(userStance);
   }
 
-  // Add some randomness for diversity
-  score += (Math.random() - 0.5) * 10;
+  // If embeddings are available, combine with semantic similarity
+  let finalScore = categoryScore;
+  if (userEmbedding && newsItem.embedding && newsItem.embedding.length > 0) {
+    const similarity = cosineSimilarity(userEmbedding, newsItem.embedding);
+    // Semantic similarity contributes up to 30% of final score
+    // Category score contributes 70%
+    const semanticScore = similarity * 100; // Convert 0-1 similarity to 0-100 score
+    finalScore = categoryScore * 0.7 + semanticScore * 0.3;
+    publishingLogger.debug('calculateRelevanceScore',
+      `Using embeddings: category=${categoryScore.toFixed(1)}, semantic=${semanticScore.toFixed(1)}, final=${finalScore.toFixed(1)}`
+    );
+  }
 
-  return Math.max(0, Math.min(100, score));
+  // Add small deterministic variance based on titleHash for consistency
+  // Use hash instead of random() so same news gets same score for same user
+  const hashSeed = newsItem.titleHash.split('').reduce((acc, char) =>
+    acc + char.charCodeAt(0), 0
+  );
+  const variance = ((hashSeed % 100) / 100 - 0.5) * 5; // ±2.5 points deterministic variance
+  finalScore += variance;
+
+  return Math.max(0, Math.min(100, finalScore));
 };
 
 /**
@@ -223,20 +244,40 @@ const calculateRelevanceScore = (
 export const personalizeNewsFeed = async (
   news: ProcessedNewsItem[],
   userStance: PoliticalCoordinates,
-  maxItems: number = 10
+  maxItems: number = 10,
+  userEmbedding?: number[] | null
 ): Promise<AgentResponse<PersonalizedFeed>> => {
   const startTime = Date.now();
   const opId = publishingLogger.operationStart('personalizeNewsFeed', {
     inputCount: news.length,
     maxItems,
-    userStance: { economic: userStance.economic, social: userStance.social }
+    userStance: { economic: userStance.economic, social: userStance.social },
+    hasUserEmbedding: !!userEmbedding
   });
 
   try {
-    // Calculate relevance scores
+    // Validate input
+    if (!news || news.length === 0) {
+      publishingLogger.warn('personalizeNewsFeed', 'No news items to personalize');
+      return {
+        success: true,
+        data: {
+          news: [],
+          userStance,
+          diversityScore: 0
+        },
+        metadata: {
+          source: 'publishing-agent',
+          timestamp: new Date(),
+          processingTime: Date.now() - startTime
+        }
+      };
+    }
+
+    // Calculate relevance scores (with embeddings if available)
     const scoredNews = news.map(item => ({
       ...item,
-      relevanceScore: calculateRelevanceScore(item, userStance)
+      relevanceScore: calculateRelevanceScore(item, userStance, userEmbedding)
     }));
 
     // Sort by relevance
@@ -373,39 +414,89 @@ export const processNewsWithEmbeddings = async (
  * Get cached news from database (avoid re-fetching)
  */
 export const getCachedNews = async (
-  maxItems: number = 20
+  maxItems: number = 20,
+  language?: string,
+  maxAgeHours: number = 12  // Only use news less than 12 hours old (more timely)
 ): Promise<ProcessedNewsItem[]> => {
-  const opId = publishingLogger.operationStart('getCachedNews', { maxItems });
+  const opId = publishingLogger.operationStart('getCachedNews', { maxItems, language, maxAgeHours });
   try {
-    const q = query(
-      collection(db, NEWS_COLLECTION),
-      orderBy('createdAt', 'desc'),
-      limit(maxItems)
-    );
+    // Calculate cutoff time (only news newer than this)
+    const cutoffTime = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
+    const cutoffTimestamp = Timestamp.fromDate(cutoffTime);
+
+    // Build query with language filter if specified
+    let q;
+    if (language) {
+      q = query(
+        collection(db, NEWS_COLLECTION),
+        where('originalLanguage', '==', language),
+        where('createdAt', '>=', cutoffTimestamp),
+        orderBy('createdAt', 'desc'),
+        limit(maxItems)
+      );
+    } else {
+      q = query(
+        collection(db, NEWS_COLLECTION),
+        where('createdAt', '>=', cutoffTimestamp),
+        orderBy('createdAt', 'desc'),
+        limit(maxItems)
+      );
+    }
 
     const querySnapshot = await getDocs(q);
-    const results = querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: data.id,
-        titleHash: data.titleHash || '',
-        title: data.title,
-        summary: data.summary,
-        date: data.date,
-        imageUrl: data.imageUrl,
-        category: data.category,
-        originalLanguage: data.originalLanguage || 'en',
-        sources: data.sources || [],
-      } as ProcessedNewsItem;
-    });
+
+    // Validate and filter results
+    const results = querySnapshot.docs
+      .map(doc => {
+        const data = doc.data() as any;
+
+        // Validate required fields
+        if (!data.id || !data.title || !data.summary) {
+          publishingLogger.warn('getCachedNews', `Invalid news data in doc ${doc.id}, skipping`);
+          return null;
+        }
+
+        return {
+          id: data.id,
+          titleHash: data.titleHash || '',
+          title: data.title,
+          summary: data.summary,
+          date: data.date || 'UNKNOWN',
+          imageUrl: data.imageUrl || '',
+          category: data.category || 'WORLD',
+          originalLanguage: data.originalLanguage || 'en',
+          sources: data.sources || [],
+          sourceType: data.sourceType,
+          embedding: data.embedding,
+        } as ProcessedNewsItem;
+      })
+      .filter((item): item is ProcessedNewsItem => item !== null);
 
     publishingLogger.operationSuccess(opId, 'getCachedNews', {
       requested: maxItems,
-      returned: results.length
+      returned: results.length,
+      invalid: querySnapshot.docs.length - results.length
     });
+
     return results;
   } catch (error: any) {
-    publishingLogger.operationFailed(opId, 'getCachedNews', error);
+    // Enhanced error handling with specific error types
+    publishingLogger.operationFailed(opId, 'getCachedNews', error, {
+      language,
+      maxItems,
+      errorCode: error.code,
+      errorMessage: error.message
+    });
+
+    // Check if it's a Firestore index error
+    if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+      publishingLogger.error('getCachedNews',
+        'Firestore index missing! Run: firebase deploy --only firestore:indexes',
+        error
+      );
+    }
+
+    // Return empty array but error is logged
     return [];
   }
 };
