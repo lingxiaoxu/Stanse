@@ -511,18 +511,51 @@ Only return the summary, nothing else.`,
 
           if (groundedSummary && !isGroundingError) {
             cleanedSummary = groundedSummary;
-            newsLogger.debug('processNews', `Grounded summary: ${cleanedSummary.slice(0, 50)}...`);
+            newsLogger.debug('processNews', `Grounded summary from URL: ${cleanedSummary.slice(0, 50)}...`);
           } else {
-            // Grounding failed - fallback to title-based AI summary
+            // Strategy 2: URL failed, try searching for the topic instead
             if (isGroundingError) {
-              newsLogger.warn('processNews', `Grounding failed: ${groundedSummary?.slice(0, 50)}...`);
+              newsLogger.warn('processNews', `URL grounding failed: ${groundedSummary?.slice(0, 50)}...`);
             }
-            newsLogger.info('processNews', 'Using title-based AI summary instead');
-            const titleResponse = await ai.models.generateContent({
-              model: 'gemini-2.5-flash',
-              contents: `Generate a concise 2-3 sentence news summary (max 200 characters) for this headline: "${item.title}". Provide context about what happened and why it matters. Only return the summary.`,
-            });
-            cleanedSummary = titleResponse.text?.trim() || item.title;
+            newsLogger.info('processNews', 'Trying search-based grounding...');
+
+            try {
+              const searchResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: `Search for current information about this news topic and generate a concise 2-3 sentence summary (max 200 characters).
+
+Topic: ${item.title}
+
+Use search results to provide accurate context. Only return the summary.`,
+                config: {
+                  tools: [{ googleSearch: {} }],  // Search for topic instead of accessing URL
+                }
+              });
+
+              const searchSummary = searchResponse.text?.trim();
+              const isSearchError = searchSummary && (
+                searchSummary.includes('cannot access') ||
+                searchSummary.includes('I am sorry') ||
+                searchSummary.includes('I cannot') ||
+                searchSummary.length < 20
+              );
+
+              if (searchSummary && !isSearchError) {
+                cleanedSummary = searchSummary;
+                newsLogger.debug('processNews', `Search-based summary: ${cleanedSummary.slice(0, 50)}...`);
+              } else {
+                throw new Error('Search grounding also failed');
+              }
+            } catch (searchError: any) {
+              // Strategy 3: Both grounding methods failed - generate from title alone
+              newsLogger.warn('processNews', `Search grounding failed: ${searchError.message}`);
+              newsLogger.info('processNews', 'Using title-only AI summary (no grounding)');
+              const titleResponse = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: `Generate a concise 2-3 sentence news summary (max 200 characters) for this headline: "${item.title}". Provide informative context about what likely happened and why it matters. Only return the summary.`,
+              });
+              cleanedSummary = titleResponse.text?.trim() || item.title;
+            }
           }
         } catch (error: any) {
           newsLogger.warn('processNews', `Grounding failed, using title-based summary: ${error.message}`);
