@@ -78,3 +78,14 @@ __pycache__/
 stanse---union-duel/
 scripts/security-audit.sh
 video/
+
+# ML and Business Strategy Documents (Confidential)
+documentation/ml/
+*.ipynb
+models/
+data/
+*.parquet
+*.pkl
+*.h5
+*.pth
+*.onnx
