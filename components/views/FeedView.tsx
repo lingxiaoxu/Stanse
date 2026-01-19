@@ -1212,7 +1212,7 @@ export const FeedView: React.FC = () => {
                               <div><span className="font-bold bg-gray-200 text-black px-1">{t('feed', 'neutral')}</span> <p className="mt-1">{prismData[newsItem.id]?.neutral}</p></div>
                           </div>
                           <div className="flex gap-2 items-start">
-                              <div className="min-w-[4px] h-full bg-white border border-black self-stretch"></div>
+                              <div className="min-w-[4px] h-full bg-red-600 self-stretch"></div>
                               <div><span className="font-bold border border-black px-1">{t('feed', 'oppose')}</span> <p className="mt-1">{prismData[newsItem.id]?.oppose}</p></div>
                           </div>
                           </div>
