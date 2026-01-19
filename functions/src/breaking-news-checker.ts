@@ -66,15 +66,100 @@ async function getSendGridApiKey(): Promise<string> {
 
 interface BreakingNewsResult {
   title: string;
-  originalContent: string; // Full article content/description from search
-  summary: string; // AI-generated summary
+  originalContent: string; // Full article content/description from search (English)
+  summary: string; // AI-generated summary (English)
   sources: string[];
   category: string;
   url?: string;
 }
 
+interface MultiLanguageBreakingNews extends BreakingNewsResult {
+  // Translated versions
+  titleZH?: string;
+  titleJA?: string;
+  titleFR?: string;
+  titleES?: string;
+  summaryZH?: string;
+  summaryJA?: string;
+  summaryFR?: string;
+  summaryES?: string;
+}
+
 /**
- * Search specifically for breaking news using Gemini with Google Search
+ * Translate text using Gemini
+ */
+async function translateText(text: string, targetLanguage: 'zh' | 'ja' | 'fr' | 'es'): Promise<string> {
+  const languageNames: Record<string, string> = {
+    'zh': 'Simplified Chinese',
+    'ja': 'Japanese',
+    'fr': 'French',
+    'es': 'Spanish'
+  };
+
+  try {
+    const { GoogleGenAI } = require('@google/genai');
+    const apiKey = await getGeminiApiKey();
+    const ai = new GoogleGenAI({ apiKey });
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Translate the following English text to ${languageNames[targetLanguage]}. Maintain the same tone and meaning. Only return the translation:\n\n${text}`
+    });
+
+    return response.text?.trim() || text;
+  } catch (error) {
+    console.error(`Translation to ${targetLanguage} failed:`, error);
+    return text; // Return original if translation fails
+  }
+}
+
+/**
+ * Generate multi-language versions of breaking news
+ */
+async function generateMultiLanguageVersions(newsItems: BreakingNewsResult[]): Promise<MultiLanguageBreakingNews[]> {
+  console.log(`🌐 Generating multi-language versions for ${newsItems.length} breaking news items...`);
+
+  const multiLangResults: MultiLanguageBreakingNews[] = [];
+
+  for (const item of newsItems) {
+    try {
+      // Translate title and summary to all 4 languages in parallel
+      const [titleZH, titleJA, titleFR, titleES, summaryZH, summaryJA, summaryFR, summaryES] = await Promise.all([
+        translateText(item.title, 'zh'),
+        translateText(item.title, 'ja'),
+        translateText(item.title, 'fr'),
+        translateText(item.title, 'es'),
+        translateText(item.summary, 'zh'),
+        translateText(item.summary, 'ja'),
+        translateText(item.summary, 'fr'),
+        translateText(item.summary, 'es')
+      ]);
+
+      multiLangResults.push({
+        ...item,
+        titleZH,
+        titleJA,
+        titleFR,
+        titleES,
+        summaryZH,
+        summaryJA,
+        summaryFR,
+        summaryES
+      });
+
+      console.log(`✅ Generated multi-language versions for: "${item.title.slice(0, 50)}..."`);
+    } catch (error) {
+      console.error(`Failed to generate multi-language versions for: ${item.title}`, error);
+      // Still include the English version
+      multiLangResults.push(item);
+    }
+  }
+
+  return multiLangResults;
+}
+
+/**
+ * Search specifically for breaking news using Gemini with Google Search (English only)
  */
 async function searchBreakingNews(): Promise<BreakingNewsResult[]> {
   try {
@@ -241,72 +326,101 @@ async function searchBreakingNews(): Promise<BreakingNewsResult[]> {
 }
 
 /**
- * Store breaking news in Firestore
- * - Original content in news_original collection (parallel to news)
- * - Summary in news collection
- * Both use the same document ID and structure
+ * Store breaking news in Firestore with multi-language support
+ * - news_original: Uses "news-{hash}" format (for breaking news service)
+ * - news: Uses simple base36 hash (same as regular news)
+ * - Both use titleHash field for cross-language linking
  */
-async function storeBreakingNews(newsItems: BreakingNewsResult[]): Promise<number> {
+async function storeBreakingNews(newsItems: MultiLanguageBreakingNews[]): Promise<number> {
   let storedCount = 0;
 
   for (const item of newsItems) {
     try {
-      // Generate ID based on title (same as existing news system)
+      // Generate base hash from English title (MD5, shared across languages)
       const titleHash = require('crypto')
         .createHash('md5')
         .update(item.title)
         .digest('hex')
         .slice(0, 6);
 
-      const newsId = `news-${titleHash}`;
+      // Language configurations
+      const languages: Array<{ code: string; title: string; summary: string }> = [
+        { code: 'en', title: item.title, summary: item.summary },
+        { code: 'zh', title: item.titleZH || item.title, summary: item.summaryZH || item.summary },
+        { code: 'ja', title: item.titleJA || item.title, summary: item.summaryJA || item.summary },
+        { code: 'fr', title: item.titleFR || item.title, summary: item.summaryFR || item.summary },
+        { code: 'es', title: item.titleES || item.title, summary: item.summaryES || item.summary }
+      ];
 
-      // Check if already exists in news collection
-      const existingDoc = await db.collection('news').doc(newsId).get();
-      if (existingDoc.exists) {
-        console.log(`⏭️  Already exists: ${item.title}`);
-        continue;
+      // Store for each language with unique document ID
+      for (const lang of languages) {
+        // For news_original: Use "news-{hash}" format (existing breaking news format)
+        const newsOriginalHash = require('crypto')
+          .createHash('md5')
+          .update(`${lang.title}-${lang.code}`)
+          .digest('hex')
+          .slice(0, 6);
+        const newsOriginalId = `news-${newsOriginalHash}`;
+
+        // For news collection: Use simple base36 hash (same as regular news)
+        const languageSpecificText = `${lang.title}-${lang.code}`;
+        let simpleHash = 0;
+        for (let i = 0; i < languageSpecificText.length; i++) {
+          const char = languageSpecificText.charCodeAt(i);
+          simpleHash = ((simpleHash << 5) - simpleHash) + char;
+          simpleHash = simpleHash & simpleHash;
+        }
+        const newsId = Math.abs(simpleHash).toString(36);
+
+        // Check if already exists in news collection
+        const existingDoc = await db.collection('news').doc(newsId).get();
+        if (existingDoc.exists) {
+          console.log(`⏭️  Already exists (${lang.code}): ${lang.title.slice(0, 50)}...`);
+          continue;
+        }
+
+        // Store SUMMARY in news collection (simple hash format)
+        await db.collection('news').doc(newsId).set({
+          id: newsId,
+          title: lang.title,
+          summary: lang.summary,
+          sources: item.sources,
+          category: item.category,
+          date: 'TODAY',
+          originalLanguage: lang.code,
+          isBreaking: true,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          titleHash: titleHash // Shared titleHash for cross-language linking
+        });
+
+        // Store ORIGINAL content in news_original collection ("news-{hash}" format)
+        const originalData: any = {
+          id: newsOriginalId,
+          title: lang.title,
+          originalContent: lang.code === 'en' ? item.originalContent : item.summary, // Only EN has full content
+          sources: item.sources,
+          category: item.category,
+          date: 'TODAY',
+          originalLanguage: lang.code,
+          isBreaking: true,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          titleHash: titleHash // Same titleHash for linking
+        };
+
+        if (item.url) {
+          originalData.url = item.url;
+        }
+
+        await db.collection('news_original').doc(newsOriginalId).set(originalData);
+
+        console.log(`✅ Stored breaking news (${lang.code}):`);
+        console.log(`   news: ${newsId} | news_original: ${newsOriginalId}`);
+        console.log(`   title: ${lang.title.slice(0, 50)}...`);
+        storedCount++;
       }
 
-      // Store SUMMARY in news collection (same structure as existing news)
-      await db.collection('news').doc(newsId).set({
-        id: newsId,
-        title: item.title,
-        summary: item.summary,
-        sources: item.sources,
-        category: item.category,
-        date: 'TODAY',
-        originalLanguage: 'en',
-        isBreaking: true, // Flag to identify breaking news
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        titleHash: titleHash
-      });
-
-      // Store ORIGINAL content in news_original collection (parallel structure)
-      // Same document ID for easy matching
-      const originalData: any = {
-        id: newsId,
-        title: item.title,
-        originalContent: item.originalContent, // Full original text
-        sources: item.sources,
-        category: item.category,
-        date: 'TODAY',
-        originalLanguage: 'en',
-        isBreaking: true,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        titleHash: titleHash
-      };
-
-      // Add URL if available
-      if (item.url) {
-        originalData.url = item.url;
-      }
-
-      await db.collection('news_original').doc(newsId).set(originalData);
-
-      console.log(`✅ Stored breaking news: ${item.title}`);
-      storedCount++;
     } catch (error) {
       console.error(`Failed to store: ${item.title}`, error);
     }
@@ -316,9 +430,9 @@ async function storeBreakingNews(newsItems: BreakingNewsResult[]): Promise<numbe
 }
 
 /**
- * Send notifications to admin and users
+ * Send notifications to admin and users (English version only for notifications)
  */
-async function sendNotifications(newsItems: BreakingNewsResult[]): Promise<number> {
+async function sendNotifications(newsItems: MultiLanguageBreakingNews[]): Promise<number> {
   try {
     const ADMIN_EMAIL = 'lxu912@gmail.com';
     const apiKey = await getSendGridApiKey();
@@ -441,7 +555,7 @@ export const checkBreakingNews = functions.scheduler.onSchedule(
     console.log(`Time: ${new Date().toISOString()}`);
 
     try {
-      // 1. Search for breaking news (independent from main news system)
+      // 1. Search for breaking news in English only (independent from main news system)
       const breakingNews = await searchBreakingNews();
 
       if (breakingNews.length === 0) {
@@ -451,9 +565,13 @@ export const checkBreakingNews = functions.scheduler.onSchedule(
 
       console.log(`📰 Found ${breakingNews.length} breaking news items`);
 
-      // 2. Store in Firestore (original + summary)
-      const storedCount = await storeBreakingNews(breakingNews);
-      console.log(`💾 Stored ${storedCount} new breaking news items`);
+      // 2. Generate multi-language versions (only if qualified as breaking)
+      const multiLangBreakingNews = await generateMultiLanguageVersions(breakingNews);
+      console.log(`🌐 Generated ${multiLangBreakingNews.length} multi-language breaking news sets`);
+
+      // 3. Store in Firestore (all languages)
+      const storedCount = await storeBreakingNews(multiLangBreakingNews);
+      console.log(`💾 Stored ${storedCount} breaking news documents (across 5 languages)`);
 
       if (storedCount === 0) {
         console.log('✅ All breaking news already in database');
