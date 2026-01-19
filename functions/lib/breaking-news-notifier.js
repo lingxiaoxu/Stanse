@@ -116,8 +116,8 @@ async function fetchLatestNews() {
  */
 async function getNotifiableUsers() {
     try {
-        // Get all users from userNotification collection who have granted permission
-        const notificationsSnapshot = await db.collection('userNotification')
+        // Get all users from userNotifications collection who have granted permission
+        const notificationsSnapshot = await db.collection('userNotifications')
             .where('status', '==', 'granted')
             .get();
         const users = [];
@@ -222,20 +222,15 @@ async function sendEmailNotification(email, articles) {
  */
 async function updateLastNotificationTime(userId) {
     try {
-        // Find the notification document for this user
-        const notifSnapshot = await db.collection('userNotification')
-            .where('userId', '==', userId)
-            .limit(1)
-            .get();
-        if (!notifSnapshot.empty) {
-            const notifDoc = notifSnapshot.docs[0];
-            await notifDoc.ref.update({
-                lastBreakingNewsNotification: new Date().toISOString()
-            });
-        }
+        // Update notification document for this user (userId as document ID in userNotifications collection)
+        const notifRef = db.collection('userNotifications').doc(userId);
+        await notifRef.set({
+            lastBreakingNewsNotification: new Date().toISOString()
+        }, { merge: true });
+        console.log(`✅ Updated last notification time for user ${userId}`);
     }
     catch (error) {
-        console.error(`Failed to update notification time for ${userId}:`, error);
+        console.error(`❌ Failed to update notification time for ${userId}:`, error);
     }
 }
 /**

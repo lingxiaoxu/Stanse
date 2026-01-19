@@ -25,7 +25,7 @@ async function diagnoseNotifications() {
 
   // 1. Check userNotification collection
   console.log('\n1️⃣  Checking userNotification collection...');
-  const notifSnapshot = await db.collection('userNotification')
+  const notifSnapshot = await db.collection('userNotifications')
     .where('status', '==', 'granted')
     .get();
 
