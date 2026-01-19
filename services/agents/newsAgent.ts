@@ -772,12 +772,18 @@ export const fetchAllNews = async (
 
 /**
  * Simple deduplication by checking title similarity
+ * MULTI-LANGUAGE UPDATE: Support non-Latin characters (Chinese, Japanese, etc.)
  */
 const deduplicateNews = (news: ProcessedNewsItem[]): ProcessedNewsItem[] => {
   const seen = new Set<string>();
   return news.filter(item => {
-    // Create a simplified key from title
-    const key = item.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 50);
+    // Create a simplified key from title (keep all Unicode characters, not just a-z)
+    // Remove only punctuation and whitespace, keep Chinese/Japanese characters
+    const key = item.title
+      .toLowerCase()
+      .replace(/[\s\p{P}]/gu, '') // Remove whitespace and punctuation (Unicode-aware)
+      .slice(0, 50);
+
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
