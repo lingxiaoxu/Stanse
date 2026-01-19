@@ -57,7 +57,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           setLocalError('Too many failed attempts. Please try again later.');
           break;
         case 'auth/network-request-failed':
-          setLocalError('Network error. Please check your connection.');
+          setLocalError('Network error: Unable to connect to Firebase. If you are in China, please use a VPN. 网络错误:无法连接Firebase。如果您在中国,请使用VPN。');
           break;
         case 'auth/user-disabled':
           setLocalError('This account has been disabled.');
@@ -79,7 +79,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       await signInGoogle();
       onLogin();
     } catch (err: any) {
-      setLocalError(err.message || 'Failed to sign in with Google');
+      // Check if error is network-related (Great Firewall)
+      const isNetworkError = err.code === 'auth/network-request-failed' ||
+                            err.message?.includes('network') ||
+                            err.message?.includes('Failed to fetch') ||
+                            err.message?.includes('CORS') ||
+                            err.message?.includes('Unable to connect');
+
+      if (isNetworkError) {
+        setLocalError('Network error: Unable to connect to Firebase. If you are in China, please use a VPN. 网络错误:无法连接Firebase。如果您在中国,请使用VPN。');
+      } else {
+        setLocalError(err.message || 'Failed to sign in with Google');
+      }
     } finally {
       setIsLoading(false);
     }

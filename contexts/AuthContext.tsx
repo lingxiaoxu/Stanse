@@ -189,7 +189,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to sign up');
+      // Check if error is network-related (likely Great Firewall blocking Firebase)
+      const isNetworkError = err.code === 'auth/network-request-failed' ||
+                            err.message?.includes('network') ||
+                            err.message?.includes('Failed to fetch') ||
+                            err.message?.includes('CORS');
+
+      if (isNetworkError) {
+        setError('Network error: Unable to connect to Firebase. If you are in China, please use a VPN to access this service. 网络错误:无法连接Firebase。如果您在中国,请使用VPN访问此服务。');
+      } else {
+        setError(err.message || 'Failed to sign up');
+      }
       throw err;
     } finally {
       setLoading(false);
@@ -212,7 +222,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google');
+      // Check if error is network-related (likely Great Firewall blocking Firebase)
+      const isNetworkError = err.code === 'auth/network-request-failed' ||
+                            err.message?.includes('network') ||
+                            err.message?.includes('Failed to fetch') ||
+                            err.message?.includes('CORS');
+
+      if (isNetworkError) {
+        setError('Network error: Unable to connect to Firebase. If you are in China, please use a VPN to access this service. 网络错误:无法连接Firebase。如果您在中国,请使用VPN访问此服务。');
+      } else {
+        setError(err.message || 'Failed to sign in with Google');
+      }
       throw err;
     } finally {
       setLoading(false);
