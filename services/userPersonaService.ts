@@ -38,17 +38,19 @@ const COLLECTION_NAME = 'user_persona_embeddings';
 export interface PersonaEmbeddingRecord {
   userId: string;
 
-  // Primary persona description (English)
-  descriptionEN: string;  // 300-400 words
-
-  // Placeholder fields for future translations
+  // Multi-language persona descriptions (300-400 words each)
+  descriptionEN: string;
   descriptionZH?: string;
   descriptionJA?: string;
   descriptionFR?: string;
   descriptionES?: string;
 
-  // Embedding vector (768 dimensions, same as news)
-  embedding: number[];
+  // Multi-language embeddings (768 dimensions each, same model as news)
+  embeddingEN: number[];
+  embeddingZH?: number[];
+  embeddingJA?: number[];
+  embeddingFR?: number[];
+  embeddingES?: number[];
 
   // Coordinates snapshot (at time of generation)
   coordinates: {
@@ -59,12 +61,31 @@ export interface PersonaEmbeddingRecord {
     coreStanceType: string;  // One of 8 core types: progressive-globalist, etc.
   };
 
-  // Metadata
+  // Metadata per language
   metadata: {
     generatedAt: string;          // ISO timestamp
     modelVersion: string;         // 'text-embedding-004'
-    descriptionWordCount: number;
-    embeddingDimensions: number;  // 768
+
+    // English metadata
+    descriptionWordCountEN: number;
+    embeddingDimensionsEN: number;  // 768
+
+    // Chinese metadata
+    descriptionWordCountZH?: number;
+    embeddingDimensionsZH?: number;
+
+    // Japanese metadata
+    descriptionWordCountJA?: number;
+    embeddingDimensionsJA?: number;
+
+    // French metadata
+    descriptionWordCountFR?: number;
+    embeddingDimensionsFR?: number;
+
+    // Spanish metadata
+    descriptionWordCountES?: number;
+    embeddingDimensionsES?: number;
+
     nationalityPrefix?: string;   // e.g., "Chinese American"
   };
 
@@ -269,10 +290,11 @@ const generateFallbackDescription = (
  * Uses text-embedding-004 model (same as news embeddings)
  */
 export const generatePersonaEmbedding = async (
-  description: string
+  description: string,
+  language: 'en' | 'zh' | 'ja' | 'fr' | 'es' = 'en'
 ): Promise<number[] | null> => {
   try {
-    console.log(`[PersonaService] Generating embedding for description (${description.split(' ').length} words)...`);
+    console.log(`[PersonaService] Generating ${language.toUpperCase()} embedding for description (${description.split(' ').length} words)...`);
 
     const response = await ai.models.embedContent({
       model: 'text-embedding-004',
@@ -282,7 +304,7 @@ export const generatePersonaEmbedding = async (
     if (response.embeddings && response.embeddings.length > 0) {
       const embedding = response.embeddings[0].values;
       if (embedding && embedding.length === 768) {
-        console.log(`[PersonaService] ✅ Generated ${embedding.length}-dimensional embedding`);
+        console.log(`[PersonaService] ✅ Generated ${embedding.length}-dimensional ${language.toUpperCase()} embedding`);
         return embedding;
       } else {
         console.warn(`[PersonaService] ⚠️ Unexpected embedding dimensions: ${embedding?.length}`);
@@ -299,13 +321,25 @@ export const generatePersonaEmbedding = async (
 };
 
 /**
- * Save persona embedding to Firestore with history tracking
+ * Save persona embeddings (multi-language) to Firestore with history tracking
  * Pattern: Save to history first, then update main document (like company_esg_by_ticker)
  */
 export const savePersonaEmbedding = async (
   userId: string,
-  description: string,
-  embedding: number[],
+  descriptions: {
+    en: string;
+    zh?: string;
+    ja?: string;
+    fr?: string;
+    es?: string;
+  },
+  embeddings: {
+    en: number[];
+    zh?: number[];
+    ja?: number[];
+    fr?: number[];
+    es?: number[];
+  },
   coordinates: PoliticalCoordinates,
   action: 'generated' | 'regenerated' | 'coordinates_updated' = 'generated'
 ): Promise<void> => {
@@ -314,11 +348,19 @@ export const savePersonaEmbedding = async (
     const now = new Date();
     const timestamp_str = now.toISOString().replace(/[-:]/g, '').replace('T', '_').split('.')[0];
 
-    // Prepare persona data
+    // Prepare persona data with all languages
     const personaData: PersonaEmbeddingRecord = {
       userId,
-      descriptionEN: description,
-      embedding,
+      descriptionEN: descriptions.en,
+      descriptionZH: descriptions.zh,
+      descriptionJA: descriptions.ja,
+      descriptionFR: descriptions.fr,
+      descriptionES: descriptions.es,
+      embeddingEN: embeddings.en,
+      embeddingZH: embeddings.zh,
+      embeddingJA: embeddings.ja,
+      embeddingFR: embeddings.fr,
+      embeddingES: embeddings.es,
       coordinates: {
         economic: coordinates.economic,
         social: coordinates.social,
@@ -329,8 +371,16 @@ export const savePersonaEmbedding = async (
       metadata: {
         generatedAt: now.toISOString(),
         modelVersion: 'text-embedding-004',
-        descriptionWordCount: description.split(' ').length,
-        embeddingDimensions: embedding.length,
+        descriptionWordCountEN: descriptions.en.split(' ').length,
+        embeddingDimensionsEN: embeddings.en.length,
+        descriptionWordCountZH: descriptions.zh?.split('').length, // Chinese uses characters
+        embeddingDimensionsZH: embeddings.zh?.length,
+        descriptionWordCountJA: descriptions.ja?.split('').length, // Japanese uses characters
+        embeddingDimensionsJA: embeddings.ja?.length,
+        descriptionWordCountFR: descriptions.fr?.split(' ').length,
+        embeddingDimensionsFR: embeddings.fr?.length,
+        descriptionWordCountES: descriptions.es?.split(' ').length,
+        embeddingDimensionsES: embeddings.es?.length,
         nationalityPrefix: coordinates.nationalityPrefix
       },
       version: '1.0'
@@ -439,9 +489,9 @@ export const shouldRegeneratePersona = async (
     return true;
   }
 
-  // Check if embedding is missing or invalid
-  if (!existing.embedding || existing.embedding.length !== 768) {
-    console.log('[PersonaService] 🔄 Embedding missing or invalid dimensions, should regenerate');
+  // Check if English embedding is missing or invalid
+  if (!existing.embeddingEN || existing.embeddingEN.length !== 768) {
+    console.log('[PersonaService] 🔄 English embedding missing or invalid dimensions, should regenerate');
     return true;
   }
 
@@ -461,7 +511,31 @@ export const shouldRegeneratePersona = async (
 };
 
 /**
- * Main function: Generate and save user persona embedding
+ * Translate text using Gemini
+ */
+const translateText = async (text: string, targetLanguage: 'zh' | 'ja' | 'fr' | 'es'): Promise<string> => {
+  const languageNames: Record<string, string> = {
+    'zh': 'Simplified Chinese',
+    'ja': 'Japanese',
+    'fr': 'French',
+    'es': 'Spanish'
+  };
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Translate the following English text to ${languageNames[targetLanguage]}. Maintain the same tone, structure, and meaning. Only return the translation:\n\n${text}`
+    });
+
+    return response.text?.trim() || text;
+  } catch (error: any) {
+    console.error(`[PersonaService] ❌ Translation to ${targetLanguage} failed:`, error.message);
+    return text; // Return original if translation fails
+  }
+};
+
+/**
+ * Main function: Generate and save user persona embeddings (multi-language)
  * Called after onboarding completion (fire-and-forget)
  *
  * @param forceRegenerate - If true, regenerate even if coordinates haven't changed (for onboarding resubmission)
@@ -491,35 +565,83 @@ export const generateAndSavePersonaEmbedding = async (
     try {
       console.log(`[PersonaService] 🔄 Generation attempt ${attempt + 1}/${maxRetries}...`);
 
-      // Step 1: Generate persona description
-      const description = await generatePersonaDescription(answers, coordinates);
+      // Step 1: Generate English persona description
+      const descriptionEN = await generatePersonaDescription(answers, coordinates);
 
-      if (!description || description.split(' ').length < 200) {
-        throw new Error(`Description too short: ${description.split(' ').length} words`);
+      if (!descriptionEN || descriptionEN.split(' ').length < 200) {
+        throw new Error(`Description too short: ${descriptionEN.split(' ').length} words`);
       }
 
-      // Step 2: Generate embedding from description
-      const embedding = await generatePersonaEmbedding(description);
+      // Step 2: Generate English embedding
+      const embeddingEN = await generatePersonaEmbedding(descriptionEN, 'en');
 
-      if (!embedding) {
-        throw new Error('Embedding generation returned null');
+      if (!embeddingEN) {
+        throw new Error('English embedding generation returned null');
       }
 
-      if (embedding.length !== 768) {
-        throw new Error(`Invalid embedding dimensions: ${embedding.length} (expected 768)`);
+      if (embeddingEN.length !== 768) {
+        throw new Error(`Invalid embedding dimensions: ${embeddingEN.length} (expected 768)`);
       }
 
-      // Step 3: Save to Firestore with history
+      console.log('[PersonaService] ✅ English persona generated successfully');
+
+      // Step 3: Generate other language versions in parallel
+      console.log('[PersonaService] 🌐 Generating translations and embeddings for other languages...');
+
+      const [descriptionZH, descriptionJA, descriptionFR, descriptionES] = await Promise.all([
+        translateText(descriptionEN, 'zh'),
+        translateText(descriptionEN, 'ja'),
+        translateText(descriptionEN, 'fr'),
+        translateText(descriptionEN, 'es')
+      ]);
+
+      // Step 4: Generate embeddings for all translated descriptions in parallel
+      const [embeddingZH, embeddingJA, embeddingFR, embeddingES] = await Promise.all([
+        generatePersonaEmbedding(descriptionZH, 'zh'),
+        generatePersonaEmbedding(descriptionJA, 'ja'),
+        generatePersonaEmbedding(descriptionFR, 'fr'),
+        generatePersonaEmbedding(descriptionES, 'es')
+      ]);
+
+      console.log('[PersonaService] ✅ All language embeddings generated successfully');
+
+      // Step 5: Save to Firestore with history
       const actionType = attempt > 0 ? 'regenerated' : 'generated';
-      await savePersonaEmbedding(userId, description, embedding, coordinates, actionType);
+      await savePersonaEmbedding(
+        userId,
+        {
+          en: descriptionEN,
+          zh: descriptionZH,
+          ja: descriptionJA,
+          fr: descriptionFR,
+          es: descriptionES
+        },
+        {
+          en: embeddingEN,
+          zh: embeddingZH || undefined,
+          ja: embeddingJA || undefined,
+          fr: embeddingFR || undefined,
+          es: embeddingES || undefined
+        },
+        coordinates,
+        actionType
+      );
 
-      console.log(`[PersonaService] ✅ Persona embedding generated successfully on attempt ${attempt + 1}`);
+      console.log(`[PersonaService] ✅ Multi-language persona embeddings generated successfully on attempt ${attempt + 1}`);
 
       // Return the generated record
       return {
         userId,
-        descriptionEN: description,
-        embedding,
+        descriptionEN,
+        descriptionZH,
+        descriptionJA,
+        descriptionFR,
+        descriptionES,
+        embeddingEN,
+        embeddingZH: embeddingZH || undefined,
+        embeddingJA: embeddingJA || undefined,
+        embeddingFR: embeddingFR || undefined,
+        embeddingES: embeddingES || undefined,
         coordinates: {
           economic: coordinates.economic,
           social: coordinates.social,
@@ -530,8 +652,16 @@ export const generateAndSavePersonaEmbedding = async (
         metadata: {
           generatedAt: new Date().toISOString(),
           modelVersion: 'text-embedding-004',
-          descriptionWordCount: description.split(' ').length,
-          embeddingDimensions: embedding.length,
+          descriptionWordCountEN: descriptionEN.split(' ').length,
+          embeddingDimensionsEN: embeddingEN.length,
+          descriptionWordCountZH: descriptionZH.split('').length,
+          embeddingDimensionsZH: embeddingZH?.length,
+          descriptionWordCountJA: descriptionJA.split('').length,
+          embeddingDimensionsJA: embeddingJA?.length,
+          descriptionWordCountFR: descriptionFR.split(' ').length,
+          embeddingDimensionsFR: embeddingFR?.length,
+          descriptionWordCountES: descriptionES.split(' ').length,
+          embeddingDimensionsES: embeddingES?.length,
           nationalityPrefix: coordinates.nationalityPrefix
         },
         version: '1.0'

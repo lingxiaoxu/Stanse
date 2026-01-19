@@ -302,6 +302,7 @@ export const fetch6ParkNews = async (): Promise<AgentResponse<RawNewsItem[]>> =>
 
     // IMPORTANT: Google Search Grounding does NOT support JSON response format
     // We must use plain text and parse manually
+    // MULTI-LANGUAGE UPDATE: Keep Chinese content, do NOT translate to English
     const prompt = `
       Search for the latest Chinese news headlines from 666parks.com (新留园), Sina, Sohu, or similar Chinese news aggregators.
 
@@ -314,12 +315,12 @@ export const fetch6ParkNews = async (): Promise<AgentResponse<RawNewsItem[]>> =>
       Format your response EXACTLY like this (use this exact format):
 
       ---NEWS_ITEM---
-      TITLE_CN: [Original Chinese title]
-      TITLE_EN: [English translation of the title]
-      SUMMARY: [Brief summary in English, max 200 chars]
+      TITLE: [Original Chinese title - keep in Chinese]
+      SUMMARY: [Brief summary in Chinese, max 200 characters - keep in Chinese]
       CATEGORY: [one of: POLITICS, WORLD, BUSINESS]
       ---END_ITEM---
 
+      IMPORTANT: Keep ALL content in original Chinese (Simplified Chinese). Do NOT translate to English.
       Repeat this format for each news item. Focus on factual news from major Chinese news sources.
     `;
 
@@ -335,22 +336,22 @@ export const fetch6ParkNews = async (): Promise<AgentResponse<RawNewsItem[]>> =>
     newsLogger.debug('fetch6Park', 'Raw response length: ' + rawText.length);
 
     // Parse the structured text response
+    // MULTI-LANGUAGE UPDATE: Now parsing Chinese content only (no English translation)
     const newsItems: RawNewsItem[] = [];
     const itemBlocks = rawText.split('---NEWS_ITEM---').filter(block => block.includes('---END_ITEM---'));
 
     for (const block of itemBlocks) {
-      const titleEnMatch = block.match(/TITLE_EN:\s*(.+?)(?=\n|SUMMARY:)/s);
-      const titleCnMatch = block.match(/TITLE_CN:\s*(.+?)(?=\n|TITLE_EN:)/s);
+      const titleMatch = block.match(/TITLE:\s*(.+?)(?=\n|SUMMARY:)/s);
       const summaryMatch = block.match(/SUMMARY:\s*(.+?)(?=\n|CATEGORY:)/s);
       const categoryMatch = block.match(/CATEGORY:\s*(.+?)(?=\n|---END_ITEM---)/s);
 
-      if ((titleEnMatch || titleCnMatch) && summaryMatch && categoryMatch) {
+      if (titleMatch && summaryMatch && categoryMatch) {
         const category = categoryMatch[1].trim().toUpperCase();
         const validCategories = ['POLITICS', 'WORLD', 'BUSINESS'];
 
         newsItems.push({
-          title: titleEnMatch ? titleEnMatch[1].trim() : (titleCnMatch ? titleCnMatch[1].trim() : 'Untitled'),
-          summary: summaryMatch[1].trim(),
+          title: titleMatch[1].trim(), // Chinese title
+          summary: summaryMatch[1].trim(), // Chinese summary
           url: '',
           source: '6park/Chinese Media',
           publishedAt: new Date(),
@@ -481,18 +482,30 @@ export const processNewsItems = async (
       }
 
       // For RSS news: Fetch actual article content using grounding and generate proper summary
+      // MULTI-LANGUAGE UPDATE: Generate summary in the same language as the news
       if (isRSSNews && item.url) {
         newsLogger.debug('processNews', `Fetching article via grounding for RSS: ${item.title.slice(0, 40)}...`);
+
+        // Language-specific prompt instructions
+        const languageInstructions: Record<string, string> = {
+          'en': 'in English',
+          'zh': 'in Simplified Chinese (简体中文)',
+          'ja': 'in Japanese (日本語)',
+          'fr': 'in French (Français)',
+          'es': 'in Spanish (Español)'
+        };
+        const languageInstruction = languageInstructions[item.language] || 'in English';
+
         try {
           const groundingResponse = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: `Read the news article at this URL and generate a concise 2-3 sentence summary (max 200 characters) that explains what happened, who is involved, and why it matters.
+            contents: `Read the news article at this URL and generate a concise 2-3 sentence summary (max 200 characters) ${languageInstruction} that explains what happened, who is involved, and why it matters.
 
 URL: ${item.url}
 
 Article title: ${item.title}
 
-Only return the summary, nothing else.`,
+IMPORTANT: The summary must be ${languageInstruction}. Only return the summary, nothing else.`,
             config: {
               tools: [{ googleSearch: {} }],  // Enable grounding to fetch URL content
             }
@@ -522,11 +535,11 @@ Only return the summary, nothing else.`,
             try {
               const searchResponse = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: `Search for current information about this news topic and generate a concise 2-3 sentence summary (max 200 characters).
+                contents: `Search for current information about this news topic and generate a concise 2-3 sentence summary (max 200 characters) ${languageInstruction}.
 
 Topic: ${item.title}
 
-Use search results to provide accurate context. Only return the summary.`,
+IMPORTANT: The summary must be ${languageInstruction}. Use search results to provide accurate context. Only return the summary.`,
                 config: {
                   tools: [{ googleSearch: {} }],  // Search for topic instead of accessing URL
                 }
@@ -552,7 +565,7 @@ Use search results to provide accurate context. Only return the summary.`,
               newsLogger.info('processNews', 'Using title-only AI summary (no grounding)');
               const titleResponse = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: `Generate a concise 2-3 sentence news summary (max 200 characters) for this headline: "${item.title}". Provide informative context about what likely happened and why it matters. Only return the summary.`,
+                contents: `Generate a concise 2-3 sentence news summary (max 200 characters) ${languageInstruction} for this headline: "${item.title}". Provide informative context about what likely happened and why it matters. IMPORTANT: The summary must be ${languageInstruction}. Only return the summary.`,
               });
               cleanedSummary = titleResponse.text?.trim() || item.title;
             }
@@ -563,7 +576,7 @@ Use search results to provide accurate context. Only return the summary.`,
           try {
             const titleResponse = await ai.models.generateContent({
               model: 'gemini-2.5-flash',
-              contents: `Generate a concise 2-3 sentence news summary (max 200 characters) for this headline: "${item.title}". Only return the summary.`,
+              contents: `Generate a concise 2-3 sentence news summary (max 200 characters) ${languageInstruction} for this headline: "${item.title}". IMPORTANT: The summary must be ${languageInstruction}. Only return the summary.`,
             });
             cleanedSummary = titleResponse.text?.trim() || item.title;
           } catch (fallbackError: any) {
@@ -573,41 +586,49 @@ Use search results to provide accurate context. Only return the summary.`,
         }
       }
 
-      // OPTIMIZATION: Translate title and summary in parallel
-      const [englishTitle, englishSummary] = await Promise.all([
-        item.language === 'en' ? Promise.resolve(item.title) : translateToEnglish(item.title, item.language),
-        item.language === 'en' ? Promise.resolve(cleanedSummary) : translateToEnglish(cleanedSummary, item.language)
-      ]);
+      // MULTI-LANGUAGE UPDATE: Keep original language, do NOT translate
+      // The title and summary remain in their original language
+      const originalTitle = item.title;
+      const originalSummary = cleanedSummary;
 
-      if (item.language !== 'en') {
-        translated++;
-        newsLogger.debug('processNews', `Translated from ${item.language}: ${englishTitle.slice(0, 40)}...`);
-      }
+      newsLogger.debug('processNews', `Keeping original ${item.language} content: ${originalTitle.slice(0, 40)}...`);
 
-      // Generate AI image using Imagen API
+      // Generate AI image using original title (images work across languages)
       let imageUrl: string;
       try {
-        newsLogger.debug('processNews', `Generating AI image for: ${englishTitle.slice(0, 40)}...`);
-        imageUrl = await generateNewsImage(englishTitle, item.category || 'WORLD');
-        newsLogger.debug('processNews', `Successfully generated AI image for: ${englishTitle.slice(0, 40)}...`);
+        newsLogger.debug('processNews', `Generating AI image for: ${originalTitle.slice(0, 40)}...`);
+        imageUrl = await generateNewsImage(originalTitle, item.category || 'WORLD');
+        newsLogger.debug('processNews', `Successfully generated AI image for: ${originalTitle.slice(0, 40)}...`);
 
-        // Cache the image URL to news_images collection
+        // Cache the image URL to news_images collection (titleHash links different language versions)
         await saveImageToCache(titleHash, imageUrl);
-        newsLogger.debug('processNews', `Cached image for: ${englishTitle.slice(0, 40)}...`);
+        newsLogger.debug('processNews', `Cached image for: ${originalTitle.slice(0, 40)}...`);
       } catch (error: any) {
         // Fallback to SVG geometric pattern if Imagen fails
-        newsLogger.warn('processNews', `Imagen failed for "${englishTitle.slice(0, 40)}...", using fallback: ${error.message}`);
-        const seed = englishTitle.split('').reduce((acc, char) => {
+        newsLogger.warn('processNews', `Imagen failed for "${originalTitle.slice(0, 40)}...", using fallback: ${error.message}`);
+        const seed = originalTitle.split('').reduce((acc, char) => {
           return ((acc << 5) - acc + char.charCodeAt(0)) | 0;
         }, 0);
         imageUrl = getImageForCategory(item.category || 'WORLD', seed);
       }
 
+      // MULTI-LANGUAGE UPDATE: Each language version gets its own unique hash
+      // Use same hash format as existing system (base36, no "news-" prefix)
+      // Format: "2s7yjs", "1111cu" (matches newsCache.ts hashTitle function)
+      const languageSpecificText = `${originalTitle}-${item.language}`;
+      let languageSpecificHash = 0;
+      for (let i = 0; i < languageSpecificText.length; i++) {
+        const char = languageSpecificText.charCodeAt(i);
+        languageSpecificHash = ((languageSpecificHash << 5) - languageSpecificHash) + char;
+        languageSpecificHash = languageSpecificHash & languageSpecificHash;
+      }
+      const newsId = Math.abs(languageSpecificHash).toString(36);
+
       const processedItem: ProcessedNewsItem = {
-        id: `news-${titleHash}`,
-        titleHash,
-        title: englishTitle,
-        summary: englishSummary,
+        id: newsId,
+        titleHash, // titleHash links all language versions (shared across collections)
+        title: originalTitle,
+        summary: originalSummary,
         date: getRelativeDate(item.publishedAt),
         imageUrl,
         category: item.category?.toUpperCase() || 'WORLD',
@@ -618,7 +639,7 @@ Use search results to provide accurate context. Only return the summary.`,
 
       // Save to cache
       await saveNewsToCache(processedItem);
-      newsLogger.debug('processNews', `Saved to cache: ${englishTitle.slice(0, 40)}...`);
+      newsLogger.debug('processNews', `Saved to cache: ${originalTitle.slice(0, 40)}...`);
       return processedItem;
     })
   );

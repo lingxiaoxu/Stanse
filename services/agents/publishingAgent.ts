@@ -43,9 +43,13 @@ const NEWS_COLLECTION = 'news';
 
 /**
  * Generate embedding for a news article using Gemini
+ * MULTI-LANGUAGE UPDATE: text-embedding-004 model supports multi-language natively
  */
-export const generateEmbedding = async (text: string): Promise<number[] | null> => {
-  const opId = publishingLogger.operationStart('generateEmbedding', { textLength: text.length });
+export const generateEmbedding = async (
+  text: string,
+  language: string = 'en'
+): Promise<number[] | null> => {
+  const opId = publishingLogger.operationStart('generateEmbedding', { textLength: text.length, language });
   try {
     const response = await ai.models.embedContent({
       model: 'text-embedding-004',
@@ -55,7 +59,8 @@ export const generateEmbedding = async (text: string): Promise<number[] | null> 
     if (response.embeddings && response.embeddings.length > 0) {
       const embedding = response.embeddings[0].values || null;
       publishingLogger.operationSuccess(opId, 'generateEmbedding', {
-        embeddingDimensions: embedding?.length || 0
+        embeddingDimensions: embedding?.length || 0,
+        language
       });
       return embedding;
     }
@@ -374,11 +379,13 @@ export const personalizeNewsFeed = async (
 
 /**
  * Process news with embeddings (for future similarity search)
+ * MULTI-LANGUAGE UPDATE: Generate embeddings for each language version
  */
 export const processNewsWithEmbeddings = async (
-  news: ProcessedNewsItem[]
+  news: ProcessedNewsItem[],
+  language: string = 'en'
 ): Promise<ProcessedNewsItem[]> => {
-  const opId = publishingLogger.operationStart('processNewsWithEmbeddings', { newsCount: news.length });
+  const opId = publishingLogger.operationStart('processNewsWithEmbeddings', { newsCount: news.length, language });
   let cacheHits = 0;
   let newEmbeddings = 0;
   let failed = 0;
@@ -386,7 +393,7 @@ export const processNewsWithEmbeddings = async (
   // OPTIMIZATION: Process all embeddings in parallel using Promise.all
   const processedNews = await Promise.all(
     news.map(async (item) => {
-      // Check if embedding already exists
+      // Check if embedding already exists (use titleHash + language to cache)
       const existingEmbedding = await getEmbedding(item.titleHash);
 
       if (existingEmbedding) {
@@ -396,9 +403,9 @@ export const processNewsWithEmbeddings = async (
           embedding: existingEmbedding.embedding
         };
       } else {
-        // Generate new embedding
+        // Generate new embedding for this language version
         const text = `${item.title}. ${item.summary}`;
-        const embedding = await generateEmbedding(text);
+        const embedding = await generateEmbedding(text, language);
 
         if (embedding) {
           newEmbeddings++;
@@ -434,10 +441,11 @@ export const processNewsWithEmbeddings = async (
 
 /**
  * Get cached news from database (avoid re-fetching)
+ * MULTI-LANGUAGE UPDATE: Filter by language to get language-specific news
  */
 export const getCachedNews = async (
   maxItems: number = 20,
-  language?: string,
+  language: string = 'en',  // Now required, defaults to 'en'
   maxAgeHours: number = 12  // Only use news less than 12 hours old (more timely)
 ): Promise<ProcessedNewsItem[]> => {
   const opId = publishingLogger.operationStart('getCachedNews', { maxItems, language, maxAgeHours });
@@ -446,24 +454,14 @@ export const getCachedNews = async (
     const cutoffTime = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
     const cutoffTimestamp = Timestamp.fromDate(cutoffTime);
 
-    // Build query with language filter if specified
-    let q;
-    if (language) {
-      q = query(
-        collection(db, NEWS_COLLECTION),
-        where('originalLanguage', '==', language),
-        where('createdAt', '>=', cutoffTimestamp),
-        orderBy('createdAt', 'desc'),
-        limit(maxItems)
-      );
-    } else {
-      q = query(
-        collection(db, NEWS_COLLECTION),
-        where('createdAt', '>=', cutoffTimestamp),
-        orderBy('createdAt', 'desc'),
-        limit(maxItems)
-      );
-    }
+    // MULTI-LANGUAGE UPDATE: Always filter by language (each language has separate news documents)
+    const q = query(
+      collection(db, NEWS_COLLECTION),
+      where('originalLanguage', '==', language),
+      where('createdAt', '>=', cutoffTimestamp),
+      orderBy('createdAt', 'desc'),
+      limit(maxItems)
+    );
 
     const querySnapshot = await getDocs(q);
 

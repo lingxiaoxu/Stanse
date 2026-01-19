@@ -82,15 +82,26 @@ export const getPersonalizedNewsFeed = async (
         // Try to get existing persona embedding
         let personaData = await getPersonaEmbedding(userId);
 
+        // MULTI-LANGUAGE UPDATE: Get language-specific embedding
+        // Map language code to embedding field
+        const embeddingFieldMap: Record<string, keyof typeof personaData> = {
+          'en': 'embeddingEN',
+          'zh': 'embeddingZH',
+          'ja': 'embeddingJA',
+          'fr': 'embeddingFR',
+          'es': 'embeddingES'
+        };
+        const embeddingField = embeddingFieldMap[language] || 'embeddingEN';
+
         // Backfill: If no embedding exists but user has completed onboarding, generate it now
-        if (!personaData || !personaData.embedding) {
+        if (!personaData || !personaData.embeddingEN) {
           orchestratorLogger.info('getPersonalizedNewsFeed', 'No persona embedding found, checking for onboarding data...');
 
           const userProfileData = await getUserProfile(userId);
           if (userProfileData?.hasCompletedOnboarding && userProfileData.onboarding && userProfileData.coordinates) {
-            orchestratorLogger.info('getPersonalizedNewsFeed', 'Backfilling persona embedding for existing user...');
+            orchestratorLogger.info('getPersonalizedNewsFeed', 'Backfilling multi-language persona embeddings for existing user...');
 
-            // Generate embedding (fire-and-forget for first fetch, don't block news)
+            // Generate multi-language embeddings (fire-and-forget for first fetch, don't block news)
             generateAndSavePersonaEmbedding(
               userId,
               userProfileData.onboarding,
@@ -109,10 +120,15 @@ export const getPersonalizedNewsFeed = async (
           }
         }
 
-        // Use embedding if available
-        if (personaData && personaData.embedding && personaData.embedding.length === 768) {
-          userEmbedding = personaData.embedding;
-          orchestratorLogger.info('getPersonalizedNewsFeed', `Using persona embedding for user ${userId}`);
+        // Use language-specific embedding if available
+        if (personaData && personaData[embeddingField]) {
+          const langEmbedding = personaData[embeddingField] as number[] | undefined;
+          if (langEmbedding && langEmbedding.length === 768) {
+            userEmbedding = langEmbedding;
+            orchestratorLogger.info('getPersonalizedNewsFeed', `Using ${language.toUpperCase()} persona embedding for user ${userId}`);
+          } else {
+            orchestratorLogger.info('getPersonalizedNewsFeed', `No valid ${language.toUpperCase()} embedding, falling back to category-only scoring`);
+          }
         } else {
           orchestratorLogger.info('getPersonalizedNewsFeed', 'No valid persona embedding available, using category-only scoring');
         }
@@ -145,8 +161,8 @@ export const getPersonalizedNewsFeed = async (
 
       if (fetchResult.success && fetchResult.data) {
         orchestratorLogger.info('getPersonalizedNewsFeed', `Fetched ${fetchResult.data.length} news items`);
-        // Process with embeddings for future similarity search
-        newsItems = await processNewsWithEmbeddings(fetchResult.data);
+        // Process with embeddings for future similarity search (language-specific)
+        newsItems = await processNewsWithEmbeddings(fetchResult.data, language);
       } else {
         orchestratorLogger.warn('getPersonalizedNewsFeed', 'News fetch failed, using cache only');
       }
