@@ -334,19 +334,36 @@ export const generatePrismSummary = async (
     // Clean up any leading symbols that AI might add despite instructions
     const cleanText = (text: string): string => {
       if (!text) return text;
-      // Remove leading dashes, bullets, numbers, and whitespace
-      return text.replace(/^[\s\-•*0-9.)\]]+/, '').trim();
+      // Remove all types of leading symbols:
+      // - Whitespace
+      // - All dash types: - – — ― ‐ ‑ ‒ (hyphen, en-dash, em-dash, etc.)
+      // - Bullets: • ● ○ ◦ ∙ ⦿
+      // - Asterisks: *
+      // - Numbers and list markers: 1. 2) a. etc.
+      return text.replace(/^[\s\-–—―‐‑‒•●○◦∙⦿*0-9a-z.)\]]+/gi, '').trim();
     };
 
     const cleanedSupport = cleanText(result.support || '');
     const cleanedOppose = cleanText(result.oppose || '');
     const cleanedNeutral = cleanText(result.neutral || '');
 
+    // Log if text was cleaned (had leading symbols)
+    if (result.support !== cleanedSupport) {
+      senseLogger.info('generatePrismSummary', `Cleaned SUPPORT: "${result.support.slice(0, 20)}..." → "${cleanedSupport.slice(0, 20)}..."`);
+    }
+    if (result.oppose !== cleanedOppose) {
+      senseLogger.info('generatePrismSummary', `Cleaned OPPOSE: "${result.oppose.slice(0, 20)}..." → "${cleanedOppose.slice(0, 20)}..."`);
+    }
+    if (result.neutral !== cleanedNeutral) {
+      senseLogger.info('generatePrismSummary', `Cleaned NEUTRAL: "${result.neutral.slice(0, 20)}..." → "${cleanedNeutral.slice(0, 20)}..."`);
+    }
+
     senseLogger.operationSuccess(opId, 'generatePrismSummary', {
       topic,
       hasSupport: !!cleanedSupport,
       hasOppose: !!cleanedOppose,
-      hasNeutral: !!cleanedNeutral
+      hasNeutral: !!cleanedNeutral,
+      cleanedAny: (result.support !== cleanedSupport) || (result.oppose !== cleanedOppose) || (result.neutral !== cleanedNeutral)
     });
 
     return {
