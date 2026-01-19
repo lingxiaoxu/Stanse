@@ -182,28 +182,33 @@ async function searchBreakingNews(): Promise<BreakingNewsResult[]> {
         const contentLower = originalContent.toLowerCase();
 
         // TIER 1: Explicit breaking indicators (highest priority)
+        // TIER 1: Explicit breaking labels (must appear in TITLE, very strict)
         const explicitBreaking = [
-          'breaking', 'urgent', 'alert', 'just in', 'developing story'
+          'breaking:', 'breaking news:', 'urgent:', 'just in:'
         ];
 
-        // TIER 2: Major events that are always newsworthy (very strict)
-        const majorEvents = [
-          'war declared', 'military strike', 'attack on',
-          'president dies', 'assassination',
-          'market crash', 'stock market plunge',
-          'earthquake', 'hurricane', 'tsunami',
-          'nuclear', 'explosion', 'terror attack',
-          'mass shooting', 'school shooting'
+        // TIER 2: Critical events that are always breaking news (very narrow scope)
+        const criticalEvents = [
+          'war declared', 'declares war',
+          'military strike', 'missile strike', 'attack on',
+          'president dies', 'president dead', 'assassination',
+          'market crash', 'stock market crash', 'trading halted',
+          'major earthquake', 'magnitude 7', 'magnitude 8',
+          'nuclear', 'reactor', 'meltdown',
+          'terror attack', 'terrorist attack',
+          'mass shooting', 'active shooter'
         ];
 
-        const text = titleLower + ' ' + contentLower;
+        const titleText = titleLower;
+        const fullText = titleLower + ' ' + contentLower;
 
-        // Must have EITHER explicit breaking indicator OR major event
-        const hasExplicitBreaking = explicitBreaking.some(k => text.includes(k));
-        const hasMajorEvent = majorEvents.some(k => text.includes(k));
+        // Stricter logic: Require explicit breaking label in TITLE, OR critical event
+        const hasExplicitInTitle = explicitBreaking.some(k => titleText.includes(k));
+        const hasCriticalEvent = criticalEvents.some(k => fullText.includes(k));
 
-        if (!hasExplicitBreaking && !hasMajorEvent) {
-          console.log(`⏭️  Skipping: "${title}" - not breaking news (lacks explicit indicator or major event)`);
+        // Must meet BOTH conditions OR have critical event
+        if (!hasCriticalEvent && !hasExplicitInTitle) {
+          console.log(`⏭️  Skipping: "${title}" - not breaking (titleBreaking=${hasExplicitInTitle}, critical=${hasCriticalEvent})`);
           continue;
         }
 
