@@ -500,15 +500,27 @@ Only return the summary, nothing else.`,
 
           const groundedSummary = groundingResponse.text?.trim();
 
-          if (groundedSummary && groundedSummary.length > 20) {
+          // Check if grounding actually worked (detect error messages)
+          const isGroundingError = groundedSummary && (
+            groundedSummary.includes('cannot access') ||
+            groundedSummary.includes('I am sorry') ||
+            groundedSummary.includes('I do not have') ||
+            groundedSummary.includes('I cannot') ||
+            groundedSummary.length < 20
+          );
+
+          if (groundedSummary && !isGroundingError) {
             cleanedSummary = groundedSummary;
             newsLogger.debug('processNews', `Grounded summary: ${cleanedSummary.slice(0, 50)}...`);
           } else {
-            // Grounding returned empty - fallback to title-based AI summary
-            newsLogger.warn('processNews', 'Grounding empty, using title-based summary');
+            // Grounding failed - fallback to title-based AI summary
+            if (isGroundingError) {
+              newsLogger.warn('processNews', `Grounding failed: ${groundedSummary?.slice(0, 50)}...`);
+            }
+            newsLogger.info('processNews', 'Using title-based AI summary instead');
             const titleResponse = await ai.models.generateContent({
               model: 'gemini-2.5-flash',
-              contents: `Generate a concise 2-3 sentence news summary (max 200 characters) for this headline: "${item.title}". Only return the summary.`,
+              contents: `Generate a concise 2-3 sentence news summary (max 200 characters) for this headline: "${item.title}". Provide context about what happened and why it matters. Only return the summary.`,
             });
             cleanedSummary = titleResponse.text?.trim() || item.title;
           }
