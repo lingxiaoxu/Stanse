@@ -479,6 +479,44 @@ export const debugViewCampaigns = async (): Promise<void> => {
 };
 
 /**
+ * Clear all campaigns from Firebase (DANGEROUS - use with caution)
+ */
+export const clearAllCampaigns = async (): Promise<void> => {
+  const confirmation = confirm('⚠️ WARNING: This will delete ALL campaigns from Firebase. Are you sure?');
+  if (!confirmation) {
+    console.log('❌ Cancelled by user');
+    return;
+  }
+
+  const { getAllCampaigns } = await import('../services/activeFrontsService');
+  const { db } = await import('../services/firebase');
+  const { doc, deleteDoc } = await import('firebase/firestore');
+
+  try {
+    const campaigns = await getAllCampaigns();
+    console.log(`🗑️ Deleting ${campaigns.length} campaigns...`);
+
+    let deletedCount = 0;
+    for (const campaign of campaigns) {
+      try {
+        await deleteDoc(doc(db, 'union_ACTIVE_FRONTS', campaign.id));
+        deletedCount++;
+
+        if (deletedCount % 20 === 0) {
+          console.log(`Progress: ${deletedCount}/${campaigns.length}`);
+        }
+      } catch (error) {
+        console.error(`Failed to delete ${campaign.id}:`, error);
+      }
+    }
+
+    console.log(`✅ Deleted ${deletedCount} campaigns`);
+  } catch (error) {
+    console.error('❌ Error clearing campaigns:', error);
+  }
+};
+
+/**
  * Add offline activity to a campaign (all language versions)
  */
 export const addOfflineActivity = async (
@@ -557,6 +595,7 @@ if (typeof window !== 'undefined') {
   (window as any).generateCompanyCampaigns = generateCompanyCampaigns;
   (window as any).generateExampleCampaigns = generateExampleCampaigns;
   (window as any).debugViewCampaigns = debugViewCampaigns;
+  (window as any).clearAllCampaigns = clearAllCampaigns;
   (window as any).addOfflineActivity = addOfflineActivity;
   console.log('✅ Active Fronts Multi-Language utilities loaded!');
   console.log('Usage:');
@@ -565,5 +604,6 @@ if (typeof window !== 'undefined') {
   console.log('  window.populateActiveFronts("example", "EN")   - Generate 8 example campaigns (English only)');
   console.log('  window.populateActiveFronts("all", "ZH")       - Generate 188 campaigns (Chinese only)');
   console.log('  window.debugViewCampaigns()                    - View all campaigns in Firebase (table format)');
+  console.log('  window.clearAllCampaigns()                     - ⚠️ Delete ALL campaigns (with confirmation)');
   console.log('  window.addOfflineActivity(baseId, data)        - Add offline activity to all language versions');
 }
