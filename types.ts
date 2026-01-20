@@ -65,15 +65,89 @@ export interface NewsEvent {
   };
 }
 
-export interface Campaign {
+// Offline Activity Information for Campaigns
+export interface OfflineActivity {
+  hasProposal: boolean;
+  events?: OfflineEvent[];
+  isLegallyCompliant?: boolean;
+  legalCounsel?: LawyerInfo;
+  policeInfo?: PoliceInfo;
+}
+
+export interface OfflineEvent {
   id: string;
-  title: string;
-  target: string; // The brand or entity
+  date: string; // ISO date string
+  city: string;
+  state: string;
+  country: string;
+  address?: string;
+  attendees?: number;
+}
+
+export interface LawyerInfo {
+  name: string;
+  firm: string;
+  city: string;
+  state: string;
+  country: string;
+  phone: string;
+}
+
+export interface PoliceInfo {
+  department: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  phone: string;
+  emergencyContact?: string;
+}
+
+// User participation in a campaign
+export interface CampaignUserAction {
+  userId: string;
+  actionType: 'BOYCOTT' | 'BUYCOTT';
+  amountCents: number; // Amount in cents (USD)
+  timestamp: string; // ISO date string
+}
+
+// Campaign Metadata
+export interface CampaignMetadata {
+  createdAt: string; // ISO date string
+  updatedAt: string; // ISO date string
+  startDate: string; // ISO date string
+  endDate?: string; // Optional end date
+  endCondition?: string; // Optional end condition (e.g., "Goal reached", "Time limit")
+  totalBoycottAmount: number; // Total boycott amount in cents
+  totalBuycottAmount: number; // Total buycott amount in cents
+  uniqueParticipants: number; // Number of unique users who participated
+  politicalStatement?: string; // Political manifesto/statement
+  goals?: string[]; // List of goals (e.g., ["1. Increase transparency", "2. Fair wages"])
+}
+
+export interface Campaign {
+  id: string;                        // Format: company_aapl_oppose_EN (includes language suffix)
+  language: Language;                // EN, ZH, JA, FR, ES
+  baseId: string;                    // e.g., "company_aapl_oppose" (without language suffix)
+  title: string;                     // Localized title
+  target: string;                    // Company name or sector name (localized)
+  targetType: 'COMPANY' | 'SECTOR';  // Type of target
   type: 'BOYCOTT' | 'BUYCOTT' | 'PETITION';
-  participants: number;
-  goal: number;
-  description: string;
-  daysActive: number;
+  participants: number;              // Shared across all language versions
+  goal: number;                      // Shared across all language versions
+  description: string;               // Localized description
+  daysActive: number;                // Shared across all language versions
+
+  // Metadata (goals and politicalStatement are localized)
+  metadata?: CampaignMetadata;
+  offlineActivity?: OfflineActivity; // Shared across all language versions
+
+  // For sector campaigns: list of companies in the sector
+  companiesInSector?: string[];      // Array of company names (localized)
+
+  // For company campaigns: ticker symbol (language-agnostic)
+  ticker?: string;
+  sector?: string;                   // Sector name (localized)
 }
 
 export interface StockTicker {
