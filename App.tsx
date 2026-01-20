@@ -29,6 +29,7 @@ import { checkNotificationPermission } from './services/notificationService';
 import { testCollectionLinking, cleanAllNews } from './utils/testCollectionLinking';
 import { testLanguageSwitch, compareLanguages } from './utils/testLanguageSwitch';
 import { checkRSSStatus, testRSSNow } from './utils/monitorRSS';
+import './utils/populateActiveFronts'; // Load Active Fronts utilities for browser console
 
 // Initial mock state for user profile (used as fallback)
 const INITIAL_PROFILE: PoliticalCoordinates = {

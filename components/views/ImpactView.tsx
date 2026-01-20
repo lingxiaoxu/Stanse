@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Zap, ArrowUpRight, ShieldCheck, Target, Copy, Activity, Swords, Shield } from 'lucide-react';
+import { Zap, ArrowUpRight, ShieldCheck, Target, Copy, Activity, Swords, Shield, Info } from 'lucide-react';
 import { PixelCard } from '../ui/PixelCard';
 import { Campaign } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -9,8 +9,14 @@ import * as PolisAPI from '../../services/polisApi';
 import { LogActionModal } from '../modals/LogActionModal';
 import { DuelModal } from '../modals/DuelModal';
 import { WalletModal } from '../modals/WalletModal';
-import { recordUserAction } from '../../services/userActionService';
+import { CampaignDetailModal } from '../modals/CampaignDetailModal';
+import { ProposeOfflineActivityModal } from '../modals/ProposeOfflineActivityModal';
+import { AllCampaignsView } from './AllCampaignsView';
+import { recordUserAction as recordPolisAction } from '../../services/userActionService';
 import { getUserCreditsBalance, addCredits, withdrawCredits } from '../../services/duelFirebaseService';
+import { getPersonalizedCampaigns } from '../../services/campaignPersonalizationService';
+import { getCampaignsByLanguage, recordUserAction as recordCampaignAction } from '../../services/activeFrontsService';
+import { submitOfflineActivityProposal } from '../../services/offlineActivityProposalService';
 
 // Helper function to get the API base URL
 const getApiBaseUrl = () => {
@@ -19,29 +25,9 @@ const getApiBaseUrl = () => {
     : 'https://polis-protocol-yfcontxnkq-uc.a.run.app/api/v1';
 };
 
-// Mock Campaigns (fallback if backend unavailable)
-const MOCK_CAMPAIGNS: Campaign[] = [
-  {
-    id: 'c1',
-    title: 'Fair Wages Initiative',
-    target: 'MEGA CORP',
-    type: 'BOYCOTT',
-    participants: 12405,
-    goal: 15000,
-    description: 'Demanding transparency in overseas supply chains.',
-    daysActive: 14
-  },
-  {
-    id: 'c2',
-    title: 'Green Energy Support',
-    target: 'SUNRISE POWER',
-    type: 'BUYCOTT',
-    participants: 8320,
-    goal: 10000,
-    description: 'Shifting collective purchasing power to renewable providers.',
-    daysActive: 30
-  }
-];
+// No mock campaigns - all campaigns loaded from Firebase
+// Use window.populateActiveFronts('example') or window.populateActiveFronts() to populate
+const MOCK_CAMPAIGNS: Campaign[] = [];
 
 export const UnionView: React.FC = () => {
   const [liveCount, setLiveCount] = useState<number | null>(null);
@@ -53,12 +39,15 @@ export const UnionView: React.FC = () => {
   const [tps, setTps] = useState(0);
   const [showAllCampaigns, setShowAllCampaigns] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [selectedCampaignForDetail, setSelectedCampaignForDetail] = useState<Campaign | null>(null);
+  const [selectedCampaignForProposal, setSelectedCampaignForProposal] = useState<Campaign | null>(null);
   const [showDuelModal, setShowDuelModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [walletInitialTab, setWalletInitialTab] = useState<'DEPOSIT' | 'WITHDRAW'>('DEPOSIT');
   const [userCredits, setUserCredits] = useState<number | null>(null); // null = loading
   const [isCollectiveStatsExpanded, setIsCollectiveStatsExpanded] = useState(true); // Default expanded
-  const { t } = useLanguage();
+  const [loadingPersonalizedCampaigns, setLoadingPersonalizedCampaigns] = useState(false);
+  const { t, language } = useLanguage();
   const { user, demoMode, userProfile } = useAuth();
 
   // Fetch user credits from server
@@ -224,6 +213,64 @@ export const UnionView: React.FC = () => {
     return () => clearInterval(interval);
   }, [user, demoMode]);
 
+  // Fetch campaigns from Firebase (personalized if user has coordinates, otherwise all campaigns)
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      setLoadingPersonalizedCampaigns(true);
+      try {
+        // Always load campaigns for current language
+        console.log(`[Union View] 🔄 Loading campaigns for language: ${language}...`);
+        const allCampaigns = await getCampaignsByLanguage(language);
+        console.log(`[Union View] 📊 Retrieved ${allCampaigns.length} campaigns for ${language}`, allCampaigns);
+
+        // If we have campaigns, try to personalize them
+        if (allCampaigns.length > 0) {
+          if (userProfile?.coordinates) {
+            console.log('[Union View] 🎯 Attempting to personalize campaigns for:', userProfile.coordinates.coreStanceType);
+            const personalizedCampaigns = await getPersonalizedCampaigns(userProfile.coordinates, language);
+            console.log(`[Union View] 📌 Personalization returned ${personalizedCampaigns.length} campaigns`, personalizedCampaigns);
+
+            if (personalizedCampaigns.length >= 4) {
+              console.log(`[Union View] ✅ Using 4 personalized campaigns`);
+              setCampaigns(personalizedCampaigns.slice(0, 4));
+            } else if (personalizedCampaigns.length > 0) {
+              // Got some personalized campaigns, but not enough - fill the rest alphabetically
+              console.log(`[Union View] ⚠️ Only ${personalizedCampaigns.length} personalized campaigns, filling rest alphabetically`);
+              const personalizedIds = new Set(personalizedCampaigns.map(c => c.id));
+              const remainingCampaigns = allCampaigns
+                .filter(c => !personalizedIds.has(c.id))
+                .sort((a, b) => a.target.localeCompare(b.target));
+              const neededCount = 4 - personalizedCampaigns.length;
+              setCampaigns([...personalizedCampaigns, ...remainingCampaigns.slice(0, neededCount)]);
+            } else {
+              // Personalization failed, show first 4 campaigns alphabetically
+              console.log('[Union View] ⚠️ Personalization returned 0 campaigns, showing first 4 alphabetically');
+              const sortedCampaigns = [...allCampaigns].sort((a, b) => a.target.localeCompare(b.target));
+              setCampaigns(sortedCampaigns.slice(0, 4));
+            }
+          } else {
+            // No user coordinates, show first 4 campaigns alphabetically
+            console.log('[Union View] ℹ️ No user coordinates, showing first 4 campaigns alphabetically');
+            const sortedCampaigns = [...allCampaigns].sort((a, b) => a.target.localeCompare(b.target));
+            setCampaigns(sortedCampaigns.slice(0, 4));
+          }
+        } else {
+          console.log('[Union View] ❌ No campaigns found in Firebase (empty collection)');
+        }
+      } catch (error) {
+        console.error('[Union View] ❌ Error fetching campaigns:', error);
+      } finally {
+        setLoadingPersonalizedCampaigns(false);
+      }
+    };
+
+    fetchCampaigns();
+
+    // Also refresh campaigns every 30 seconds
+    const interval = setInterval(fetchCampaigns, 30000);
+    return () => clearInterval(interval);
+  }, [userProfile, language]); // Re-fetch when user profile or language changes
+
   // Fetch blockchain metrics from Polis Protocol backend
   useEffect(() => {
     const fetchBlockchainStats = async () => {
@@ -282,51 +329,108 @@ export const UnionView: React.FC = () => {
       throw new Error('Please sign in to submit actions');
     }
 
-    // Use the campaign's target as the target entity
-    const target = selectedCampaign?.target || 'Unknown';
+    if (!selectedCampaign) {
+      throw new Error('No campaign selected');
+    }
 
-    // Convert action type to backend format (capitalize first letter only)
-    const backendActionType = actionType === 'BOYCOTT' ? 'Boycott' : 'Buycott';
+    try {
+      // Record action to Firebase campaign system (always)
+      await recordCampaignAction(selectedCampaign.id, user.uid, actionType, amountCents);
+      console.log(`[Union View] ✅ Action recorded to Firebase: ${actionType} ${amountCents}¢ on ${selectedCampaign.id}`);
 
-    // Record action to backend
-    await recordUserAction(user.uid, backendActionType as 'Boycott' | 'Buycott' | 'Vote', target, amountCents);
-
-    // Refresh campaign data after submission
-    setTimeout(async () => {
+      // Also record to Polis Protocol backend (production requirement)
+      const backendActionType = actionType === 'BOYCOTT' ? 'Boycott' : 'Buycott';
       try {
-        const backendCampaigns = await PolisAPI.fetchCampaigns();
-        if (backendCampaigns && backendCampaigns.length > 0) {
-          setCampaigns(backendCampaigns.map((c: any) => ({
-            id: c.id,
-            title: c.title,
-            target: c.target,
-            type: c.type || 'PETITION',
-            participants: c.participants,
-            goal: c.goal,
-            description: c.description,
-            daysActive: c.days_active || c.daysActive || 0
-          })));
-        }
-
-        // Refresh global stats
-        const globalStats = await PolisAPI.fetchGlobalStats();
-        if (globalStats) {
-          setLiveCount(globalStats.active_allies_online);
-          setCollectiveStats({
-            strength: globalStats.total_union_strength,
-            divested: globalStats.capital_diverted_usd * 100
-          });
-        }
-      } catch (error) {
-        console.error('Error refreshing data after action submission:', error);
+        await recordPolisAction(user.uid, backendActionType as 'Boycott' | 'Buycott' | 'Vote', selectedCampaign.target, amountCents);
+        console.log(`[Union View] ✅ Action recorded to Polis backend`);
+      } catch (polisError) {
+        console.log('[Union View] ⚠️ Polis backend not available (dev mode), action saved to Firebase only');
       }
-    }, 2000);
+
+      // Refresh campaigns from Firebase and Polis backend
+      setTimeout(async () => {
+        try {
+          // Refresh from Firebase for current language
+          const allCampaigns = await getCampaignsByLanguage(language);
+          if (allCampaigns.length > 0 && userProfile?.coordinates) {
+            const personalizedCampaigns = await getPersonalizedCampaigns(userProfile.coordinates, language);
+            if (personalizedCampaigns.length > 0) {
+              setCampaigns(personalizedCampaigns);
+            } else {
+              const sortedCampaigns = [...allCampaigns].sort((a, b) => a.target.localeCompare(b.target));
+              setCampaigns(sortedCampaigns.slice(0, 4));
+            }
+          }
+
+          // Try to refresh from Polis backend (if available)
+          try {
+            const backendCampaigns = await PolisAPI.fetchCampaigns();
+            if (backendCampaigns && backendCampaigns.length > 0) {
+              console.log('[Union View] Refreshed campaigns from Polis backend');
+            }
+
+            // Refresh global stats
+            const globalStats = await PolisAPI.fetchGlobalStats();
+            if (globalStats) {
+              setLiveCount(globalStats.active_allies_online);
+              setCollectiveStats({
+                strength: globalStats.total_union_strength,
+                divested: globalStats.capital_diverted_usd * 100
+              });
+            }
+          } catch (backendError) {
+            console.log('[Union View] Polis backend refresh skipped (dev mode)');
+          }
+        } catch (error) {
+          console.error('[Union View] Error refreshing data after action submission:', error);
+        }
+      }, 1000);
+    } catch (error) {
+      console.error('[Union View] Error submitting action:', error);
+      throw error;
+    }
+  };
+
+  // Handle offline activity proposal submission
+  const handleProposeActivity = async (proposalData: {
+    date: string;
+    city: string;
+    state: string;
+    country: string;
+    address?: string;
+    expectedAttendees?: number;
+    description: string;
+  }) => {
+    if (!user?.uid) {
+      throw new Error('Please sign in to propose activities');
+    }
+
+    if (!selectedCampaignForProposal) {
+      throw new Error('No campaign selected');
+    }
+
+    try {
+      await submitOfflineActivityProposal(
+        user.uid,
+        selectedCampaignForProposal.baseId,
+        proposalData
+      );
+      console.log(`[Union View] ✅ Offline activity proposal submitted for ${selectedCampaignForProposal.baseId}`);
+    } catch (error) {
+      console.error('[Union View] Error submitting proposal:', error);
+      throw error;
+    }
   };
 
   // Debug: log demoMode changes
   useEffect(() => {
     console.log('🔍 ImpactView - demoMode:', demoMode);
   }, [demoMode]);
+
+  // If showing all campaigns view, render that instead (AFTER all hooks)
+  if (showAllCampaigns) {
+    return <AllCampaignsView onBack={() => setShowAllCampaigns(false)} />;
+  }
 
   return (
     <div className="max-w-lg promax:max-w-xl mx-auto w-full space-y-6 pb-20">
@@ -420,8 +524,8 @@ export const UnionView: React.FC = () => {
                 {t('duel', 'preview')}
               </button>
 
-              {/* Description */}
-              <p className="font-mono text-[11px] text-gray-700 leading-tight">
+              {/* Description - Match style with Active Allies description */}
+              <p className="font-mono text-[10px] text-gray-500 leading-relaxed">
                 {t('duel', 'duel_description')}
               </p>
             </div>
@@ -432,19 +536,21 @@ export const UnionView: React.FC = () => {
             </div>
           </div>
 
-          {/* Feature Tags - 3 boxes */}
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="border-2 border-black p-1.5 text-center bg-white">
-              <Zap size={14} className="mx-auto mb-0.5" strokeWidth={2} />
-              <div className="font-mono text-[9px] font-bold uppercase">{t('duel', 'fast')}</div>
+          {/* Feature Tags - Redesigned to match overall UI */}
+          <div className="flex gap-2 mb-3 text-[10px] font-mono text-gray-500">
+            <div className="flex items-center gap-1">
+              <Zap size={12} strokeWidth={2} />
+              <span className="font-bold uppercase">{t('duel', 'fast')}</span>
             </div>
-            <div className="border-2 border-black p-1.5 text-center bg-white">
-              <Target size={14} className="mx-auto mb-0.5" strokeWidth={2} />
-              <div className="font-mono text-[9px] font-bold uppercase">{t('duel', 'global')}</div>
+            <span>•</span>
+            <div className="flex items-center gap-1">
+              <Target size={12} strokeWidth={2} />
+              <span className="font-bold uppercase">{t('duel', 'global')}</span>
             </div>
-            <div className="border-2 border-black p-1.5 text-center bg-white">
-              <Shield size={14} className="mx-auto mb-0.5" strokeWidth={2} />
-              <div className="font-mono text-[9px] font-bold uppercase">{t('duel', 'safe')}</div>
+            <span>•</span>
+            <div className="flex items-center gap-1">
+              <Shield size={12} strokeWidth={2} />
+              <span className="font-bold uppercase">{t('duel', 'safe')}</span>
             </div>
           </div>
 
@@ -487,14 +593,14 @@ export const UnionView: React.FC = () => {
         <div className="flex justify-between items-end px-1">
             <h3 className="font-pixel text-2xl">{t('union', 'active_fronts')}</h3>
             <button
-              onClick={() => setShowAllCampaigns(!showAllCampaigns)}
+              onClick={() => setShowAllCampaigns(true)}
               className="font-mono text-xs underline cursor-pointer hover:text-gray-600 transition-colors"
             >
-              {showAllCampaigns ? 'SHOW LESS' : t('union', 'view_all')}
+              {t('union', 'view_all')}
             </button>
         </div>
 
-        {(showAllCampaigns ? campaigns : campaigns.slice(0, 2)).map((campaign: Campaign) => (
+        {campaigns.slice(0, 4).map((campaign: Campaign) => (
           <PixelCard key={campaign.id} className="group cursor-pointer hover:-translate-y-1 transition-transform">
             <div className="flex justify-between items-start">
                 <div className="flex gap-3">
@@ -517,7 +623,7 @@ export const UnionView: React.FC = () => {
                 </div>
             </div>
 
-            <p className="mt-4 font-mono text-sm leading-relaxed">
+            <p className="mt-4 font-mono text-[10px] text-gray-500 leading-relaxed">
                 {campaign.description}
             </p>
 
@@ -535,13 +641,23 @@ export const UnionView: React.FC = () => {
                 </div>
             </div>
             
-            <div className="mt-4 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="mt-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedCampaignForDetail(campaign);
+                  }}
+                  className="flex-1 px-4 py-2 border-2 border-black bg-white hover:bg-gray-100 transition-colors font-mono text-xs font-bold uppercase"
+                >
+                    <Info size={14} className="inline mr-2"/>
+                    DETAILS
+                </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleAmplify(campaign.id);
                   }}
-                  className="px-4 py-2 border-2 border-black bg-white hover:bg-black hover:text-white transition-colors font-mono text-xs font-bold uppercase"
+                  className="flex-1 px-4 py-2 border-2 border-black bg-black text-white hover:bg-gray-800 transition-colors font-mono text-xs font-bold uppercase"
                 >
                     AMPLIFY IMPACT <ArrowUpRight size={14} className="ml-2 inline"/>
                 </button>
@@ -615,6 +731,31 @@ export const UnionView: React.FC = () => {
           </div>
         </div>
       </PixelCard>
+
+      {/* Campaign Detail Modal */}
+      {selectedCampaignForDetail && (
+        <CampaignDetailModal
+          campaign={selectedCampaignForDetail}
+          onClose={() => setSelectedCampaignForDetail(null)}
+          onAmplify={() => {
+            setSelectedCampaign(selectedCampaignForDetail);
+            setSelectedCampaignForDetail(null);
+          }}
+          onProposeActivity={() => {
+            setSelectedCampaignForProposal(selectedCampaignForDetail);
+            setSelectedCampaignForDetail(null);
+          }}
+        />
+      )}
+
+      {/* Propose Offline Activity Modal */}
+      {selectedCampaignForProposal && (
+        <ProposeOfflineActivityModal
+          campaign={selectedCampaignForProposal}
+          onClose={() => setSelectedCampaignForProposal(null)}
+          onSubmit={handleProposeActivity}
+        />
+      )}
 
       {/* LOG ACTION Modal */}
       {selectedCampaign && (
