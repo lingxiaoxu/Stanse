@@ -90,6 +90,132 @@ const translateToEnglish = async (text: string, sourceLanguage: string): Promise
 };
 
 /**
+ * Get appropriate max summary length based on language
+ * CJK languages (Chinese, Japanese) are more compact, so allow more characters
+ */
+const getMaxSummaryLength = (language: string): number => {
+  switch (language) {
+    case 'zh': // Chinese
+    case 'ja': // Japanese
+      return 300; // CJK characters are more information-dense
+    case 'en': // English
+    case 'fr': // French
+    case 'es': // Spanish
+    default:
+      return 250;
+  }
+};
+
+/**
+ * Clean AI-generated summary by removing chain-of-thought artifacts
+ * Extracts the final summary from responses that include thinking process
+ * Supports multilingual markers (EN, ZH, JA, FR, ES)
+ *
+ * Smart cleaning: Only removes artifacts if chain-of-thought is detected.
+ * Otherwise, just enforces max length.
+ */
+const cleanAISummary = (rawSummary: string, language: string = 'en'): string => {
+  const maxLength = getMaxSummaryLength(language);
+  if (!rawSummary) return '';
+
+  let cleaned = rawSummary.trim();
+
+  // Detect if this response contains chain-of-thought artifacts
+  const hasChainOfThought = (
+    // Draft markers
+    /(Summary Draft|摘要草稿|草稿|要約ドラフト|ドラフト|Résumé brouillon|Brouillon|Borrador de resumen|Borrador)\s*\d+[:：]/.test(cleaned) ||
+    // Character count mentions
+    /(Character count|字符数|文字数|Nombre de caractères|Número de caracteres)[:：]/.test(cleaned) ||
+    // Meta-commentary
+    /^(This is too long|Still too long|Let's|这太长了|还是太长|太长了|これは長すぎます|まだ長すぎます)/m.test(cleaned) ||
+    // Thinking markers
+    /^(What happened|Who is involved|Why it matters|发生了什么|谁参与了|为什么重要|何が起こったか|誰が関与しているか|なぜ重要か)[:：]/m.test(cleaned)
+  );
+
+  // If no chain-of-thought detected and length is reasonable, just enforce max length
+  if (!hasChainOfThought) {
+    if (cleaned.length > maxLength) {
+      cleaned = cleaned.slice(0, maxLength - 3).trim() + '...';
+    }
+    return cleaned;
+  }
+
+  // Pattern 1: Remove "Summary Draft X:" / "摘要草稿X：" / "要約ドラフトX：" sections
+  // English: "Summary Draft 1:", "Summary Draft 2:", etc.
+  // Chinese: "摘要草稿1：", "草稿1：", etc.
+  // Japanese: "要約ドラフト1：", "ドラフト1：", etc.
+  // French: "Résumé brouillon 1:", "Brouillon 1:", etc.
+  // Spanish: "Borrador de resumen 1:", "Borrador 1:", etc.
+  const draftMatches = cleaned.match(/(Summary Draft|摘要草稿|草稿|要約ドラフト|ドラフト|Résumé brouillon|Brouillon|Borrador de resumen|Borrador)\s*\d+[:：].*?(?=(Summary Draft|摘要草稿|草稿|要約ドラフト|ドラフト|Résumé brouillon|Brouillon|Borrador de resumen|Borrador)\s*\d+[:：]|$)/gs);
+  if (draftMatches && draftMatches.length > 0) {
+    // Get the last draft
+    const lastDraft = draftMatches[draftMatches.length - 1];
+    // Extract text after draft marker
+    const summaryText = lastDraft.replace(/(Summary Draft|摘要草稿|草稿|要約ドラフト|ドラフト|Résumé brouillon|Brouillon|Borrador de resumen|Borrador)\s*\d+[:：]\s*/i, '').trim();
+    // Remove character count annotations
+    cleaned = summaryText.replace(/(Character count|字符数|文字数|Nombre de caractères|Número de caracteres)[:：].*$/i, '').trim();
+  }
+
+  // Pattern 2: Remove "Character count: X" / "字符数：X" / "文字数：X" lines
+  cleaned = cleaned.replace(/(Character count|字符数|文字数|Nombre de caractères|Número de caracteres)[:：]\s*\d+\.?.*$/gim, '').trim();
+
+  // Pattern 3: Remove meta-commentary
+  // English: "This is too long", "Still too long", etc.
+  // Chinese: "这太长了", "还是太长", "让我们", "需要", "几乎完成", "专注于"
+  // Japanese: "これは長すぎます", "まだ長すぎます", etc.
+  cleaned = cleaned.replace(/^(This is|Still|Let's|Need to|Almost there|Focus on|这太长了|还是太长|太长了|让我们|需要|几乎|专注于|これは長すぎます|まだ長すぎます|もっと簡潔に|Ceci est|Encore|C'est trop long|Esto es|Todavía|Demasiado largo).*$/gim, '').trim();
+
+  // Pattern 4: Remove thinking process markers
+  // English: "What happened:", "Who is involved:", "Why it matters:"
+  // Chinese: "发生了什么：", "谁参与了：", "为什么重要："
+  // Japanese: "何が起こったか：", "誰が関与しているか：", "なぜ重要か："
+  cleaned = cleaned.replace(/^(What happened|Who is involved|Why it matters|发生了什么|谁参与了|为什么重要|何が起こったか|誰が関与しているか|なぜ重要か|Ce qui s'est passé|Qui est impliqué|Pourquoi c'est important|Qué pasó|Quién está involucrado|Por qué importa)[:：].*$/gim, '').trim();
+
+  // Pattern 5: If there are multiple paragraphs, take the last substantial one
+  const paragraphs = cleaned.split('\n\n').filter(p => p.trim().length > 20);
+  if (paragraphs.length > 1) {
+    cleaned = paragraphs[paragraphs.length - 1].trim();
+  }
+
+  // Pattern 6: Remove leading meta-phrases
+  // English: "The article discusses...", "This article..."
+  // Chinese: "这篇文章讨论了...", "本文..."
+  // Japanese: "この記事は...について議論しています"
+  const metaPrefixes = [
+    'The article discusses',
+    'This article',
+    '这篇文章讨论了',
+    '本文',
+    'この記事は',
+    'この記事では',
+    'Cet article',
+    'Este artículo'
+  ];
+
+  for (const prefix of metaPrefixes) {
+    if (cleaned.startsWith(prefix)) {
+      // For sentences split by '. ' or '。' or '．'
+      const sentences = cleaned.split(/[.。．]\s*/);
+      if (sentences.length > 2) {
+        // Skip the first sentence and take the rest
+        cleaned = sentences.slice(1).join('。');
+      }
+      break;
+    }
+  }
+
+  // Final cleanup: Remove extra whitespace and newlines
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+  // Enforce max length (with ellipsis if truncated)
+  if (cleaned.length > maxLength) {
+    cleaned = cleaned.slice(0, maxLength - 3).trim() + '...';
+  }
+
+  return cleaned;
+};
+
+/**
  * Fetch news using Google Search Grounding
  * This gets real-time news from Google Search
  */
@@ -436,7 +562,8 @@ export const processNewsItems = async (
               model: 'gemini-2.5-flash',
               contents: `Generate a concise 1-2 sentence news summary (max 150 characters) for this headline: "${cachedItem.title}". Only return the summary, nothing else.`,
             });
-            cleanSummary = summaryResponse.text?.trim() || cachedItem.title;
+            // Clean AI summary to remove chain-of-thought artifacts
+            cleanSummary = cleanAISummary(summaryResponse.text?.trim() || cachedItem.title, cachedItem.originalLanguage || 'en');
             newsLogger.debug('processNews', `Regenerated AI summary for RSS cached item: ${cleanSummary.slice(0, 50)}...`);
           } catch (error: any) {
             newsLogger.warn('processNews', `AI summary failed for cached item, using title: ${error.message}`);
@@ -523,7 +650,8 @@ IMPORTANT: The summary must be ${languageInstruction}. Only return the summary, 
           );
 
           if (groundedSummary && !isGroundingError) {
-            cleanedSummary = groundedSummary;
+            // Clean AI summary to remove chain-of-thought artifacts
+            cleanedSummary = cleanAISummary(groundedSummary, item.language);
             newsLogger.debug('processNews', `Grounded summary from URL: ${cleanedSummary.slice(0, 50)}...`);
           } else {
             // Strategy 2: URL failed, try searching for the topic instead
@@ -554,7 +682,8 @@ IMPORTANT: The summary must be ${languageInstruction}. Use search results to pro
               );
 
               if (searchSummary && !isSearchError) {
-                cleanedSummary = searchSummary;
+                // Clean AI summary to remove chain-of-thought artifacts
+                cleanedSummary = cleanAISummary(searchSummary, item.language);
                 newsLogger.debug('processNews', `Search-based summary: ${cleanedSummary.slice(0, 50)}...`);
               } else {
                 throw new Error('Search grounding also failed');
@@ -567,7 +696,8 @@ IMPORTANT: The summary must be ${languageInstruction}. Use search results to pro
                 model: 'gemini-2.5-flash',
                 contents: `Generate a concise 2-3 sentence news summary (max 200 characters) ${languageInstruction} for this headline: "${item.title}". Provide informative context about what likely happened and why it matters. IMPORTANT: The summary must be ${languageInstruction}. Only return the summary.`,
               });
-              cleanedSummary = titleResponse.text?.trim() || item.title;
+              // Clean AI summary to remove chain-of-thought artifacts
+              cleanedSummary = cleanAISummary(titleResponse.text?.trim() || item.title, item.language);
             }
           }
         } catch (error: any) {
@@ -578,7 +708,8 @@ IMPORTANT: The summary must be ${languageInstruction}. Use search results to pro
               model: 'gemini-2.5-flash',
               contents: `Generate a concise 2-3 sentence news summary (max 200 characters) ${languageInstruction} for this headline: "${item.title}". IMPORTANT: The summary must be ${languageInstruction}. Only return the summary.`,
             });
-            cleanedSummary = titleResponse.text?.trim() || item.title;
+            // Clean AI summary to remove chain-of-thought artifacts
+            cleanedSummary = cleanAISummary(titleResponse.text?.trim() || item.title, item.language);
           } catch (fallbackError: any) {
             newsLogger.error('processNews', `All summary generation failed: ${fallbackError.message}`);
             cleanedSummary = item.title;
