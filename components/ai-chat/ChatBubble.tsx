@@ -9,28 +9,37 @@ interface Props {
 /**
  * Simple Markdown-to-HTML converter for chat messages
  * Handles: **bold**, *italic*, `code`, bullet lists
+ * Fixed to support Chinese/Japanese and multiline content
  */
 const formatMarkdown = (text: string): string => {
   if (!text) return '';
 
   let formatted = text;
 
-  // Convert **bold** to <strong>
-  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Step 1: Protect bullet list markers from being treated as italic
+  // Replace "* " at start of line with placeholder
+  formatted = formatted.replace(/^(\s*)\*\s+/gm, '$1BULLET_MARKER_PLACEHOLDER ');
 
-  // Convert *italic* to <em> (but not already converted ** patterns)
-  formatted = formatted.replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, '<em>$1</em>');
+  // Step 2: Convert **bold** to <strong> (use [\s\S] to match across lines)
+  formatted = formatted.replace(/\*\*([^\*]+?)\*\*/g, '<strong>$1</strong>');
 
-  // Convert `code` to <code>
-  formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-gray-200 px-1 rounded text-xs">$1</code>');
+  // Step 3: Convert *italic* to <em> (only single * not followed/preceded by *)
+  // Use negative lookahead/lookbehind to avoid matching ** or bullet markers
+  formatted = formatted.replace(/(?<![*\w])\*([^*\n]+?)\*(?![*\w])/g, '<em>$1</em>');
 
-  // Convert bullet lists: "* item" or "• item" to <li>
-  formatted = formatted.replace(/^[\s]*[*•]\s+(.+)$/gm, '<li class="ml-4">$1</li>');
+  // Step 4: Restore bullet markers and convert to <li>
+  formatted = formatted.replace(/^(\s*)BULLET_MARKER_PLACEHOLDER\s+(.+)$/gm, '$1<li class="ml-4">$2</li>');
 
-  // Wrap consecutive <li> items in <ul>
+  // Step 5: Also handle "• " markers
+  formatted = formatted.replace(/^(\s*)•\s+(.+)$/gm, '$1<li class="ml-4">$2</li>');
+
+  // Step 6: Wrap consecutive <li> items in <ul>
   formatted = formatted.replace(/(<li.*?<\/li>\s*)+/g, (match) => `<ul class="list-disc ml-4 space-y-1">${match}</ul>`);
 
-  // Convert line breaks to <br> (preserve spacing)
+  // Step 7: Convert `code` to <code>
+  formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-gray-200 px-1 rounded text-xs font-mono">$1</code>');
+
+  // Step 8: Convert line breaks to <br> (preserve spacing)
   formatted = formatted.replace(/\n/g, '<br/>');
 
   return formatted;

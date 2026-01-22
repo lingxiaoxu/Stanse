@@ -15,6 +15,8 @@ import { AccountView } from './components/views/AccountView';
 import { AboutUsView } from './components/views/AboutUsView';
 import { MenuOverlay } from './components/ui/MenuOverlay';
 import { AppTour } from './components/ui/AppTour';
+import { AIChatFloatingButton } from './components/ai-chat/AIChatFloatingButton';
+import { AIChatSidebar } from './components/ai-chat/AIChatSidebar';
 import { SplashVideo } from './components/ui/SplashVideo';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -44,6 +46,25 @@ const StanseApp: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [selectedTextForAI, setSelectedTextForAI] = useState<string>('');
+  const [showChatButton, setShowChatButton] = useState(() => {
+    // Load from localStorage
+    const saved = localStorage.getItem('stanse_show_ai_button');
+    return saved !== 'false'; // Default to true
+  });
+
+  // Listen for changes to AI button visibility from Settings
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('stanse_show_ai_button');
+      setShowChatButton(saved !== 'false');
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const { t, language } = useLanguage();
   const { user, userProfile: authUserProfile, logout, loading, updateCoordinates, hasCompletedOnboarding } = useAuth();
 
@@ -251,7 +272,14 @@ const StanseApp: React.FC = () => {
   const renderView = () => {
     switch (view) {
       case ViewState.FEED:
-        return <FeedView />;
+        return (
+          <FeedView
+            onTextSelected={(text) => {
+              setSelectedTextForAI(text);
+              setIsChatOpen(true);
+            }}
+          />
+        );
       case ViewState.SENSE:
         // Extract demographics for country-aware analysis
         const demographics = authUserProfile?.onboarding?.demographics;
@@ -291,6 +319,16 @@ const StanseApp: React.FC = () => {
     }
   };
 
+  // Handle navigation with special case for AI_CHAT
+  const handleNavigate = (newView: ViewState) => {
+    if (newView === ViewState.AI_CHAT) {
+      setIsChatOpen(true);
+      // Don't change view, just open chat
+    } else {
+      setView(newView);
+    }
+  };
+
   // If not authenticated, show Login Screen
   if (!user) {
     return <LoginView onLogin={handleLogin} />;
@@ -300,10 +338,10 @@ const StanseApp: React.FC = () => {
   return (
     <div className="min-h-screen text-pixel-black font-mono selection:bg-black selection:text-white">
       {/* Menu Overlay */}
-      <MenuOverlay 
-        isOpen={isMenuOpen} 
-        onClose={() => setIsMenuOpen(false)} 
-        onNavigate={(v) => setView(v)}
+      <MenuOverlay
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        onNavigate={handleNavigate}
         onLogout={handleLogout}
       />
 
@@ -372,6 +410,27 @@ const StanseApp: React.FC = () => {
         onComplete={handleTourComplete}
         onSkip={handleTourSkip}
         onSwitchTab={(tab) => setView(tab as ViewState)}
+      />
+
+      {/* AI Chat Floating Button */}
+      {authUserProfile && showChatButton && (
+        <AIChatFloatingButton
+          onClick={() => setIsChatOpen(true)}
+          onHide={() => {
+            setShowChatButton(false);
+            localStorage.setItem('stanse_show_ai_button', 'false');
+          }}
+        />
+      )}
+
+      {/* AI Chat Sidebar */}
+      <AIChatSidebar
+        isOpen={isChatOpen}
+        onClose={() => {
+          setIsChatOpen(false);
+          setSelectedTextForAI(''); // Clear selected text when closing
+        }}
+        prefilledMessage={selectedTextForAI}
       />
     </div>
   );

@@ -70,9 +70,17 @@ const extractPoliticalPersona = (label: string, nationalityPrefix?: string): str
   return label;
 };
 
-export const FeedView: React.FC = () => {
+interface FeedViewProps {
+  onTextSelected?: (text: string) => void;
+}
+
+export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
   const [activePrism, setActivePrism] = useState<string | null>(null);
   const [prismData, setPrismData] = useState<Record<string, any>>({});
+
+  // Text selection for AI feature
+  const [selectedText, setSelectedText] = useState('');
+  const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
   const [prismGeneratedAt, setPrismGeneratedAt] = useState<Record<string, string>>({}); // Track when prism was generated
   const [loadingPrism, setLoadingPrism] = useState(false);
 
@@ -678,6 +686,45 @@ export const FeedView: React.FC = () => {
   };
 
   // Handle stance selection with animation and Firebase save
+  // Handle text selection in news content
+  useEffect(() => {
+    const handleSelection = () => {
+      const selection = window.getSelection();
+      const text = selection?.toString().trim();
+
+      if (text && text.length > 10) {
+        // Get selection position for floating icon
+        const range = selection?.getRangeAt(0);
+        const rect = range?.getBoundingClientRect();
+
+        if (rect) {
+          setSelectedText(text);
+          setSelectionPosition({
+            x: rect.right + 10,
+            y: rect.top + window.scrollY
+          });
+        }
+      } else {
+        // Clear selection if text is too short
+        setSelectedText('');
+        setSelectionPosition(null);
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelection);
+    return () => document.removeEventListener('selectionchange', handleSelection);
+  }, []);
+
+  // Handle AI analysis of selected text
+  const handleAskAI = () => {
+    if (selectedText && onTextSelected) {
+      onTextSelected(`Please explain this news excerpt: "${selectedText}"`);
+      // Clear selection
+      setSelectedText('');
+      setSelectionPosition(null);
+    }
+  };
+
   const handleStanceClick = async (newsItem: NewsEvent, stance: 'SUPPORT' | 'NEUTRAL' | 'OPPOSE') => {
     if (!user || !userProfile) {
       console.warn('User must be logged in to provide feedback');
@@ -722,7 +769,23 @@ export const FeedView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto w-full pb-20">
+    <div className="max-w-md mx-auto w-full pb-20 relative">
+      {/* Floating AI Question Icon - appears when text is selected */}
+      {selectedText && selectionPosition && (
+        <button
+          onClick={handleAskAI}
+          className="fixed z-50 bg-black text-white border-2 border-white shadow-pixel hover:scale-110 transition-all duration-200 flex items-center justify-center animate-fade-in"
+          style={{
+            left: `${selectionPosition.x}px`,
+            top: `${selectionPosition.y}px`,
+            width: '36px',
+            height: '36px'
+          }}
+          title={t('feed', 'ask_ai_about_selection') || 'Ask AI about this'}
+        >
+          <span className="text-xl">?</span>
+        </button>
+      )}
 
       {/* VALUES MARKET ALIGNMENT - Combined Sections */}
       <div className="mb-12 relative">

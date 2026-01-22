@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { PixelCard } from '../ui/PixelCard';
-import { Globe, RotateCcw, MapPin, Bell, Shield, Users, Camera } from 'lucide-react';
+import { Globe, RotateCcw, MapPin, Bell, Shield, Users, Camera, MessageSquare } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Language } from '../../types';
@@ -25,6 +25,10 @@ export const SettingsView: React.FC = () => {
   const [location, setLocation] = useState(DEFAULT_SETTINGS.location);
   const [camera, setCamera] = useState(DEFAULT_SETTINGS.camera);
   const [strictMode, setStrictMode] = useState(DEFAULT_SETTINGS.strictMode);
+  const [showAIButton, setShowAIButton] = useState(() => {
+    const saved = localStorage.getItem('stanse_show_ai_button');
+    return saved !== 'false'; // Default to true
+  });
   const [isResetting, setIsResetting] = useState(false);
   const [settingsModified, setSettingsModified] = useState(false);
   const [locationStatus, setLocationStatus] = useState<LocationStatus | null>(null);
@@ -510,6 +514,31 @@ export const SettingsView: React.FC = () => {
                 </div>
                 <div className={`w-14 h-8 border-2 border-black relative transition-colors ${camera ? 'bg-black' : 'bg-white'} ${isRequestingCamera ? 'animate-pulse' : ''}`}>
                     <div className={`absolute top-1 bottom-1 w-5 bg-current border border-black transition-all ${camera ? 'left-7 bg-white' : 'left-1 bg-black'}`}></div>
+                </div>
+            </div>
+
+            {/* AI Assistant Button Toggle */}
+            <div
+              className="flex items-center justify-between p-6 hover:bg-gray-50 transition-colors cursor-pointer"
+              onClick={() => {
+                const newValue = !showAIButton;
+                setShowAIButton(newValue);
+                localStorage.setItem('stanse_show_ai_button', String(newValue));
+                // Trigger storage event for App.tsx to pick up the change
+                window.dispatchEvent(new Event('storage'));
+              }}
+            >
+                <div className="flex items-center gap-3">
+                    <MessageSquare size={20} />
+                    <div>
+                        <div className="font-bold font-mono text-lg">{t('settings', 'ai_assistant_button')}</div>
+                        <div className="font-mono text-xs text-gray-500">
+                          {t('settings', 'sub_ai_assistant_button')}
+                        </div>
+                    </div>
+                </div>
+                <div className={`w-14 h-8 border-2 border-black relative transition-colors ${showAIButton ? 'bg-black' : 'bg-white'}`}>
+                    <div className={`absolute top-1 bottom-1 w-5 bg-current border border-black transition-all ${showAIButton ? 'left-7 bg-white' : 'left-1 bg-black'}`}></div>
                 </div>
             </div>
 
