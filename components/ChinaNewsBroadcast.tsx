@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo, useRef } from 'react';
 import { PixelCard } from './ui/PixelCard';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Language } from '../types';
@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getLatestChinaNewsBroadcast, subscribeToLatestChinaNewsBroadcast, ChinaNewsBroadcastData } from '../services/chinaNewsService';
 import { translatePersonaLabel } from '../services/geminiService';
 
-export const ChinaNewsBroadcast: React.FC = () => {
+const ChinaNewsBroadcastComponent: React.FC = () => {
   const { language, t } = useLanguage();
   const { userProfile } = useAuth();
   const [broadcastData, setBroadcastData] = useState<ChinaNewsBroadcastData | null>(null);
@@ -21,9 +21,8 @@ export const ChinaNewsBroadcast: React.FC = () => {
     // 只在中文时加载数据
     if (language !== Language.ZH) {
       console.log('[ChinaNewsBroadcast] Not Chinese, hiding component. Current language:', language);
-      setBroadcastData(null);
-      setLoading(false);
-      setLoadingProgress(0);
+      // ⚠️ Don't update state if not Chinese - causes re-renders
+      // Just return early without state updates
       return;
     }
 
@@ -67,11 +66,43 @@ export const ChinaNewsBroadcast: React.FC = () => {
     };
   }, [language]);
 
+  // Track if we've already loaded for this label to prevent re-translation
+  const lastTranslatedLabel = useRef<string>('');
+
   // 翻译 persona label（和 THE MARKET 一样）
   useEffect(() => {
-    if (language !== Language.ZH) return;
+    if (language !== Language.ZH) {
+      // Don't update state if already empty - prevents re-render
+      if (translatedPersona !== '') {
+        setTranslatedPersona('');
+      }
+      return;
+    }
     if (!userProfile?.coordinates) return;
 
+    const label = userProfile.coordinates.label;
+
+    // Skip if already translated this label
+    if (lastTranslatedLabel.current === label) {
+      return;
+    }
+
+    const cacheKey = `stanse_persona_${label}_${language.toLowerCase()}`;
+
+    // Check localStorage cache first
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        console.log('[ChinaNewsBroadcast] Using cached persona translation');
+        setTranslatedPersona(cached);
+        lastTranslatedLabel.current = label;
+        return;
+      }
+    } catch (e) {
+      console.warn('[ChinaNewsBroadcast] Failed to read persona cache');
+    }
+
+    // Cache miss - translate
     const translateLabel = async () => {
       try {
         const translated = await translatePersonaLabel(
@@ -79,6 +110,13 @@ export const ChinaNewsBroadcast: React.FC = () => {
           language.toLowerCase()
         );
         setTranslatedPersona(translated);
+        lastTranslatedLabel.current = label;
+        // Cache the translation
+        try {
+          localStorage.setItem(cacheKey, translated);
+        } catch (e) {
+          console.warn('[ChinaNewsBroadcast] Failed to cache persona translation');
+        }
       } catch (error) {
         console.error('Failed to translate persona:', error);
         setTranslatedPersona('');
@@ -86,14 +124,14 @@ export const ChinaNewsBroadcast: React.FC = () => {
     };
 
     translateLabel();
-  }, [userProfile?.coordinates, language]);
+  }, [userProfile?.coordinates?.label, language, translatedPersona]); // Include translatedPersona to avoid unnecessary setState
 
-  // 只在中文时显示
+  // Early return - only after all hooks are called (React rules)
   if (language !== Language.ZH) {
-    console.log('[ChinaNewsBroadcast] Render: Hidden (not Chinese)');
     return null;
   }
 
+  // Loading state
   if (loading) {
     console.log('[ChinaNewsBroadcast] Render: Loading...');
     return (
@@ -244,3 +282,6 @@ const BroadcastText: React.FC<{ text: string }> = ({ text }) => {
     </div>
   );
 };
+
+// Export memoized version to prevent unnecessary re-renders when parent updates
+export const ChinaNewsBroadcast = memo(ChinaNewsBroadcastComponent);
