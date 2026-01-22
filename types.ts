@@ -58,6 +58,9 @@ export interface NewsEvent {
   imageUrl: string;
   sourceUrl?: string;
   category?: string;
+  createdAt?: string; // News production timestamp from Firestore
+  originalLanguage?: string; // Language of the news (EN, ZH, JA, FR, ES)
+  titleHash?: string; // 6-character hash for linking with news_embeddings, news_images, news_prism_lens
   prism?: {
     support: string;
     oppose: string;

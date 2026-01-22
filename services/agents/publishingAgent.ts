@@ -12,6 +12,7 @@ import { ProcessedNewsItem, PersonalizedFeed, NewsEmbedding, AgentResponse } fro
 import { PoliticalCoordinates } from '../../types';
 import { db } from '../firebase';
 import { publishingLogger } from './logger';
+import { createTitleHash } from '../newsCache';
 import {
   collection,
   doc,
@@ -476,9 +477,14 @@ export const getCachedNews = async (
           return null;
         }
 
+        // Debug: Check if titleHash is missing
+        if (!data.titleHash) {
+          publishingLogger.warn('getCachedNews', `Missing titleHash for doc ${doc.id}: ${data.title?.slice(0, 50)}`);
+        }
+
         return {
           id: data.id,
-          titleHash: data.titleHash || '',
+          titleHash: data.titleHash || '', // Empty string if missing (will be filtered later)
           title: data.title,
           summary: data.summary,
           date: data.date || 'UNKNOWN',

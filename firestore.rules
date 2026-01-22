@@ -246,6 +246,32 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // News Prism Lens Feedback - user's stance selection on news perspectives
+    // Structure: news_prism_lens/{newsDocId}/users_lens_records/{userId}
+    // Main document stores news info and three stances
+    // Subcollection stores user feedback
+    match /news_prism_lens/{newsDocId} {
+      // Authenticated users can read main document (for analytics)
+      allow read: if request.auth != null;
+
+      // Authenticated users can create main document (first user to provide feedback)
+      allow create: if request.auth != null
+                    && request.resource.data.newsId is string
+                    && request.resource.data.newsTitle is string
+                    && request.resource.data.support is string
+                    && request.resource.data.neutral is string
+                    && request.resource.data.oppose is string;
+
+      // No updates or deletes to main document after creation
+      allow update, delete: if false;
+
+      // User feedback subcollection
+      match /users_lens_records/{userId} {
+        // Users can read/write only their own lens feedback
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
     // Premium Subscription System
     // Structure: user_subscriptions/{userId} with history subcollection
     match /user_subscriptions/{userId} {
@@ -344,6 +370,12 @@ service cloud.firestore {
       // Allow public read/write for development (will be restricted in production)
       // TODO: Replace with service account authentication for production
       allow read, write: if true;
+    }
+
+    // China News Consolidated - Generated broadcasts from news_stanseradar_china
+    match /news_stanseradar_china_consolidated/{docId} {
+      allow read: if true;  // All users can read
+      allow write: if request.auth != null; // TEMP: Allow authenticated users for testing (will be restricted to Functions only in production)
     }
 
     // ==================== DUEL Arena System ====================

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { TrendingUp, TrendingDown, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Sparkles, ThumbsUp, ThumbsDown, Info } from 'lucide-react';
+import { TrendingUp, TrendingDown, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Sparkles, ThumbsUp, ThumbsDown, Info, Check } from 'lucide-react';
 import { PixelCard } from '../ui/PixelCard';
 import { PixelButton } from '../ui/PixelButton';
 import { ValuesCompanyRanking } from '../ui/ValuesCompanyRanking';
@@ -12,6 +12,13 @@ import { CompanyRanking } from '../../services/companyRankingCache';
 import { useAppState } from '../../contexts/AppStateContext';
 import { getEnhancedCompanyRankingsForUser } from '../../services/enhancedCompanyRankingService';
 import { generateTodayAnalysis, MarketAnalysisResult } from '../../services/marketAnalysisService';
+import { getNewsPrismLensDoc, createNewsPrismMainDoc, saveUserPrismFeedback } from '../../services/userService';
+import { createTitleHash } from '../../services/newsCache';
+import '../../utils/queryChinaNews';
+import '../../utils/testChinaNewsBroadcast';
+import '../../utils/createTestBroadcast';
+import '../../utils/generateRealBroadcast';
+import { ChinaNewsBroadcast } from '../ChinaNewsBroadcast';
 
 import { Language } from '../../types';
 
@@ -66,9 +73,15 @@ const extractPoliticalPersona = (label: string, nationalityPrefix?: string): str
 export const FeedView: React.FC = () => {
   const [activePrism, setActivePrism] = useState<string | null>(null);
   const [prismData, setPrismData] = useState<Record<string, any>>({});
+  const [prismGeneratedAt, setPrismGeneratedAt] = useState<Record<string, string>>({}); // Track when prism was generated
   const [loadingPrism, setLoadingPrism] = useState(false);
+
+  // Track user's selected stance for each news item
+  const [selectedStances, setSelectedStances] = useState<Record<string, 'SUPPORT' | 'NEUTRAL' | 'OPPOSE'>>({});
+  const [showCheckmark, setShowCheckmark] = useState<Record<string, boolean>>({});
+
   const { t, language } = useLanguage();
-  const { userProfile, hasCompletedOnboarding } = useAuth();
+  const { userProfile, hasCompletedOnboarding, user } = useAuth();
 
   // Use global state for news loading (persists across tab switches)
   const {
@@ -604,9 +617,107 @@ export const FeedView: React.FC = () => {
 
     if (!prismData[newsItem.id]) {
       setLoadingPrism(true);
-      const prism = await generatePrismSummary(newsItem.title + " " + newsItem.summary);
+
+      // Validate: News must have titleHash for prism lens
+      if (!newsItem.titleHash) {
+        console.error('❌ News item missing titleHash, cannot create prism lens:', newsItem.title);
+        setLoadingPrism(false);
+        return;
+      }
+
+      // First, check if cached in Firebase using titleHash (links with news_embeddings)
+      const docId = newsItem.titleHash;
+      try {
+        const cachedDoc = await getNewsPrismLensDoc(docId);
+
+        if (cachedDoc) {
+          // Use cached data from Firebase
+          console.log(`📦 Using cached prism from Firebase for: ${newsItem.title}`);
+          const prism = {
+            support: cachedDoc.support,
+            neutral: cachedDoc.neutral,
+            oppose: cachedDoc.oppose
+          };
+          setPrismData(prev => ({ ...prev, [newsItem.id]: prism }));
+          setPrismGeneratedAt(prev => ({ ...prev, [newsItem.id]: cachedDoc.newsPushTimestamp }));
+          setLoadingPrism(false);
+          return;
+        }
+      } catch (error) {
+        console.warn('Failed to fetch cached prism, generating new:', error);
+      }
+
+      // Generate new prism with AI using news original language
+      const prismGenerationTime = new Date().toISOString();
+      const rawLanguage = newsItem.originalLanguage || language;
+      const newsLanguage = rawLanguage.toLowerCase(); // Normalize to lowercase (en, fr, zh, ja, es)
+
+      const prism = await generatePrismSummary(
+        newsItem.title + " " + newsItem.summary,
+        newsLanguage
+      );
       setPrismData(prev => ({ ...prev, [newsItem.id]: prism }));
+      setPrismGeneratedAt(prev => ({ ...prev, [newsItem.id]: prismGenerationTime }));
+
+      // Save to Firebase immediately after generation using titleHash
+      try {
+        await createNewsPrismMainDoc(
+          docId, // Use titleHash for consistency with news_embeddings
+          newsItem.title,
+          newsLanguage, // Always lowercase for consistency
+          prismGenerationTime,
+          newsItem.createdAt || prismGenerationTime, // Use news createdAt or fallback
+          prism
+        );
+      } catch (error) {
+        console.error('Failed to save prism to Firebase:', error);
+      }
+
       setLoadingPrism(false);
+    }
+  };
+
+  // Handle stance selection with animation and Firebase save
+  const handleStanceClick = async (newsItem: NewsEvent, stance: 'SUPPORT' | 'NEUTRAL' | 'OPPOSE') => {
+    if (!user || !userProfile) {
+      console.warn('User must be logged in to provide feedback');
+      return;
+    }
+
+    // Set selected stance immediately for UI feedback
+    setSelectedStances(prev => ({ ...prev, [newsItem.id]: stance }));
+
+    // Trigger checkmark animation after a brief delay
+    setTimeout(() => {
+      setShowCheckmark(prev => ({ ...prev, [newsItem.id]: true }));
+    }, 100);
+
+    // Save user feedback to Firebase (main document should already exist from handlePrismClick)
+    try {
+      // Validate: News must have titleHash
+      if (!newsItem.titleHash) {
+        console.error('❌ News item missing titleHash, cannot save feedback');
+        return;
+      }
+
+      const nationality = userProfile.onboarding?.demographics?.currentCountry ||
+                          userProfile.coordinates?.nationalityPrefix ||
+                          'Unknown';
+
+      await saveUserPrismFeedback(
+        user.uid,
+        newsItem.titleHash, // Always use titleHash for consistency
+        userProfile.coordinates?.label || 'Unknown',
+        userProfile.coordinates?.coreStanceType || 'Unknown',
+        nationality,
+        language, // Language when feedback was given
+        stance,
+        undefined // matchingScore - can be added later from news embedding
+      );
+      console.log(`✅ Saved user feedback: ${stance} for titleHash: ${newsItem.titleHash}`);
+    } catch (error) {
+      console.error('Failed to save user feedback:', error);
+      // Don't remove the UI feedback even if save fails - show what user selected
     }
   };
 
@@ -1148,8 +1259,8 @@ export const FeedView: React.FC = () => {
           <div className="absolute left-[3px] top-2 bottom-6 w-0.5 bg-pixel-black opacity-20 z-0"></div>
 
           <div className="space-y-12 relative z-10">
-              {feedNews.map((newsItem) => (
-              <div key={newsItem.id} className="relative">
+              {feedNews.map((newsItem, index) => (
+              <div key={`${newsItem.id}-${index}`} className="relative">
                   {/* Timeline Dot */}
                   <div className="absolute -left-[24px] top-6 w-3 h-3 bg-black border-2 border-white box-content"></div>
 
@@ -1203,17 +1314,91 @@ export const FeedView: React.FC = () => {
                           <div className="text-center py-4 font-pixel text-gray-500 animate-pulse">{t('feed', 'loading_lens')}</div>
                       ) : (
                           <div className="space-y-3 font-mono text-xs">
-                          <div className="flex gap-2 items-start">
+                          {/* SUPPORT */}
+                          <div
+                            className={`flex gap-2 items-start cursor-pointer p-2 rounded transition-all duration-300 hover:bg-gray-50 ${
+                              selectedStances[newsItem.id] === 'SUPPORT' ? 'active:scale-95' : ''
+                            }`}
+                            onClick={() => handleStanceClick(newsItem, 'SUPPORT')}
+                          >
                               <div className="min-w-[4px] h-full bg-black self-stretch"></div>
-                              <div><span className="font-bold bg-black text-white px-1">{t('feed', 'support')}</span> <p className="mt-1">{prismData[newsItem.id]?.support}</p></div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold bg-black text-white px-1">{t('feed', 'support')}</span>
+                                  {selectedStances[newsItem.id] === 'SUPPORT' && showCheckmark[newsItem.id] && (
+                                    <Check
+                                      size={16}
+                                      className="text-green-600 animate-scale-in"
+                                      strokeWidth={3}
+                                    />
+                                  )}
+                                </div>
+                                <p className={`mt-1 transition-opacity duration-300 ${
+                                  selectedStances[newsItem.id] && selectedStances[newsItem.id] !== 'SUPPORT'
+                                    ? 'opacity-40 text-gray-400'
+                                    : ''
+                                }`}>
+                                  {prismData[newsItem.id]?.support}
+                                </p>
+                              </div>
                           </div>
-                          <div className="flex gap-2 items-start">
+
+                          {/* NEUTRAL */}
+                          <div
+                            className={`flex gap-2 items-start cursor-pointer p-2 rounded transition-all duration-300 hover:bg-gray-50 ${
+                              selectedStances[newsItem.id] === 'NEUTRAL' ? 'active:scale-95' : ''
+                            }`}
+                            onClick={() => handleStanceClick(newsItem, 'NEUTRAL')}
+                          >
                               <div className="min-w-[4px] h-full bg-gray-400 self-stretch"></div>
-                              <div><span className="font-bold bg-gray-200 text-black px-1">{t('feed', 'neutral')}</span> <p className="mt-1">{prismData[newsItem.id]?.neutral}</p></div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold bg-gray-200 text-black px-1">{t('feed', 'neutral')}</span>
+                                  {selectedStances[newsItem.id] === 'NEUTRAL' && showCheckmark[newsItem.id] && (
+                                    <Check
+                                      size={16}
+                                      className="text-green-600 animate-scale-in"
+                                      strokeWidth={3}
+                                    />
+                                  )}
+                                </div>
+                                <p className={`mt-1 transition-opacity duration-300 ${
+                                  selectedStances[newsItem.id] && selectedStances[newsItem.id] !== 'NEUTRAL'
+                                    ? 'opacity-40 text-gray-400'
+                                    : ''
+                                }`}>
+                                  {prismData[newsItem.id]?.neutral}
+                                </p>
+                              </div>
                           </div>
-                          <div className="flex gap-2 items-start">
+
+                          {/* OPPOSE */}
+                          <div
+                            className={`flex gap-2 items-start cursor-pointer p-2 rounded transition-all duration-300 hover:bg-gray-50 ${
+                              selectedStances[newsItem.id] === 'OPPOSE' ? 'active:scale-95' : ''
+                            }`}
+                            onClick={() => handleStanceClick(newsItem, 'OPPOSE')}
+                          >
                               <div className="min-w-[4px] h-full bg-red-600 self-stretch"></div>
-                              <div><span className="font-bold border border-black px-1">{t('feed', 'oppose')}</span> <p className="mt-1">{prismData[newsItem.id]?.oppose}</p></div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold border border-black px-1">{t('feed', 'oppose')}</span>
+                                  {selectedStances[newsItem.id] === 'OPPOSE' && showCheckmark[newsItem.id] && (
+                                    <Check
+                                      size={16}
+                                      className="text-green-600 animate-scale-in"
+                                      strokeWidth={3}
+                                    />
+                                  )}
+                                </div>
+                                <p className={`mt-1 transition-opacity duration-300 ${
+                                  selectedStances[newsItem.id] && selectedStances[newsItem.id] !== 'OPPOSE'
+                                    ? 'opacity-40 text-gray-400'
+                                    : ''
+                                }`}>
+                                  {prismData[newsItem.id]?.oppose}
+                                </p>
+                              </div>
                           </div>
                           </div>
                       )}
@@ -1234,11 +1419,16 @@ export const FeedView: React.FC = () => {
                 className="flex items-center gap-2 mx-auto"
               >
                 <ChevronDown size={16} />
-                {feedLoading ? 'Loading...' : 'Load More'}
+                {feedLoading ? t('feed', 'loading') : t('feed', 'load_more')}
               </PixelButton>
             </div>
           )}
         </div>
+      )}
+
+      {/* SECTION 3: CHINA NEWS BROADCAST (仅中文显示) */}
+      {hasCompletedOnboarding && (
+        <ChinaNewsBroadcast />
       )}
     </div>
   );
