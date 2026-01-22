@@ -73,7 +73,8 @@ export const ChatBubble: React.FC<Props> = ({ message }) => {
       <div className={`flex-1 max-w-[70%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div className={`border-2 border-black p-3 ${isUser ? 'bg-gray-100' : providerColors[message.provider]}`}>
           <div
-            className="font-mono text-sm break-words prose prose-sm max-w-none"
+            className="font-mono text-sm break-words leading-relaxed"
+            style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
             dangerouslySetInnerHTML={{ __html: formatMarkdown(message.content) }}
           />
         </div>
