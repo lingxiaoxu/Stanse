@@ -139,7 +139,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         <PixelCard className="p-8 bg-white">
           <div className="text-center mb-6 border-b-2 border-black pb-4">
             <h2 className="font-bold font-mono text-xl uppercase">
-              {isSignUp ? 'CREATE ACCOUNT' : t('login', 'title')}
+              {isSignUp ? t('login', 'title_signup') : t('login', 'title_signin')}
             </h2>
           </div>
 
@@ -152,7 +152,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="font-mono text-xs font-bold block uppercase">{t('login', 'email')}</label>
+              <label className="font-mono text-xs font-bold block uppercase">
+                {isSignUp ? t('login', 'email_signup') : t('login', 'email_signin')}
+              </label>
               <div className="flex items-center border-2 border-black p-2 bg-gray-50">
                 <Mail className="mr-3 opacity-50" size={20} />
                 <input

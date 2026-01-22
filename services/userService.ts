@@ -700,6 +700,170 @@ export const deleteEntityStance = async (
   await deleteDoc(stanceRef);
 };
 
+// ==================== News Prism Lens Feedback ====================
+// Collection structure: news_prism_lens/{newsDocId}/users_lens_records/{userId}
+// Main document stores news info and three stances
+// Subcollection stores individual user feedback
+
+// Main document in news_prism_lens/{newsDocId}
+export interface NewsPrismLensDoc {
+  newsId: string;
+  newsTitle: string;
+  newsLanguage: string;
+  newsPushTimestamp: string; // When prism was generated
+  newsProductionTimestamp?: string; // Original news creation time
+
+  // Three stance contents
+  support: string;
+  neutral: string;
+  oppose: string;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+// User feedback record in users_lens_records subcollection
+export interface NewsPrismUserFeedback {
+  userId: string;
+  userLabel: string;
+  userCoreStanceType: string;
+  userNationality: string;
+  feedbackLanguage: string;
+  selectedStance: 'SUPPORT' | 'NEUTRAL' | 'OPPOSE';
+  feedbackTimestamp: string;
+
+  // Optional: matching score from news embedding
+  matchingScore?: number;
+}
+
+// Note: We use the actual newsId from the news collection as document ID
+// This ensures consistency with news and news_embeddings collections
+
+/**
+ * Get user's existing feedback for a news article
+ */
+export const getUserNewsPrismFeedback = async (
+  userId: string,
+  newsId: string
+): Promise<NewsPrismUserFeedback | null> => {
+  const feedbackRef = doc(db, 'news_prism_lens', newsId, 'users_lens_records', userId);
+
+  const feedbackSnap = await getDoc(feedbackRef);
+
+  if (feedbackSnap.exists()) {
+    return feedbackSnap.data() as NewsPrismUserFeedback;
+  }
+
+  return null;
+};
+
+/**
+ * Get all feedback records for a specific news article
+ */
+export const getAllNewsPrismFeedbackForNews = async (
+  newsId: string
+): Promise<NewsPrismUserFeedback[]> => {
+  const recordsRef = collection(db, 'news_prism_lens', newsId, 'users_lens_records');
+  const snapshot = await getDocs(recordsRef);
+
+  return snapshot.docs.map(doc => doc.data() as NewsPrismUserFeedback);
+};
+
+/**
+ * Get main document with news info and three stances
+ */
+export const getNewsPrismLensDoc = async (
+  newsId: string
+): Promise<NewsPrismLensDoc | null> => {
+  const mainDocRef = doc(db, 'news_prism_lens', newsId);
+
+  const mainDocSnap = await getDoc(mainDocRef);
+
+  if (mainDocSnap.exists()) {
+    return mainDocSnap.data() as NewsPrismLensDoc;
+  }
+
+  return null;
+};
+
+/**
+ * Create main document when prism is first generated
+ * This should be called when AI generates the three stances, before user provides feedback
+ * Uses actual newsId from news collection as document ID
+ */
+export const createNewsPrismMainDoc = async (
+  newsId: string,
+  newsTitle: string,
+  newsLanguage: string,
+  newsPushTimestamp: string,
+  newsProductionTimestamp: string | undefined,
+  prismContent: { support: string; neutral: string; oppose: string }
+): Promise<void> => {
+  const mainDocRef = doc(db, 'news_prism_lens', newsId);
+
+  // Check if document already exists
+  const mainDocSnap = await getDoc(mainDocRef);
+  if (mainDocSnap.exists()) {
+    console.log(`📄 Main doc already exists for: ${newsTitle} (${newsId})`);
+    return;
+  }
+
+  // Create main document
+  const mainDocData: any = {
+    newsId,
+    newsTitle,
+    newsLanguage,
+    newsPushTimestamp,
+    support: prismContent.support,
+    neutral: prismContent.neutral,
+    oppose: prismContent.oppose,
+    createdAt: newsProductionTimestamp || new Date().toISOString(), // Use news creation time
+    updatedAt: new Date().toISOString() // news_prism_lens record creation time
+  };
+
+  // Keep newsProductionTimestamp for clarity (same as createdAt)
+  if (newsProductionTimestamp !== undefined) {
+    mainDocData.newsProductionTimestamp = newsProductionTimestamp;
+  }
+
+  await setDoc(mainDocRef, mainDocData);
+  console.log(`✅ Created main doc for news: ${newsTitle} (${newsId})`);
+};
+
+/**
+ * Save only user feedback (assumes main document already exists)
+ * Uses actual newsId from news collection as document ID
+ */
+export const saveUserPrismFeedback = async (
+  userId: string,
+  newsId: string,
+  userLabel: string,
+  userCoreStanceType: string,
+  userNationality: string,
+  feedbackLanguage: string,
+  selectedStance: 'SUPPORT' | 'NEUTRAL' | 'OPPOSE',
+  matchingScore?: number
+): Promise<void> => {
+  const feedbackRef = doc(db, 'news_prism_lens', newsId, 'users_lens_records', userId);
+
+  const feedbackData: any = {
+    userId,
+    userLabel,
+    userCoreStanceType,
+    userNationality,
+    feedbackLanguage,
+    selectedStance,
+    feedbackTimestamp: new Date().toISOString()
+  };
+
+  if (matchingScore !== undefined) {
+    feedbackData.matchingScore = matchingScore;
+  }
+
+  await setDoc(feedbackRef, feedbackData);
+  console.log(`✅ Saved user feedback for newsId: ${newsId} - ${selectedStance}`);
+};
+
 // ==================== User Location ====================
 // Uses dedicated collection: userLocations/{userId}
 // With history subcollection: userLocations/{userId}/history/{timestamp}

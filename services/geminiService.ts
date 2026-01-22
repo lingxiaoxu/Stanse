@@ -650,16 +650,52 @@ Avoid generic statements - be concrete and informative.`
 /**
  * Generates a "Prism Summary" for a news topic using Gemini Pro (for deeper reasoning).
  */
-export const generatePrismSummary = async (topic: string) => {
+export const generatePrismSummary = async (topic: string, language: string = 'en') => {
     try {
-        const prompt = `
-          Provide a 'Prism Summary' for the topic: "${topic}".
-          I need three distinct perspectives:
-          1. Support/Proponent narrative.
-          2. Oppose/Critic narrative.
-          3. Neutral/Objective observer narrative.
-          Keep each section under 40 words.
-        `;
+        // Language-specific prompts
+        const languagePrompts: Record<string, string> = {
+            en: `Provide a 'Prism Summary' for the topic: "${topic}".
+                 I need three distinct perspectives:
+                 1. Support/Proponent narrative.
+                 2. Oppose/Critic narrative.
+                 3. Neutral/Objective observer narrative.
+                 Keep each section under 40 words.
+                 **Respond in English.**`,
+
+            zh: `为以下主题提供"棱镜摘要"："${topic}"。
+                 我需要三个不同的视角：
+                 1. 支持/赞成者叙述
+                 2. 反对/批评者叙述
+                 3. 中立/客观观察者叙述
+                 每部分保持在50字以内。
+                 **请用中文回答。**`,
+
+            ja: `次のトピックについて「プリズムサマリー」を提供してください："${topic}"。
+                 3つの異なる視点が必要です：
+                 1. 支持/賛成派の物語
+                 2. 反対/批判派の物語
+                 3. 中立/客観的観察者の物語
+                 各セクションは50文字以内にしてください。
+                 **日本語で回答してください。**`,
+
+            fr: `Fournissez un "Résumé Prisme" pour le sujet : "${topic}".
+                 J'ai besoin de trois perspectives distinctes :
+                 1. Récit des partisans/promoteurs.
+                 2. Récit des opposants/critiques.
+                 3. Récit neutre/observateur objectif.
+                 Limitez chaque section à 40 mots.
+                 **Répondez en français.**`,
+
+            es: `Proporcione un "Resumen Prisma" para el tema: "${topic}".
+                 Necesito tres perspectivas distintas:
+                 1. Narrativa de apoyo/proponentes.
+                 2. Narrativa de oposición/críticos.
+                 3. Narrativa neutral/observador objetivo.
+                 Mantenga cada sección en menos de 40 palabras.
+                 **Responda en español.**`
+        };
+
+        const prompt = languagePrompts[language.toLowerCase()] || languagePrompts['en'];
 
         const responseSchema: Schema = {
             type: Type.OBJECT,
@@ -672,7 +708,7 @@ export const generatePrismSummary = async (topic: string) => {
         };
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash', // Flash is sufficient and faster
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -680,7 +716,7 @@ export const generatePrismSummary = async (topic: string) => {
                 systemInstruction: "You are an objective political analyst translating complex events into clear narratives."
             }
         });
-        
+
         return JSON.parse(response.text || '{}');
     } catch (error) {
         console.error("Gemini Prism Error:", error);

@@ -1067,3 +1067,8 @@ export { scheduledNewsFetch } from './scheduled-news-fetcher';
 // Presence Cleanup
 // ========================================
 export { cleanupStalePresence } from './cleanup-stale-presence';
+
+// ========================================
+// China News Listener
+// ========================================
+export { onChinaNewsCreate } from './china-news-listener';

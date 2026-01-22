@@ -189,6 +189,9 @@ export const getPersonalizedNewsFeed = async (
       date: item.date,
       imageUrl: item.imageUrl || '',
       category: item.category,
+      titleHash: item.titleHash, // Include titleHash for news_prism_lens linking
+      originalLanguage: item.originalLanguage, // Include for multi-language prism generation
+      createdAt: item.createdAt, // Include for news production timestamp
     }));
 
     orchestratorLogger.operationSuccess(opId, 'getPersonalizedNewsFeed', {

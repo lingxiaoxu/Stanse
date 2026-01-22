@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cleanupStalePresence = exports.scheduledNewsFetch = exports.fetchGoogleNewsRSS = exports.checkBreakingNews = exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
+exports.onChinaNewsCreate = exports.cleanupStalePresence = exports.scheduledNewsFetch = exports.fetchGoogleNewsRSS = exports.checkBreakingNews = exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -921,4 +921,9 @@ Object.defineProperty(exports, "scheduledNewsFetch", { enumerable: true, get: fu
 // ========================================
 var cleanup_stale_presence_1 = require("./cleanup-stale-presence");
 Object.defineProperty(exports, "cleanupStalePresence", { enumerable: true, get: function () { return cleanup_stale_presence_1.cleanupStalePresence; } });
+// ========================================
+// China News Listener
+// ========================================
+var china_news_listener_1 = require("./china-news-listener");
+Object.defineProperty(exports, "onChinaNewsCreate", { enumerable: true, get: function () { return china_news_listener_1.onChinaNewsCreate; } });
 //# sourceMappingURL=index.js.map

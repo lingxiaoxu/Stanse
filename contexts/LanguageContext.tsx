@@ -8,7 +8,11 @@ const TRANSLATIONS = {
     nav: { feed: "FEED", sense: "SENSE", stance: "STANCE", union: "UNION" },
     login: {
         title: "IDENTIFY YOURSELF",
+        title_signin: "PLATFORM GATEWAY",
+        title_signup: "CREATE ACCOUNT",
         email: "EMAIL FREQUENCY",
+        email_signin: "EMAIL LOGON",
+        email_signup: "EMAIL REGISTRATION",
         key: "ACCESS KEY",
         btn: "ESTABLISH LINK",
         google: "CONTINUE WITH GOOGLE",
@@ -250,6 +254,8 @@ const TRANSLATIONS = {
         market: "Values Market Alignment",
         market_title: "THE MARKET",
         market_subtitle: "REAL-TIME VALUES TRACKING",
+        china_title: "THE CHINA",
+        china_subtitle: "THE MOST AUTHENTIC CHINA NEWS",
         aligned_with: "Aligned with",
         curated_for: "Curated for",
         company_ranking: "Values Company Ranking",
@@ -294,7 +300,9 @@ const TRANSLATIONS = {
         analysis_placeholder: "Market analysis will appear here",
         outperforming: "OUTPERFORMING",
         underperforming: "UNDERPERFORMING",
-        today_long_short: "today (Long / Short Equity)"
+        today_long_short: "today (Long / Short Equity)",
+        loading: "Loading...",
+        load_more: "Load More"
     },
     fingerprint: {
         title: "YOUR STANCE",
@@ -397,7 +405,11 @@ const TRANSLATIONS = {
     nav: { feed: "动态", sense: "感知", stance: "立场", union: "联合" },
     login: {
         title: "身份识别",
+        title_signin: "平台入口",
+        title_signup: "创建账户",
         email: "电子邮箱",
+        email_signin: "登录邮箱",
+        email_signup: "注册邮箱",
         key: "访问密钥",
         btn: "建立连接",
         google: "通过 GOOGLE 继续",
@@ -639,6 +651,8 @@ const TRANSLATIONS = {
         market: "价值观市场对齐度",
         market_title: "市场",
         market_subtitle: "实时价值观追踪",
+        china_title: "中国",
+        china_subtitle: "最真实的中国新闻",
         aligned_with: "对齐",
         curated_for: "为您筛选",
         company_ranking: "价值观公司排名",
@@ -683,7 +697,9 @@ const TRANSLATIONS = {
         analysis_placeholder: "市场分析将在此显示",
         outperforming: "指数表现上涨",
         underperforming: "指数表现下跌",
-        today_long_short: "今日 (多空策略)"
+        today_long_short: "今日 (多空策略)",
+        loading: "加载中...",
+        load_more: "加载更多"
     },
     fingerprint: {
         title: "你的立场",
@@ -786,7 +802,11 @@ const TRANSLATIONS = {
     nav: { feed: "フィード", sense: "センス", stance: "スタンス", union: "ユニオン" },
     login: {
         title: "本人確認",
+        title_signin: "プラットフォームゲートウェイ",
+        title_signup: "アカウント作成",
         email: "メールアドレス",
+        email_signin: "ログインメール",
+        email_signup: "登録メール",
         key: "アクセスキー",
         btn: "リンク確立",
         google: "GOOGLEで続行",
@@ -1028,6 +1048,8 @@ const TRANSLATIONS = {
         market: "価値観市場適合度",
         market_title: "マーケット",
         market_subtitle: "リアルタイム価値観追跡",
+        china_title: "中国",
+        china_subtitle: "最も本物の中国ニュース",
         aligned_with: "適合",
         curated_for: "キュレーション",
         company_ranking: "価値観企業ランキング",
@@ -1072,6 +1094,8 @@ const TRANSLATIONS = {
         analysis_placeholder: "市場分析がここに表示されます",
         outperforming: "上昇中",
         underperforming: "下落中",
+        loading: "読み込み中...",
+        load_more: "もっと見る",
         today_long_short: "本日 (ロング/ショート)"
     },
     fingerprint: {
@@ -1175,7 +1199,11 @@ const TRANSLATIONS = {
     nav: { feed: "FLUX", sense: "SENS", stance: "POSITION", union: "UNION" },
     login: {
         title: "IDENTIFICATION",
+        title_signin: "PORTAIL PLATEFORME",
+        title_signup: "CRÉER UN COMPTE",
         email: "EMAIL",
+        email_signin: "EMAIL DE CONNEXION",
+        email_signup: "EMAIL D'INSCRIPTION",
         key: "CLÉ D'ACCÈS",
         btn: "ÉTABLIR LIEN",
         google: "CONTINUER AVEC GOOGLE",
@@ -1412,6 +1440,8 @@ const TRANSLATIONS = {
         market: "Alignement Marché Valeurs",
         market_title: "LE MARCHÉ",
         market_subtitle: "SUIVI DES VALEURS EN TEMPS RÉEL",
+        china_title: "LA CHINE",
+        china_subtitle: "LES NOUVELLES CHINOISES LES PLUS AUTHENTIQUES",
         aligned_with: "Aligné avec",
         curated_for: "Sélectionné pour",
         company_ranking: "Classement des Entreprises selon les Valeurs",
@@ -1456,7 +1486,9 @@ const TRANSLATIONS = {
         analysis_placeholder: "L'analyse du marché apparaîtra ici",
         outperforming: "EN HAUSSE",
         underperforming: "EN BAISSE",
-        today_long_short: "aujourd'hui (Long / Short)"
+        today_long_short: "aujourd'hui (Long / Short)",
+        loading: "Chargement...",
+        load_more: "Charger Plus"
     },
     fingerprint: {
         title: "VOTRE POSITION",
@@ -1559,7 +1591,11 @@ const TRANSLATIONS = {
     nav: { feed: "FEED", sense: "SENTIDO", stance: "POSTURA", union: "UNIÓN" },
     login: {
         title: "IDENTIFÍCATE",
+        title_signin: "PORTAL DE PLATAFORMA",
+        title_signup: "CREAR CUENTA",
         email: "CORREO ELECTRÓNICO",
+        email_signin: "CORREO DE INICIO DE SESIÓN",
+        email_signup: "CORREO DE REGISTRO",
         key: "CLAVE DE ACCESO",
         btn: "ESTABLECER ENLACE",
         google: "CONTINUAR CON GOOGLE",
@@ -1796,6 +1832,8 @@ const TRANSLATIONS = {
         market: "Alineación Mercado Valores",
         market_title: "EL MERCADO",
         market_subtitle: "SEGUIMIENTO DE VALORES EN TIEMPO REAL",
+        china_title: "CHINA",
+        china_subtitle: "LAS NOTICIAS MÁS AUTÉNTICAS DE CHINA",
         aligned_with: "Alineado con",
         curated_for: "Seleccionado para",
         company_ranking: "Clasificación de Empresas por Valores",
@@ -1840,7 +1878,9 @@ const TRANSLATIONS = {
         analysis_placeholder: "El análisis del mercado aparecerá aquí",
         outperforming: "EN ALZA",
         underperforming: "EN BAJA",
-        today_long_short: "hoy (Long / Short)"
+        today_long_short: "hoy (Long / Short)",
+        loading: "Cargando...",
+        load_more: "Cargar Más"
     },
     fingerprint: {
         title: "TU POSTURA",
