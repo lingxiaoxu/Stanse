@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, BookOpen, Shield, Settings, LogOut, ChevronRight, Users, Twitter, Check, User } from 'lucide-react';
+import { X, BookOpen, Shield, Settings, LogOut, ChevronRight, Users, Twitter, Check, User, MessageSquare } from 'lucide-react';
 import { ViewState, SocialPlatform } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -119,6 +119,12 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose, onNav
           label={t('menu', 'account')}
           sub={t('menu', 'subs').account}
           onClick={() => handleNav(ViewState.ACCOUNT)}
+        />
+        <MenuItem
+          icon={<MessageSquare />}
+          label={t('menu', 'aiAssistant')}
+          sub={t('menu', 'subs').aiAssistant}
+          onClick={() => handleNav(ViewState.AI_CHAT)}
         />
         <MenuItem
           icon={<Users />}

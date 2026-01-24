@@ -315,7 +315,14 @@ const StanseApp: React.FC = () => {
       case ViewState.ABOUT_US:
         return <AboutUsView />;
       default:
-        return <FeedView />;
+        return (
+          <FeedView
+            onTextSelected={(text) => {
+              setSelectedTextForAI(text);
+              setIsChatOpen(true);
+            }}
+          />
+        );
     }
   };
 
@@ -323,6 +330,11 @@ const StanseApp: React.FC = () => {
   const handleNavigate = (newView: ViewState) => {
     if (newView === ViewState.AI_CHAT) {
       setIsChatOpen(true);
+      // Also re-enable the floating button when opening from menu
+      if (!showChatButton) {
+        setShowChatButton(true);
+        localStorage.setItem('stanse_show_ai_button', 'true');
+      }
       // Don't change view, just open chat
     } else {
       setView(newView);

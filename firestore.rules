@@ -485,6 +485,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ==================== AI Chat Assistant ====================
+    // Chat History - users can read/write only their own chat history (max 5 records enforced client-side)
+    // Structure: users/{userId}/chatHistory/{messageId}
+    match /users/{userId}/chatHistory/{messageId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Public read for certain collections
     match /public_data/{document=**} {
       allow read: if true;

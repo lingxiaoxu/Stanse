@@ -54,6 +54,8 @@ import { personalizeNewsFeed, processNewsWithEmbeddings, getCachedNews } from '.
 import { PoliticalCoordinates, NewsEvent } from '../../types';
 import { ProcessedNewsItem, AgentResponse } from './types';
 import { orchestratorLogger } from './logger';
+import { getPersonaEmbedding, generateAndSavePersonaEmbedding } from '../userPersonaService';
+import { getUserProfile } from '../userService';
 
 export const getPersonalizedNewsFeed = async (
   userProfile: PoliticalCoordinates,
@@ -76,8 +78,6 @@ export const getPersonalizedNewsFeed = async (
     let userEmbedding: number[] | null = null;
     if (userId) {
       try {
-        const { getPersonaEmbedding, generateAndSavePersonaEmbedding } = await import('../userPersonaService');
-        const { getUserProfile } = await import('../userService');
 
         // Try to get existing persona embedding
         let personaData = await getPersonaEmbedding(userId);

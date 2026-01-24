@@ -20,8 +20,10 @@ const formatMarkdown = (text: string): string => {
   // Replace "* " at start of line with placeholder
   formatted = formatted.replace(/^(\s*)\*\s+/gm, '$1BULLET_MARKER_PLACEHOLDER ');
 
-  // Step 2: Convert **bold** to <strong> (use [\s\S] to match across lines)
-  formatted = formatted.replace(/\*\*([^\*]+?)\*\*/g, '<strong>$1</strong>');
+  // Step 2: Convert **bold** to <strong>
+  // Match: ** followed by any chars (non-greedy) followed by **
+  // Use [\s\S] to include newlines, but be careful not to match nested **
+  formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
   // Step 3: Convert *italic* to <em> (only single * not followed/preceded by *)
   // Use negative lookahead/lookbehind to avoid matching ** or bullet markers
