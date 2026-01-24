@@ -68,17 +68,17 @@ export const AIChatFloatingButton: React.FC<Props> = ({ onClick, onHide }) => {
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
       onClick={handleClick}
-      className="fixed right-6 bottom-[100px] z-40 bg-black text-white border-4 border-white shadow-pixel hover:scale-110 transition-transform duration-200 flex items-center justify-center"
+      className="fixed right-2.5 bottom-[95px] z-40 bg-black text-white border-4 border-white shadow-pixel hover:scale-110 transition-transform duration-200 flex items-center justify-center"
       style={{
-        width: '64px',
-        height: '64px'
+        width: '54px',
+        height: '54px'
       }}
       aria-label={showClose ? "Hide AI Assistant" : "Open AI Chat Assistant"}
     >
       {showClose ? (
-        <X size={32} className="animate-fade-in" />
+        <X size={28} className="animate-fade-in" />
       ) : (
-        <MessageSquare size={32} />
+        <MessageSquare size={28} />
       )}
     </button>
   );
