@@ -492,6 +492,33 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // ==================== Ember AI Chat 成本追踪 ====================
+    // 成本追踪 - Cloud Function (gen-lang-client-0960644135) 写入到 stanseproject
+    // Structure: users/{userId}/ember_cost_sessions/{sessionId}
+    match /users/{userId}/ember_cost_sessions/{sessionId} {
+      // 用户可以读取自己的成本数据
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Cloud Function 可以写入（通过 Firebase Admin SDK）
+      allow write: if true; // 暂时允许所有写入，生产环境应限制为 service account
+    }
+
+    // Ember 全局缓存 - Cloud Function 管理（所有用户共享）
+    match /ember_global_cache/{cacheKey} {
+      allow read: if request.auth != null; // 认证用户可读
+      allow write: if true; // Cloud Function 写入
+    }
+
+    // Ember 用户预算设置
+    match /user_budgets/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Ember 用户等级
+    match /user_tiers/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // 仅管理员可修改
+    }
+
     // Public read for certain collections
     match /public_data/{document=**} {
       allow read: if true;
