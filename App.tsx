@@ -16,7 +16,8 @@ import { AboutUsView } from './components/views/AboutUsView';
 import { MenuOverlay } from './components/ui/MenuOverlay';
 import { AppTour } from './components/ui/AppTour';
 import { AIChatFloatingButton } from './components/ai-chat/AIChatFloatingButton';
-import { AIChatSidebar } from './components/ai-chat/AIChatSidebar';
+// 使用 Ember AI Chat（支持4种模式 + 成本追踪 + 多模型对比）
+import { EmberAIChatSidebar as AIChatSidebar } from './components/ai-chat/EmberAIChatSidebar';
 import { SplashVideo } from './components/ui/SplashVideo';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -32,6 +33,7 @@ import { testCollectionLinking, cleanAllNews } from './utils/testCollectionLinki
 import { testLanguageSwitch, compareLanguages } from './utils/testLanguageSwitch';
 import { checkRSSStatus, testRSSNow } from './utils/monitorRSS';
 import './utils/populateActiveFronts'; // Load Active Fronts utilities for browser console
+import './utils/testEmberAPI'; // Load Ember API test utilities for browser console
 
 // Initial mock state for user profile (used as fallback)
 const INITIAL_PROFILE: PoliticalCoordinates = {
@@ -141,6 +143,8 @@ const StanseApp: React.FC = () => {
       console.log('   - window.cleanAllNews()');
       console.log('   - window.checkRSSStatus()');
       console.log('   - window.testRSSNow(\'en\')');
+      console.log('   - window.testEmberAPI.testAll()          - Ember API 完整测试');
+      console.log('   - window.testEmberAPI.defaultMode("你好") - 测试快速问答');
     }
   }, []);
 
