@@ -73,6 +73,7 @@ export const AIChatFloatingButton: React.FC<Props> = ({ onClick, onHide }) => {
         width: '54px',
         height: '54px'
       }}
+      data-tour-id="ai-chat-button"
       aria-label={showClose ? "Hide AI Assistant" : "Open AI Chat Assistant"}
     >
       {showClose ? (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader, Trash2 } from 'lucide-react';
+import { X, Send, Loader, Trash2, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ChatMessage } from '../../types';
@@ -9,6 +9,7 @@ import {
   clearOldestMessage,
   clearAllChatHistory
 } from '../../services/chatHistoryService';
+import { translatePersonaLabel } from '../../services/agents/stanceAgent';
 import { ChatBubble } from './ChatBubble';
 import { ChatModeSelector, ChatMode } from './ChatModeSelector';
 import { CostTracker } from './CostTracker';
@@ -42,6 +43,62 @@ interface EmberResponse {
   error?: string;
 }
 
+// Collapsible component for Ensemble candidates (view only, no selection)
+const EnsembleCandidatesCollapsible: React.FC<{ candidates: string[]; language?: string }> = ({ candidates, language }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const getLabel = () => {
+    switch (language) {
+      case 'ZH': return isExpanded ? '隐藏候选答案' : '查看候选答案';
+      case 'JA': return isExpanded ? '候補回答を隠す' : '候補回答を表示';
+      case 'FR': return isExpanded ? 'Masquer les candidats' : 'Voir les candidats';
+      case 'ES': return isExpanded ? 'Ocultar candidatos' : 'Ver candidatos';
+      default: return isExpanded ? 'Hide Candidates' : 'View Candidates';
+    }
+  };
+
+  return (
+    <div className="mt-2 border-2 border-gray-300 bg-gray-50">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-3 py-2 flex items-center justify-between hover:bg-gray-100 transition-colors"
+      >
+        <span className="font-mono text-xs text-gray-600">
+          {getLabel()} ({candidates.length})
+        </span>
+        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </button>
+
+      {isExpanded && (
+        <div className="p-3 border-t-2 border-gray-300 space-y-3">
+          <div className="font-mono text-[10px] text-gray-500 mb-2">
+            {language === 'ZH' ? '💡 以下是 Claude 评估的 5 个候选答案（仅供参考）' :
+             language === 'JA' ? '💡 以下はClaudeが評価した5つの候補回答（参考用）' :
+             language === 'FR' ? '💡 Voici les 5 candidats évalués par Claude (référence)' :
+             language === 'ES' ? '💡 Los 5 candidatos evaluados por Claude (referencia)' :
+             '💡 5 candidate answers evaluated by Claude (for reference)'}
+          </div>
+          {candidates.map((candidate, idx) => (
+            <div
+              key={idx}
+              className="p-2 bg-white border border-gray-300 font-mono text-xs"
+            >
+              <div className="font-semibold text-gray-700 mb-1">
+                {language === 'ZH' ? '候选' :
+                 language === 'JA' ? '候補' :
+                 language === 'FR' ? 'Candidat' :
+                 language === 'ES' ? 'Candidato' :
+                 'Candidate'} {idx + 1}
+              </div>
+              <div className="text-gray-600 whitespace-pre-wrap">{candidate}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilledMessage }) => {
   const { user, userProfile } = useAuth();
   const { t, language } = useLanguage();
@@ -65,13 +122,17 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
   const [todayTotalCost, setTodayTotalCost] = useState(0);
   const [monthTotalCost, setMonthTotalCost] = useState(0);
 
-  // Ensemble 候选选择
-  const [pendingCandidates, setPendingCandidates] = useState<{
+  // Track Ensemble mode candidates for collapsible view
+  const [ensembleCandidates, setEnsembleCandidates] = useState<{[messageId: string]: string[]}>({});
+
+  // Track Multi mode answers for selection (Expert Panel)
+  const [pendingMultiAnswers, setPendingMultiAnswers] = useState<{
     question: string;
-    finalAnswer: string;
-    candidates: string[];
-    messageIds: string[];
+    answers: Array<{ model: string; answer: string; messageId: string }>;
   } | null>(null);
+
+  // Translated user label (synced with Stance tab translation)
+  const [translatedUserLabel, setTranslatedUserLabel] = useState<string | undefined>(undefined);
 
   // Swipe to close
   const [swipeStartX, setSwipeStartX] = useState<number | null>(null);
@@ -116,6 +177,55 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
       }
     }
   }, [isOpen, prefilledMessage]);
+
+  // Translate user label when language changes (sync with Stance tab)
+  useEffect(() => {
+    const translateLabel = async () => {
+      if (!userProfile?.coordinates?.label) {
+        setTranslatedUserLabel(undefined);
+        return;
+      }
+
+      const originalLabel = userProfile.coordinates.label;
+
+      // Check localStorage cache first - MUST match FingerprintView's cache key format!
+      // FingerprintView uses: `stanse_persona_${label}_${language.toLowerCase()}`
+      const cacheKey = `stanse_persona_${originalLabel}_${language.toLowerCase()}`;
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          console.log(`[EmberAIChat] Using cached translated label for ${language}:`, cached);
+          setTranslatedUserLabel(cached);
+          return;
+        }
+      } catch (e) {
+        console.warn('[EmberAIChat] Failed to read label cache');
+      }
+
+      // If English, use original
+      if (language === 'EN' || language === 'en') {
+        setTranslatedUserLabel(originalLabel);
+        return;
+      }
+
+      // Translate using the same service as Stance tab
+      try {
+        const translated = await translatePersonaLabel(userProfile.coordinates, language);
+        setTranslatedUserLabel(translated);
+        // Cache the result with the SAME key format as FingerprintView
+        try {
+          localStorage.setItem(cacheKey, translated);
+        } catch (e) {
+          console.warn('[EmberAIChat] Failed to cache translated label');
+        }
+      } catch (error) {
+        console.error('[EmberAIChat] Failed to translate label:', error);
+        setTranslatedUserLabel(originalLabel); // Fallback to original
+      }
+    };
+
+    translateLabel();
+  }, [language, userProfile?.coordinates?.label]);
 
   // Load cost statistics
   const loadCostStats = async () => {
@@ -274,55 +384,50 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
       let assistantMessages: ChatMessage[] = [];
 
       if (chatMode === 'multi' && Array.isArray(data.answer)) {
-        // Multi-model mode: show all answers
+        // Multi-model mode: show all answers with selection capability
+        const multiAnswers: Array<{ model: string; answer: string; messageId: string }> = [];
+
         data.answer.forEach((resp, idx) => {
+          const msgId = `${Date.now()}-assistant-${idx}`;
+          multiAnswers.push({
+            model: resp.model,
+            answer: resp.answer,
+            messageId: msgId
+          });
           assistantMessages.push({
-            id: `${Date.now()}-assistant-${idx}`,
+            id: msgId,
             role: 'assistant',
             content: `**${resp.model}**: ${resp.answer}`,
             timestamp: new Date().toISOString(),
             provider: 'ember' as any
           });
         });
+
+        // Store for selection UI
+        setPendingMultiAnswers({
+          question: trimmedInput,
+          answers: multiAnswers
+        });
       } else if (chatMode === 'ensemble' && data.candidates) {
-        // Ensemble mode: show final answer + candidates with selection buttons
+        // Ensemble mode: show ONLY final answer (Claude already selected best from 5 candidates)
         answerContent = typeof data.answer === 'string' ? data.answer : JSON.stringify(data.answer);
 
-        const finalMsgId = `${Date.now()}-assistant-final`;
-        const candidateIds: string[] = [];
+        const ensembleMessageId = `${Date.now()}-assistant-ensemble`;
 
-        // Add final answer
+        // Only show Claude's synthesized final answer
         assistantMessages.push({
-          id: finalMsgId,
+          id: ensembleMessageId,
           role: 'assistant',
-          content: `**最终答案 (Ensemble)**:\n${answerContent}\n\n💡 *从下面的候选答案中选择你最喜欢的，其他候选将被删除*`,
+          content: `**深度分析 (Deep Analysis)**:\n\n${answerContent}\n\n_✨ 此答案由 Claude 从 5 个 AI 候选中评估综合得出_`,
           timestamp: new Date().toISOString(),
           provider: 'ember' as any
         });
 
-        // Add candidates with selection buttons
-        data.candidates.forEach((candidate, idx) => {
-          const candidateId = `${Date.now()}-candidate-${idx}`;
-          candidateIds.push(candidateId);
-
-          assistantMessages.push({
-            id: candidateId,
-            role: 'assistant',
-            content: `**候选 ${idx + 1}**:\n${candidate}`,
-            timestamp: new Date().toISOString(),
-            provider: 'ember' as any,
-            // 添加候选索引用于选择
-            candidateIndex: idx
-          } as any);
-        });
-
-        // 保存待选择的候选信息
-        setPendingCandidates({
-          question: trimmedInput,
-          finalAnswer: answerContent,
-          candidates: data.candidates,
-          messageIds: [finalMsgId, ...candidateIds]
-        });
+        // Store candidates for collapsible view (not for selection, just for reference)
+        setEnsembleCandidates(prev => ({
+          ...prev,
+          [ensembleMessageId]: data.candidates || []
+        }));
       } else {
         // Default/batch mode: single answer
         answerContent = typeof data.answer === 'string' ? data.answer : JSON.stringify(data.answer);
@@ -359,41 +464,27 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
       // Update today's total cost
       setTodayTotalCost(prev => prev + (data.cost || 0));
 
-      // Save to Firestore (max 5 records)
-      // 对于 Ensemble/Multi 模式，等待用户选择后再保存
-      try {
-        // Ensemble 模式：不立即保存，等待用户选择候选
-        if (chatMode === 'ensemble' && data.candidates) {
-          // 由 handleSelectCandidate 处理保存
-          console.log('Ensemble 模式：等待用户选择候选答案');
-          return;
-        }
+      // Save chat history - but for Multi mode, wait for user selection
+      // Multi mode saves only the selected answer via handleSelectMultiAnswer
+      if (chatMode !== 'multi') {
+        try {
+          const historyCount = await saveChatMessage(
+            user.uid,
+            trimmedInput,
+            answerContent,
+            'ember' as any
+          );
 
-        // Multi 模式：保存所有答案
-        let contentToSave = answerContent;
-        if (chatMode === 'multi' && Array.isArray(data.answer)) {
-          contentToSave = '';
-          data.answer.forEach((resp) => {
-            contentToSave += `**${resp.model}**: ${resp.answer}\n\n`;
-          });
+          if (historyCount > 5) {
+            await clearOldestMessage(user.uid);
+          }
+        } catch (saveError) {
+          console.error('Failed to save chat history:', saveError);
         }
-
-        const historyCount = await saveChatMessage(
-          user.uid,
-          trimmedInput,
-          contentToSave,
-          'ember' as any
-        );
-
-        if (historyCount > 5) {
-          await clearOldestMessage(user.uid);
-        }
-      } catch (saveError) {
-        console.error('Failed to save chat history:', saveError);
       }
+      // For Multi mode: user must select an answer, which triggers handleSelectMultiAnswer to save
 
       // Reload cost stats after saving
-      // 延迟一下让 Firestore 写入完成
       setTimeout(() => {
         loadCostStats();
       }, 1000);
@@ -426,45 +517,49 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
     }
   };
 
-  // 处理候选答案选择
-  const handleSelectCandidate = async (candidateIndex: number) => {
-    if (!pendingCandidates || !user) return;
+  // Handle Multi mode answer selection (Expert Panel)
+  const handleSelectMultiAnswer = async (selectedMessageId: string, model: string, answer: string) => {
+    if (!user || !pendingMultiAnswers) return;
 
-    const { question, candidates, messageIds } = pendingCandidates;
-    const selectedCandidate = candidates[candidateIndex];
-
-    // 保存选中的候选到 Firestore
+    // Save only the selected answer to Firebase
     try {
-      const contentToSave = `**Ensemble 答案 (已选择候选 ${candidateIndex + 1})**:\n\n${selectedCandidate}`;
-
-      await saveChatMessage(
+      const historyCount = await saveChatMessage(
         user.uid,
-        question,
-        contentToSave,
+        pendingMultiAnswers.question,
+        `**${model}** (Selected): ${answer}`,
         'ember' as any
       );
 
-      // 删除界面上的其他候选消息
-      setMessages(prev => prev.filter(msg =>
-        !messageIds.includes(msg.id) || msg.id === messageIds[candidateIndex + 1]
-      ));
+      if (historyCount > 5) {
+        await clearOldestMessage(user.uid);
+      }
 
-      // 更新选中候选的内容（移除选择按钮）
+      // Mark the selected answer visually - update messages
       setMessages(prev => prev.map(msg => {
-        if (msg.id === messageIds[candidateIndex + 1]) {
-          return {
-            ...msg,
-            content: `**✅ 已选择的答案**:\n${selectedCandidate}`
-          };
+        if (pendingMultiAnswers.answers.some(a => a.messageId === msg.id)) {
+          const isSelected = msg.id === selectedMessageId;
+          if (isSelected) {
+            // Add checkmark to selected answer
+            return {
+              ...msg,
+              content: `✅ **${model}** (Selected): ${answer}`
+            };
+          } else {
+            // Dim non-selected answers
+            return {
+              ...msg,
+              content: msg.content.replace(/^\*\*/, '~~**').replace(/\*\*:/, '**:~~')
+            };
+          }
         }
         return msg;
       }));
 
-      // 清除待选择状态
-      setPendingCandidates(null);
+      // Clear pending state
+      setPendingMultiAnswers(null);
 
-    } catch (error) {
-      console.error('Failed to save selected candidate:', error);
+    } catch (saveError) {
+      console.error('Failed to save selected answer:', saveError);
     }
   };
 
@@ -541,27 +636,51 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
             <div className="text-center text-gray-400 font-mono text-sm mt-8">
               <p>{t('aiChat', 'emptyState')}</p>
               <p className="text-xs mt-2">
-                💡 选择不同模式获得不同质量的回答
+                💡 {language === 'ZH' ? '选择不同模式获得不同质量的回答' :
+                   language === 'JA' ? '異なるモードで異なる品質の回答を取得' :
+                   language === 'FR' ? 'Choisissez le mode pour différentes qualités' :
+                   language === 'ES' ? 'Elige el modo para diferentes calidades' :
+                   'Choose different modes for different quality answers'}
               </p>
             </div>
           )}
 
-          {messages.map(msg => (
-            <div key={msg.id}>
-              <ChatBubble message={msg} />
-              {/* 如果是候选答案，显示选择按钮 */}
-              {pendingCandidates && (msg as any).candidateIndex !== undefined && (
-                <div className="mt-2 flex justify-end">
-                  <button
-                    onClick={() => handleSelectCandidate((msg as any).candidateIndex)}
-                    className="px-4 py-2 bg-blue-600 text-white font-mono text-xs border-2 border-black hover:bg-blue-700 transition-colors"
-                  >
-                    ✅ 选择此答案
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+          {messages.map(msg => {
+            const candidates = ensembleCandidates[msg.id];
+            // Check if this message is part of pending Multi mode selection
+            const pendingAnswer = pendingMultiAnswers?.answers.find(a => a.messageId === msg.id);
+            const isPendingMultiAnswer = !!pendingAnswer;
+
+            return (
+              <div key={msg.id}>
+                <ChatBubble message={msg} />
+                {/* Multi mode: selection button for each answer */}
+                {isPendingMultiAnswer && pendingAnswer && (
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      onClick={() => handleSelectMultiAnswer(
+                        pendingAnswer.messageId,
+                        pendingAnswer.model,
+                        pendingAnswer.answer
+                      )}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white font-mono text-xs border-2 border-green-700 transition-colors"
+                    >
+                      <Check size={14} />
+                      {language === 'ZH' ? '选择此答案' :
+                       language === 'JA' ? 'この回答を選択' :
+                       language === 'FR' ? 'Choisir cette réponse' :
+                       language === 'ES' ? 'Elegir esta respuesta' :
+                       'Select this answer'}
+                    </button>
+                  </div>
+                )}
+                {/* Ensemble mode: collapsible candidate view (for reference only, no selection) */}
+                {candidates && candidates.length > 0 && (
+                  <EnsembleCandidatesCollapsible candidates={candidates} language={language} />
+                )}
+              </div>
+            );
+          })}
 
           {loading && (
             <div className="flex items-center gap-2 text-gray-500 font-mono text-sm">
@@ -579,11 +698,11 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Cost Tracker - 始终显示 */}
+        {/* Cost Tracker - 始终显示，使用翻译后的标签 */}
         <CostTracker
           costInfo={costInfo}
           language={language}
-          userLabel={userProfile?.coordinates?.label}
+          userLabel={translatedUserLabel || userProfile?.coordinates?.label}
         />
 
         {/* Input */}

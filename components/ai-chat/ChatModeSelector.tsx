@@ -219,14 +219,34 @@ export const ChatModeSelector: React.FC<Props> = ({
                       <span className="font-mono text-[9px]">{mode.estimatedTime}</span>
                     </div>
 
-                    {/* 质量 */}
+                    {/* 质量 - 5种语言翻译 */}
                     <div className="flex items-center gap-1">
                       <Award size={12} className={`
                         ${mode.quality === 'good' && 'text-blue-600'}
                         ${mode.quality === 'better' && 'text-purple-600'}
                         ${mode.quality === 'best' && 'text-pink-600'}
                       `} />
-                      <span className="font-mono text-[9px] capitalize">{mode.quality}</span>
+                      <span className="font-mono text-[9px]">
+                        {mode.quality === 'good' ? (
+                          language === 'ZH' ? '良好' :
+                          language === 'JA' ? '良い' :
+                          language === 'FR' ? 'Bon' :
+                          language === 'ES' ? 'Bueno' :
+                          'Good'
+                        ) : mode.quality === 'better' ? (
+                          language === 'ZH' ? '更好' :
+                          language === 'JA' ? 'より良い' :
+                          language === 'FR' ? 'Mieux' :
+                          language === 'ES' ? 'Mejor' :
+                          'Better'
+                        ) : (
+                          language === 'ZH' ? '最佳' :
+                          language === 'JA' ? '最高' :
+                          language === 'FR' ? 'Optimal' :
+                          language === 'ES' ? 'Óptimo' :
+                          'Best'
+                        )}
+                      </span>
                     </div>
                   </div>
 

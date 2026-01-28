@@ -44,7 +44,7 @@ const NEWS_COLLECTION = 'news';
 
 /**
  * Generate embedding for a news article using Gemini
- * MULTI-LANGUAGE UPDATE: text-embedding-004 model supports multi-language natively
+ * Uses gemini-embedding-001 model with 768 dimensions (multi-language native support)
  */
 export const generateEmbedding = async (
   text: string,
@@ -53,8 +53,11 @@ export const generateEmbedding = async (
   const opId = publishingLogger.operationStart('generateEmbedding', { textLength: text.length, language });
   try {
     const response = await ai.models.embedContent({
-      model: 'text-embedding-004',
+      model: 'gemini-embedding-001',
       contents: text,
+      config: {
+        outputDimensionality: 768,  // Keep 768 dimensions for compatibility
+      },
     });
 
     if (response.embeddings && response.embeddings.length > 0) {
