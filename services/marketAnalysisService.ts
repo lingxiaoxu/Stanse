@@ -1,7 +1,17 @@
 /**
  * Market Analysis Service
  * Generates AI-powered daily market analysis using Gemini API
+ *
+ * Features:
+ * - Caches analysis per user per language in Firestore
+ * - Cache valid for 15 minutes if stock list unchanged
+ * - Supports 5 languages (EN, ZH, JA, FR, ES)
  */
+
+import {
+  getCachedAnalysis,
+  saveAnalysisToCache
+} from './marketAnalysisCacheService';
 
 export interface MarketStock {
   symbol: string;
@@ -14,6 +24,7 @@ export interface MarketStock {
 export interface MarketAnalysisResult {
   explanation: string;
   generatedAt: Date;
+  fromCache?: boolean;
 }
 
 // Language code to full name mapping for AI prompts
@@ -33,17 +44,44 @@ const LANGUAGE_NAMES: Record<string, string> = {
 
 /**
  * Generate AI-powered explanation for why today's stocks performed the way they did
+ * Uses caching to reduce API calls - cache valid for 15 minutes if stock list unchanged
+ *
  * @param stocks - Array of market stocks with current prices and changes
  * @param personaLabel - User's political persona label (e.g., "Socialist-Nationalist")
  * @param language - Language code for the response (en, zh, ja, fr, es)
- * @returns Explanation text
+ * @param userId - Optional user ID for caching (required for cache to work)
+ * @returns Explanation text with cache status
  */
 export const generateTodayAnalysis = async (
   stocks: MarketStock[],
   personaLabel: string,
-  language: string = 'en'
+  language: string = 'en',
+  userId?: string
 ): Promise<MarketAnalysisResult> => {
   try {
+    // Handle empty stocks (new user without persona)
+    if (!stocks || stocks.length === 0) {
+      return {
+        explanation: '',
+        generatedAt: new Date(),
+        fromCache: false
+      };
+    }
+
+    // Try to get cached analysis first (if userId provided)
+    if (userId) {
+      const cached = await getCachedAnalysis(userId, language, stocks);
+      if (cached.found && cached.analysisText) {
+        console.log(`[MarketAnalysis] Using cached analysis for ${language}`);
+        return {
+          explanation: cached.analysisText,
+          generatedAt: new Date(),
+          fromCache: true
+        };
+      }
+      console.log(`[MarketAnalysis] Cache miss: ${cached.reason}`);
+    }
+
     // Import dynamically to avoid circular dependency
     const { GoogleGenAI } = await import('@google/genai');
 
@@ -117,16 +155,23 @@ CRITICAL REQUIREMENTS:
 
     const text = result.text?.trim() || 'Market analysis unavailable';
 
+    // Save to cache if userId provided
+    if (userId && text) {
+      await saveAnalysisToCache(userId, language, stocks, text);
+    }
+
     return {
       explanation: text,
-      generatedAt: new Date()
+      generatedAt: new Date(),
+      fromCache: false
     };
   } catch (error) {
     console.error('Error generating today analysis:', error);
     // Return fallback explanation
     return {
       explanation: `Energy & Financial sector outperformance created drag on ${personaLabel} aligned positions.`,
-      generatedAt: new Date()
+      generatedAt: new Date(),
+      fromCache: false
     };
   }
 };

@@ -519,6 +519,14 @@ service cloud.firestore {
       allow write: if false; // 仅管理员可修改
     }
 
+    // ==================== Market Analysis Cache ====================
+    // 市场分析缓存 - 用户只能读写自己的分析缓存
+    // Structure: users/{userId}/market_analysis_cache/{language}
+    // 缓存每种语言的 Today's Analysis，减少 API 调用
+    match /users/{userId}/market_analysis_cache/{language} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Public read for certain collections
     match /public_data/{document=**} {
       allow read: if true;

@@ -260,8 +260,11 @@ export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
           const nationalityPrefix = userProfile.coordinates.nationalityPrefix;
           const politicalPersona = extractPoliticalPersona(personaLabel, nationalityPrefix);
 
-          const analysis = await generateTodayAnalysis(stocksWithPrices, politicalPersona, language);
+          const analysis = await generateTodayAnalysis(stocksWithPrices, politicalPersona, language, user?.uid);
           setTodayAnalysis(analysis);
+          if (analysis.fromCache) {
+            console.log('[FeedView] Using cached market analysis');
+          }
         } catch (error) {
           console.error('Error generating today analysis:', error);
         } finally {

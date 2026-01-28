@@ -4,19 +4,20 @@ import { TourStep } from '../components/ui/AppTour';
 /**
  * App Tour Steps - Multilingual
  *
- * Each language has 12 steps (dynamically adjusted based on user state):
+ * Each language has 13 steps (dynamically adjusted based on user state):
  * 1. Welcome (center)
- * 2. Feed Tab (bottom)
- * 3. Market Alignment
- * 4. Company Rankings
+ * 2. AI Chat Assistant (right-bottom)
+ * 3. Feed Tab (bottom)
+ * 4. Market Signal
  * 5. News Feed
  * 6. Sense Tab (bottom)
  * 7. Stance Tab (bottom)
  * 8. Coordinates OR Onboarding (conditional based on hasCompletedOnboarding)
  * 9. Union Tab (bottom)
  * 10. Active Allies
- * 11. Menu (left)
- * 12. Final Welcome (center)
+ * 11. Duel Arena
+ * 12. Menu (left)
+ * 13. Final Welcome (center)
  */
 
 // Base tour steps (without coordinates step)
@@ -29,6 +30,14 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       title: 'Welcome to Stanse!',
       description: 'AI-powered political & economic alignment app with blockchain-based impact tracking. Let\'s take a quick tour!',
       position: 'center'
+    },
+    {
+      id: 'ai-chat-assistant',
+      target: 'ai-chat-button',
+      title: 'AI Chat Assistant',
+      description: 'Multi-model AI assistant with agentic capabilities. Get personalized political insights powered by multiple LLMs.',
+      position: 'left',
+      requiredTab: 'FEED'
     },
     {
       id: 'feed-tab',
@@ -121,6 +130,14 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       position: 'center'
     },
     {
+      id: 'ai-chat-assistant',
+      target: 'ai-chat-button',
+      title: 'AI 聊天助手',
+      description: '多模型 AI 助手，支持智能代理模式。多个大模型协作提供个性化政治洞察。',
+      position: 'left',
+      requiredTab: 'FEED'
+    },
+    {
       id: 'feed-tab',
       target: 'feed-tab',
       title: '动态标签',
@@ -209,6 +226,14 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       title: 'Stanse へようこそ！',
       description: 'AI 駆動の政治経済アライメントアプリ、ブロックチェーンベースの影響追跡。クイックツアーを始めましょう！',
       position: 'center'
+    },
+    {
+      id: 'ai-chat-assistant',
+      target: 'ai-chat-button',
+      title: 'AI チャットアシスタント',
+      description: 'マルチモデル AI アシスタント。エージェント機能搭載、複数の LLM で政治的インサイトを提供。',
+      position: 'left',
+      requiredTab: 'FEED'
     },
     {
       id: 'feed-tab',
@@ -301,6 +326,14 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       position: 'center'
     },
     {
+      id: 'ai-chat-assistant',
+      target: 'ai-chat-button',
+      title: 'Assistant IA',
+      description: 'Assistant IA multi-modèles avec capacités agentiques. Insights politiques personnalisés via plusieurs LLMs.',
+      position: 'left',
+      requiredTab: 'FEED'
+    },
+    {
       id: 'feed-tab',
       target: 'feed-tab',
       title: 'Onglet Flux',
@@ -389,6 +422,14 @@ const BASE_TOUR_STEPS: Record<Language, TourStep[]> = {
       title: '¡Bienvenido a Stanse!',
       description: 'Aplicación de alineación política y económica impulsada por IA con seguimiento de impacto blockchain. ¡Hagamos un recorrido rápido!',
       position: 'center'
+    },
+    {
+      id: 'ai-chat-assistant',
+      target: 'ai-chat-button',
+      title: 'Asistente IA',
+      description: 'Asistente IA multi-modelo con capacidades agénticas. Insights políticos personalizados con múltiples LLMs.',
+      position: 'left',
+      requiredTab: 'FEED'
     },
     {
       id: 'feed-tab',

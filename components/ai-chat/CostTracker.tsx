@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, TrendingUp, Zap, Info, HelpCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, Zap, Info, HelpCircle, Bot } from 'lucide-react';
 
 interface CostInfo {
   currentCost: number;       // 本次对话成本
@@ -90,29 +90,47 @@ export const CostTracker: React.FC<Props> = ({
               <HelpCircle size={12} className="text-gray-500" />
             </button>
 
-            {/* Tooltip - 5种语言 */}
+            {/* Tooltip - 5种语言 (标题和解释都翻译) */}
             {showTooltip && (
-              <div className="absolute right-0 bottom-full mb-2 w-48 bg-black text-white p-2 text-[9px] font-mono border-2 border-white shadow-lg z-50">
+              <div className="absolute right-0 bottom-full mb-2 w-52 bg-black text-white p-2 text-[9px] font-mono border-2 border-white shadow-lg z-50">
                 <div className="space-y-1">
-                  <div>⚡ <strong>Current</strong>: {
-                    language === 'ZH' ? '本次对话成本' :
-                    language === 'JA' ? '今回の会話コスト' :
-                    language === 'FR' ? 'Coût de conversation' :
-                    language === 'ES' ? 'Costo de conversación' :
+                  <div>⚡ <strong>{
+                    language === 'ZH' ? '本次' :
+                    language === 'JA' ? '今回' :
+                    language === 'FR' ? 'Actuel' :
+                    language === 'ES' ? 'Actual' :
+                    'Current'
+                  }</strong>: {
+                    language === 'ZH' ? '本次对话消耗的成本' :
+                    language === 'JA' ? '今回の会話で消費したコスト' :
+                    language === 'FR' ? 'Coût de cette conversation' :
+                    language === 'ES' ? 'Costo de esta conversación' :
                     'Cost of this conversation'
                   }</div>
-                  <div>💵 <strong>Today</strong>: {
-                    language === 'ZH' ? '今日累计成本' :
+                  <div>💵 <strong>{
+                    language === 'ZH' ? '今日' :
+                    language === 'JA' ? '本日' :
+                    language === 'FR' ? 'Aujourd\'hui' :
+                    language === 'ES' ? 'Hoy' :
+                    'Today'
+                  }</strong>: {
+                    language === 'ZH' ? '今日累计消耗的成本' :
                     language === 'JA' ? '本日の累積コスト' :
                     language === 'FR' ? 'Coût total aujourd\'hui' :
-                    language === 'ES' ? 'Costo total hoy' :
+                    language === 'ES' ? 'Costo total de hoy' :
                     'Total cost today'
                   }</div>
-                  <div>📈 <strong>Month</strong>: {
-                    language === 'ZH' ? '本月累计成本' :
+                  <div>📈 <strong>{
+                    language === 'ZH' ? '本月' :
+                    language === 'JA' ? '今月' :
+                    language === 'FR' ? 'Ce mois' :
+                    language === 'ES' ? 'Este mes' :
+                    'Month'
+                  }</strong>: {
+                    language === 'ZH' ? '本月累计消耗的成本' :
                     language === 'JA' ? '今月の累積コスト' :
                     language === 'FR' ? 'Coût total ce mois' :
-                    language === 'ES' ? 'Costo total este mes' :
+                    language === 'ES' ? 'Costo total de este mes' :
                     'Total cost this month'
                   }</div>
                 </div>
@@ -264,10 +282,17 @@ export const CostTracker: React.FC<Props> = ({
         </div>
       )}
 
-      {/* 用户标签 - 显示 "AI for <label>" */}
+      {/* 用户标签 - 显示 "AI for <label>" - 5种语言 + 黑白图标 */}
       {userLabel && (
-        <div className="font-mono text-[8px] text-gray-400 mt-1">
-          🤖 AI for {userLabel}
+        <div className="font-mono text-[8px] text-gray-400 mt-1 flex items-center gap-1">
+          <Bot size={10} className="text-gray-500" />
+          <span>
+            {language === 'ZH' ? `为 ${userLabel} 定制的 AI` :
+             language === 'JA' ? `${userLabel} のための AI` :
+             language === 'FR' ? `IA pour ${userLabel}` :
+             language === 'ES' ? `IA para ${userLabel}` :
+             `AI for ${userLabel}`}
+          </span>
         </div>
       )}
     </div>

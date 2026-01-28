@@ -202,7 +202,11 @@ class EmberService:
                     "model": model_name,
                     "answer": "",
                     "cost": 0.0,
-                    "tokens": 0,
+                    "tokens": {
+                        "prompt": 0,
+                        "completion": 0,
+                        "total": 0
+                    },
                     "success": False,
                     "error": str(e)
                 }
@@ -214,7 +218,7 @@ class EmberService:
 
         # 计算总成本
         total_cost = sum(r['cost'] for r in results if r['success'])
-        total_tokens = sum(r['tokens'] for r in results if r['success'])
+        total_tokens = sum(r['tokens'].get('total', 0) for r in results if r['success'])
 
         # 筛选成功的结果
         successful_results = [r for r in results if r['success']]

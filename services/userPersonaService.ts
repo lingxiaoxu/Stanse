@@ -6,7 +6,7 @@
  *
  * Architecture:
  * 1. Generate persona description from onboarding answers + political coordinates
- * 2. Convert description to embedding using text-embedding-004
+ * 2. Convert description to embedding using gemini-embedding-001
  * 3. Store in Firestore with history tracking (main doc + history subcollection pattern)
  * 4. Use for news personalization (semantic similarity scoring)
  */
@@ -64,7 +64,7 @@ export interface PersonaEmbeddingRecord {
   // Metadata per language
   metadata: {
     generatedAt: string;          // ISO timestamp
-    modelVersion: string;         // 'text-embedding-004'
+    modelVersion: string;         // 'gemini-embedding-001'
 
     // English metadata
     descriptionWordCountEN: number;
@@ -286,8 +286,8 @@ const generateFallbackDescription = (
 };
 
 /**
- * Generate 768-dimensional embedding from persona description
- * Uses text-embedding-004 model (same as news embeddings)
+ * Generate embedding from persona description
+ * Uses gemini-embedding-001 model (same as news embeddings)
  */
 export const generatePersonaEmbedding = async (
   description: string,
@@ -297,17 +297,20 @@ export const generatePersonaEmbedding = async (
     console.log(`[PersonaService] Generating ${language.toUpperCase()} embedding for description (${description.split(' ').length} words)...`);
 
     const response = await ai.models.embedContent({
-      model: 'text-embedding-004',
+      model: 'gemini-embedding-001',
       contents: description,
+      config: {
+        outputDimensionality: 768,  // Keep 768 dimensions for compatibility with existing embeddings
+      },
     });
 
     if (response.embeddings && response.embeddings.length > 0) {
       const embedding = response.embeddings[0].values;
-      if (embedding && embedding.length === 768) {
+      if (embedding && embedding.length > 0) {
         console.log(`[PersonaService] ✅ Generated ${embedding.length}-dimensional ${language.toUpperCase()} embedding`);
         return embedding;
       } else {
-        console.warn(`[PersonaService] ⚠️ Unexpected embedding dimensions: ${embedding?.length}`);
+        console.warn(`[PersonaService] ⚠️ Empty embedding returned`);
         return null;
       }
     }
@@ -370,7 +373,7 @@ export const savePersonaEmbedding = async (
       },
       metadata: {
         generatedAt: now.toISOString(),
-        modelVersion: 'text-embedding-004',
+        modelVersion: 'gemini-embedding-001',
         descriptionWordCountEN: descriptions.en.split(' ').length,
         embeddingDimensionsEN: embeddings.en.length,
         descriptionWordCountZH: descriptions.zh?.split('').length, // Chinese uses characters
@@ -651,7 +654,7 @@ export const generateAndSavePersonaEmbedding = async (
         },
         metadata: {
           generatedAt: new Date().toISOString(),
-          modelVersion: 'text-embedding-004',
+          modelVersion: 'gemini-embedding-001',
           descriptionWordCountEN: descriptionEN.split(' ').length,
           embeddingDimensionsEN: embeddingEN.length,
           descriptionWordCountZH: descriptionZH.split('').length,

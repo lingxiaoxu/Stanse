@@ -168,7 +168,8 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
           left = highlightRect.right + padding;
           break;
         case 'left':
-          top = Math.max(highlightRect.top + (highlightRect.height / 2) - (tooltipHeight / 2), 20);
+          // Position tooltip higher up (top-left of target with visible gap from bottom)
+          top = Math.max(highlightRect.top + highlightRect.height - tooltipHeight - 80, 20);
           left = highlightRect.left - tooltipWidth - padding;
           break;
       }
