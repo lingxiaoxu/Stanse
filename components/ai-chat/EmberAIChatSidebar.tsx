@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Loader, Trash2, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { ChatMessage } from '../../types';
+import { ChatMessage, LLMProvider } from '../../types';
 import {
   saveChatMessage,
   loadChatHistory,
@@ -337,7 +337,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
       role: 'user',
       content: trimmedInput,
       timestamp: new Date().toISOString(),
-      provider: 'ember' as any  // Use 'ember' as provider
+      provider: LLMProvider.EMBER  // Use 'ember' as provider
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -399,7 +399,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
             role: 'assistant',
             content: `**${resp.model}**: ${resp.answer}`,
             timestamp: new Date().toISOString(),
-            provider: 'ember' as any
+            provider: LLMProvider.EMBER
           });
         });
 
@@ -420,7 +420,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
           role: 'assistant',
           content: `**深度分析 (Deep Analysis)**:\n\n${answerContent}\n\n_✨ 此答案由 Claude 从 5 个 AI 候选中评估综合得出_`,
           timestamp: new Date().toISOString(),
-          provider: 'ember' as any
+          provider: LLMProvider.EMBER
         });
 
         // Store candidates for collapsible view (not for selection, just for reference)
@@ -436,7 +436,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
           role: 'assistant',
           content: answerContent,
           timestamp: new Date().toISOString(),
-          provider: 'ember' as any
+          provider: LLMProvider.EMBER
         });
       }
 
@@ -472,7 +472,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
             user.uid,
             trimmedInput,
             answerContent,
-            'ember' as any
+            LLMProvider.EMBER
           );
 
           if (historyCount > 5) {
@@ -527,7 +527,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
         user.uid,
         pendingMultiAnswers.question,
         `**${model}** (Selected): ${answer}`,
-        'ember' as any
+        LLMProvider.EMBER
       );
 
       if (historyCount > 5) {
