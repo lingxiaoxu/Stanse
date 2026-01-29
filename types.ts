@@ -617,3 +617,55 @@ export interface ChatHistoryRecord {
   timestamp: string; // ISO date string
   createdAt: any; // Firestore Timestamp
 }
+
+// StanseAgent Types (Agent Mode)
+export interface StanseAgentSchema {
+  commentary: string;
+  template: string;
+  title: string;
+  description: string;
+  additional_dependencies: string[];
+  has_additional_dependencies: boolean;
+  install_dependencies_command: string;
+  port: number | null;
+  file_path: string;
+  code: string | Array<{ file_path: string; file_content: string }>;
+}
+
+export interface ExecutionResultBase {
+  sbxId: string;
+  template: string;
+}
+
+export interface ExecutionResultWeb extends ExecutionResultBase {
+  url: string;
+}
+
+export interface ExecutionResultInterpreter extends ExecutionResultBase {
+  stdout: string[];
+  stderr: string[];
+  runtimeError?: any;
+  cellResults?: any[];
+}
+
+export type ExecutionResult = ExecutionResultWeb | ExecutionResultInterpreter;
+
+export interface LLMModelConfig {
+  model?: string;
+  apiKey?: string;
+  baseURL?: string;
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  maxTokens?: number;
+}
+
+export interface AgentTemplate {
+  name: string;
+  lib: string[];
+  file: string;
+  instructions: string;
+  port: number | null;
+}

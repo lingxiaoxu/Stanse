@@ -1,7 +1,7 @@
 import React from 'react';
-import { Zap, Users, Brain, List, DollarSign, Clock, Award } from 'lucide-react';
+import { Zap, Users, Brain, List, Terminal, DollarSign, Clock, Award } from 'lucide-react';
 
-export type ChatMode = 'default' | 'multi' | 'ensemble' | 'batch';
+export type ChatMode = 'default' | 'multi' | 'ensemble' | 'batch' | 'agent';
 
 interface ChatModeInfo {
   id: ChatMode;
@@ -99,6 +99,25 @@ const CHAT_MODES: ChatModeInfo[] = [
     quality: 'good',
     estimatedCost: '$0.0002/q',
     estimatedTime: '2-5s'
+  },
+  {
+    id: 'agent',
+    name: 'Agent Mode',
+    nameZH: '智能体模式',
+    nameJA: 'エージェントモード',
+    nameFR: 'Mode Agent',
+    nameES: 'Modo Agente',
+    description: 'AI code generation with E2B sandbox execution',
+    descriptionZH: 'AI代码生成与E2B沙盒执行',
+    descriptionJA: 'E2Bサンドボックス実行によるAIコード生成',
+    descriptionFR: 'Génération de code IA avec exécution sandbox E2B',
+    descriptionES: 'Generación de código IA con ejecución sandbox E2B',
+    icon: <Terminal size={18} />,
+    costLevel: 'high',
+    speed: 'slow',
+    quality: 'best',
+    estimatedCost: '$0.020',
+    estimatedTime: '10-15s'
   }
 ];
 
@@ -285,6 +304,15 @@ export const ChatModeSelector: React.FC<Props> = ({
                          language === 'FR' ? 'Idéal pour: génération FAQ, requêtes en masse' :
                          language === 'ES' ? 'Ideal para: generación FAQ, consultas masivas' :
                          'Best for: FAQ generation, bulk queries'}
+                    </div>
+                  )}
+                  {mode.id === 'agent' && (
+                    <div className="mt-2 text-[9px] font-mono text-gray-500">
+                      💡 {language === 'ZH' ? '推荐: 代码生成、数据可视化、交互式应用' :
+                         language === 'JA' ? '推奨: コード生成、データ可視化、対話型アプリ' :
+                         language === 'FR' ? 'Idéal pour: génération code, visualisation données, apps interactives' :
+                         language === 'ES' ? 'Ideal para: generación código, visualización datos, apps interactivas' :
+                         'Best for: code generation, data visualization, interactive apps'}
                     </div>
                   )}
                 </button>
