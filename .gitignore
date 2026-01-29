@@ -10,9 +10,19 @@ lerna-debug.log*
 **/*.log
 
 node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
 dist
 dist-ssr
 *.local
+/coverage
+/.next/
+/out/
+/build
+*.tsbuildinfo
+next-env.d.ts
+.vercel
 
 # Editor directories and files
 .vscode/*
@@ -29,6 +39,7 @@ dist-ssr
 .env
 .env.*
 .env.local
+.env*.local
 .env.*.local
 .env.development
 .env.development.local
@@ -36,14 +47,20 @@ dist-ssr
 .env.production.local
 .env.test
 .env.test.local
+# But keep templates
+!.env.template
 
 # Google Cloud credentials and secrets (NEVER commit!)
 credentials.json
 service-account-key.json
 *-key.json
 *-credentials.json
+*-firebase-adminsdk-*.json
+*serviceaccount*.json
+*credentials*.json
 *.pem
 *.key
+*.secret
 gcloud-key.json
 firebase-key.json
 firestore-key.json
@@ -79,6 +96,10 @@ stanse---union-duel/
 scripts/security-audit.sh
 video/
 ember-main/
+stanse-agent/
+
+# Note: This .gitignore includes all rules from stanse-agent/.gitignore
+# to ensure consistent ignore patterns across the monorepo
 
 # ML and Business Strategy Documents (Confidential)
 documentation/ml/

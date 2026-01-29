@@ -51,14 +51,16 @@ const providerColors: Record<LLMProvider, string> = {
   [LLMProvider.GEMINI]: 'bg-blue-100 border-blue-500',
   [LLMProvider.CHATGPT]: 'bg-green-100 border-green-500',
   [LLMProvider.CLAUDE]: 'bg-purple-100 border-purple-500',
-  [LLMProvider.LOCAL]: 'bg-gray-100 border-gray-500'
+  [LLMProvider.LOCAL]: 'bg-gray-100 border-gray-500',
+  [LLMProvider.EMBER]: 'bg-white border-black'
 };
 
 const providerLabels: Record<LLMProvider, string> = {
   [LLMProvider.GEMINI]: 'Gemini',
   [LLMProvider.CHATGPT]: 'ChatGPT',
   [LLMProvider.CLAUDE]: 'Claude',
-  [LLMProvider.LOCAL]: 'Local'
+  [LLMProvider.LOCAL]: 'Local',
+  [LLMProvider.EMBER]: 'Stanse AI'
 };
 
 export const ChatBubble: React.FC<Props> = ({ message }) => {

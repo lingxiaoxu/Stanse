@@ -596,7 +596,8 @@ export enum LLMProvider {
   GEMINI = 'GEMINI',
   CHATGPT = 'CHATGPT',
   CLAUDE = 'CLAUDE',
-  LOCAL = 'LOCAL'
+  LOCAL = 'LOCAL',
+  EMBER = 'EMBER'
 }
 
 export interface ChatMessage {

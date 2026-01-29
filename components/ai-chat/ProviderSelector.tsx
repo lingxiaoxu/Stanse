@@ -13,7 +13,8 @@ const providerInfo: Record<LLMProvider, { label: string; requiresKey: boolean }>
   [LLMProvider.GEMINI]: { label: 'Gemini', requiresKey: false },
   [LLMProvider.CHATGPT]: { label: 'ChatGPT', requiresKey: true },
   [LLMProvider.CLAUDE]: { label: 'Claude', requiresKey: true },
-  [LLMProvider.LOCAL]: { label: 'Local Model', requiresKey: true }
+  [LLMProvider.LOCAL]: { label: 'Local Model', requiresKey: true },
+  [LLMProvider.EMBER]: { label: 'Stanse AI', requiresKey: false }
 };
 
 export const ProviderSelector: React.FC<Props> = ({ active, onChange }) => {
