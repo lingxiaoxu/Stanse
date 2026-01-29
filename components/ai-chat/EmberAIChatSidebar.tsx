@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Loader, Trash2, ChevronDown, ChevronUp, Check } from 'lucide-react';
-import { experimental_useObject as useObject } from 'ai/react';
-import { DeepPartial } from 'ai';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { ChatMessage, LLMProvider, StanseAgentSchema, ExecutionResult } from '../../types';
-import templates from '../../lib/stanseagent/templates';
-import { stanseAgentSchema } from '../../lib/stanseagent/schema';
+import { ChatMessage, LLMProvider } from '../../types';
 import {
   saveChatMessage,
   loadChatHistory,
@@ -17,8 +13,7 @@ import { translatePersonaLabel } from '../../services/agents/stanceAgent';
 import { ChatBubble } from './ChatBubble';
 import { ChatModeSelector, ChatMode } from './ChatModeSelector';
 import { CostTracker } from './CostTracker';
-import { AgentModeControls } from './AgentModeControls';
-import { AgentCodePanel } from './AgentCodePanel';
+import { AgentModeChat } from './AgentModeChat';
 
 interface Props {
   isOpen: boolean;
@@ -153,20 +148,8 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
   const [resizeStartX, setResizeStartX] = useState(0);
   const [resizeStartWidth, setResizeStartWidth] = useState(0);
 
-  // Agent Mode 状态
-  const [agentTemplate, setAgentTemplate] = useState<string>('auto');
-  const [agentModel, setAgentModel] = useState<any>({ model: 'claude-sonnet-4-5-20250929' });
-  const [agentFiles, setAgentFiles] = useState<File[]>([]);
-  const [generatedCode, setGeneratedCode] = useState<any>(null);
-  const [sandboxResult, setSandboxResult] = useState<any>(null);
-  const [codeTab, setCodeTab] = useState<'code' | 'preview'>('code');
-  const [splitRatio, setSplitRatio] = useState(50);
-
   // Ember API URL (需要根据部署配置)
   const EMBER_API_URL = process.env.NEXT_PUBLIC_EMBER_API_URL || 'https://us-central1-gen-lang-client-0960644135.cloudfunctions.net/ember_api';
-
-  // StanseAgent API URL (deployed to Cloud Run)
-  const STANSEAGENT_API_URL = process.env.NEXT_PUBLIC_STANSEAGENT_API_URL || 'https://stanseagent-837715360412.us-central1.run.app';
 
   // Load history on open
   useEffect(() => {
@@ -244,16 +227,6 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
 
     translateLabel();
   }, [language, userProfile?.coordinates?.label]);
-
-  // Clean up agent state when switching away from agent mode
-  useEffect(() => {
-    if (chatMode !== 'agent') {
-      setGeneratedCode(null);
-      setSandboxResult(null);
-      setAgentFiles([]);
-      setCodeTab('code');
-    }
-  }, [chatMode]);
 
   // Load cost statistics
   const loadCostStats = async () => {
@@ -356,175 +329,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
     }
   }, [isResizing, resizeStartX, resizeStartWidth]);
 
-  const handleAgentModeSubmit = async () => {
-    if (!input.trim() || !user || loading) return;
-
-    const trimmedInput = input.trim();
-    const userMessage: ChatMessage = {
-      id: `${Date.now()}-user`,
-      role: 'user',
-      content: trimmedInput,
-      timestamp: new Date().toISOString(),
-      provider: LLMProvider.EMBER
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Convert files to base64 if any
-      const imageContents = await Promise.all(
-        agentFiles.map(async (file) => {
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
-          return { type: 'image', image: base64 };
-        })
-      );
-
-      // Build messages with text and images
-      const messageContent = [
-        { type: 'text', text: trimmedInput },
-        ...imageContents
-      ];
-
-      // Call StanseAgent API to generate code
-      const selectedTemplate = agentTemplate === 'auto' ? templates : { [agentTemplate]: (templates as any)[agentTemplate] };
-
-      const chatResponse = await fetch(`${STANSEAGENT_API_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: messageContent }],
-          userID: user.uid,
-          template: selectedTemplate,
-          model: { id: agentModel.model, providerId: 'anthropic', provider: 'Anthropic', name: agentModel.model },
-          config: agentModel
-        })
-      });
-
-      if (!chatResponse.ok) {
-        throw new Error(language === 'ZH' ? '代码生成失败' :
-                       language === 'JA' ? 'コード生成に失敗しました' :
-                       language === 'FR' ? 'Échec de la génération du code' :
-                       language === 'ES' ? 'Error al generar código' :
-                       'Failed to generate code');
-      }
-
-      // Parse streaming response
-      const reader = chatResponse.body?.getReader();
-      if (!reader) throw new Error(language === 'ZH' ? '无响应流' :
-                                   language === 'JA' ? 'レスポンスストリームなし' :
-                                   language === 'FR' ? 'Pas de flux de réponse' :
-                                   language === 'ES' ? 'Sin flujo de respuesta' :
-                                   'No response stream');
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let stanseAgent: StanseAgentSchema | null = null;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        // Try to parse the latest complete object from the stream
-        const lines = buffer.split('\n');
-        for (const line of lines) {
-          if (line.trim().startsWith('0:')) {
-            try {
-              const jsonStr = line.substring(line.indexOf('{'));
-              const data = JSON.parse(jsonStr);
-              if (data && typeof data === 'object' && data.code) {
-                stanseAgent = data as StanseAgentSchema;
-                console.log('[Agent] Parsed stanseAgent:', stanseAgent.title);
-              }
-            } catch (e) {
-              // Still streaming, incomplete JSON
-            }
-          }
-        }
-      }
-
-      // Final check - if still no stanseAgent, try parsing the entire buffer
-      if (!stanseAgent) {
-        try {
-          // Try direct JSON parse
-          const data = JSON.parse(buffer);
-          if (data && typeof data === 'object' && data.code) {
-            stanseAgent = data as StanseAgentSchema;
-          }
-        } catch (e) {
-          console.error('[Agent] Failed to parse response:', buffer.substring(0, 200));
-        }
-      }
-
-      if (!stanseAgent) {
-        throw new Error(language === 'ZH' ? '未生成有效代码' :
-                       language === 'JA' ? '有効なコードが生成されませんでした' :
-                       language === 'FR' ? 'Aucun code valide généré' :
-                       language === 'ES' ? 'No se generó código válido' :
-                       'No valid code generated');
-      }
-
-      setGeneratedCode(stanseAgent);
-
-      // Add assistant message with code summary
-      const assistantMessage: ChatMessage = {
-        id: `${Date.now()}-assistant`,
-        role: 'assistant',
-        content: `**${stanseAgent.title}**\n\n${stanseAgent.commentary}\n\n✅ ${language === 'ZH' ? '代码已生成，请查看右侧面板' : language === 'JA' ? 'コードが生成されました。右側のパネルをご覧ください' : language === 'FR' ? 'Code généré, consultez le panneau de droite' : language === 'ES' ? 'Código generado, consulte el panel derecho' : 'Code generated, check the right panel'}`,
-        timestamp: new Date().toISOString(),
-        provider: LLMProvider.EMBER
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-
-      // Deploy to E2B sandbox
-      const sandboxResponse = await fetch(`${STANSEAGENT_API_URL}/api/sandbox`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stanseAgent,
-          userID: user.uid
-        })
-      });
-
-      if (!sandboxResponse.ok) {
-        throw new Error(language === 'ZH' ? '沙盒部署失败' :
-                       language === 'JA' ? 'サンドボックスへのデプロイに失敗しました' :
-                       language === 'FR' ? 'Échec du déploiement dans le sandbox' :
-                       language === 'ES' ? 'Error al implementar en sandbox' :
-                       'Failed to deploy to sandbox');
-      }
-
-      const result = await sandboxResponse.json();
-      setSandboxResult(result);
-      setCodeTab('preview'); // Auto-switch to preview tab
-
-    } catch (err: any) {
-      console.error('Agent mode error:', err);
-      setError(err.message || (language === 'ZH' ? '代码生成失败' :
-                                language === 'JA' ? 'コード生成に失敗しました' :
-                                language === 'FR' ? 'Échec de la génération du code' :
-                                language === 'ES' ? 'Error al generar código' :
-                                'Failed to generate code'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSend = async () => {
-    // Route to Agent Mode handler if in agent mode
-    if (chatMode === 'agent') {
-      return handleAgentModeSubmit();
-    }
-
     if (!input.trim() || !user || loading) return;
 
     const trimmedInput = input.trim();
@@ -761,6 +566,12 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
 
   if (!isOpen) return null;
 
+  // Agent Mode: Render completely separate component
+  if (chatMode === 'agent') {
+    return <AgentModeChat onClose={onClose} />;
+  }
+
+  // Other 4 modes: Original Ember Chat UI
   return (
     <>
       {/* Backdrop */}
@@ -772,7 +583,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
       {/* Sidebar */}
       <div
         ref={sidebarRef}
-        className="fixed right-0 top-0 h-full bg-white border-l-4 border-black shadow-pixel z-50 flex animate-slide-in"
+        className="fixed right-0 top-0 h-full bg-white border-l-4 border-black shadow-pixel z-50 flex flex-col animate-slide-in"
         style={{
           width: `${sidebarWidth}px`,
           transform: swipeOffset > 0 ? `translateX(${swipeOffset}px)` : 'translateX(0)',
@@ -792,15 +603,6 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
         >
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-12 bg-gray-400 rounded-full opacity-50 hover:opacity-100" />
         </div>
-
-        {/* Chat Panel (left side or full width) */}
-        <div
-          className="flex flex-col h-full"
-          style={{
-            width: chatMode === 'agent' && generatedCode ? `${splitRatio}%` : '100%',
-            minWidth: chatMode === 'agent' && generatedCode ? '40%' : 'auto'
-          }}
-        >
         {/* Header */}
         <div className="p-4 border-b-4 border-black bg-white">
           <div className="flex items-start justify-between mb-2">
@@ -833,21 +635,6 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
             onChange={setChatMode}
             language={language}
           />
-
-          {/* Agent Mode Controls (only visible in agent mode) */}
-          {chatMode === 'agent' && (
-            <div className="mt-3">
-              <AgentModeControls
-                selectedTemplate={agentTemplate}
-                onTemplateChange={setAgentTemplate}
-                selectedModel={agentModel}
-                onModelChange={setAgentModel}
-                files={agentFiles}
-                onFileChange={setAgentFiles}
-                language={language}
-              />
-            </div>
-          )}
         </div>
 
         {/* Messages */}
@@ -950,57 +737,6 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
             {t('aiChat', 'hint') || 'Press Enter to send'}
           </p>
         </div>
-        </div>
-        {/* End of Chat Panel */}
-
-        {/* Split Divider (only visible in agent mode with code) */}
-        {chatMode === 'agent' && generatedCode && (
-          <div
-            className="w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize border-l-2 border-r-2 border-black transition-colors"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              const startX = e.clientX;
-              const startRatio = splitRatio;
-
-              const handleMouseMove = (moveEvent: MouseEvent) => {
-                const deltaX = moveEvent.clientX - startX;
-                const sidebarRect = sidebarRef.current?.getBoundingClientRect();
-                if (!sidebarRect) return;
-
-                const deltaPercent = (deltaX / sidebarRect.width) * 100;
-                const newRatio = startRatio + deltaPercent;
-                const clampedRatio = Math.max(40, Math.min(60, newRatio));
-                setSplitRatio(clampedRatio);
-              };
-
-              const handleMouseUp = () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-              };
-
-              document.addEventListener('mousemove', handleMouseMove);
-              document.addEventListener('mouseup', handleMouseUp);
-            }}
-          />
-        )}
-
-        {/* Code Panel (right side, only visible in agent mode with code) */}
-        {chatMode === 'agent' && generatedCode && (
-          <div style={{ width: `${100 - splitRatio}%`, minWidth: '40%' }}>
-            <AgentCodePanel
-              stanseAgent={generatedCode}
-              sandboxResult={sandboxResult}
-              activeTab={codeTab}
-              onTabChange={setCodeTab}
-              onDeploy={() => {
-                if (sandboxResult && 'url' in sandboxResult && sandboxResult.url) {
-                  window.open(sandboxResult.url, '_blank');
-                }
-              }}
-              language={language}
-            />
-          </div>
-        )}
       </div>
     </>
   );
