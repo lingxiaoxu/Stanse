@@ -18,6 +18,7 @@ steps:
           --build-arg GEMINI_API_KEY=$(cat /workspace/gemini_key.txt) \
           --build-arg POLYGON_API_KEY=$(cat /workspace/polygon_key.txt) \
           --build-arg NEXT_PUBLIC_EMBER_API_URL=https://ember-api-yfcontxnkq-uc.a.run.app \
+          --build-arg NEXT_PUBLIC_STANSEAGENT_API_URL=https://stanseagent-837715360412.us-central1.run.app \
           -t gcr.io/$PROJECT_ID/stanse:latest \
           .
 
