@@ -73,7 +73,7 @@ export const CodeView: React.FC<Props> = ({ stanseAgent, language }) => {
             </span>
           </button>
         </div>
-        <pre className="flex-1 bg-white border-2 border-black p-3 overflow-auto font-mono text-xs min-h-0">
+        <pre className="flex-1 bg-white border-2 border-black p-3 overflow-auto font-mono text-xs md:min-h-0">
           <code>{stanseAgent.code}</code>
         </pre>
       </div>

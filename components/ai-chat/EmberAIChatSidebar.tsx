@@ -152,13 +152,32 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // 可调整宽度（桌面端）
-  const [sidebarWidth, setSidebarWidth] = useState(400); // 初始宽度 400px
+  // 初始宽度：宽屏(>=768px)为50%浏览器宽度，手机屏幕保持400px
+  // 但必须在最小宽度(400px)和最大宽度(11/12屏宽)之间
+  const getInitialWidth = () => {
+    if (typeof window === 'undefined') return 400;
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) return 400;
+
+    const desiredWidth = Math.floor(window.innerWidth * 0.5);
+    const maxWidth = Math.floor(window.innerWidth * 11 / 12);
+    const minWidth = 400;
+    return Math.min(Math.max(desiredWidth, minWidth), maxWidth);
+  };
+  const [sidebarWidth, setSidebarWidth] = useState(getInitialWidth());
   const [isResizing, setIsResizing] = useState(false);
   const [resizeStartX, setResizeStartX] = useState(0);
   const [resizeStartWidth, setResizeStartWidth] = useState(0);
 
   // Ember API URL (需要根据部署配置)
   const EMBER_API_URL = process.env.NEXT_PUBLIC_EMBER_API_URL || 'https://us-central1-gen-lang-client-0960644135.cloudfunctions.net/ember_api';
+
+  // Reset sidebar width to initial value when opening (only on first open)
+  useEffect(() => {
+    if (isOpen) {
+      setSidebarWidth(getInitialWidth());
+    }
+  }, [isOpen]);
 
   // Load history on open - DO NOT reload when mode changes to preserve history
   useEffect(() => {

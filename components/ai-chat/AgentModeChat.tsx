@@ -696,17 +696,17 @@ export const AgentModeChat: React.FC<Props> = ({
         </div>
 
         {/* Content area with split view - horizontal on desktop, vertical on mobile portrait */}
-        <div className={`flex ${isMobilePortrait ? 'flex-col' : 'flex-row'} h-full w-full overflow-hidden`}>
+        <div className={`flex ${isMobilePortrait ? 'flex-col' : 'flex-row'} flex-1 w-full overflow-hidden`}>
           {/* Chat Panel */}
           <div
             style={{
               width: generatedCode && !isMobilePortrait ? `${splitRatio}%` : '100%',
-              height: generatedCode && isMobilePortrait ? `${splitRatio}%` : 'auto'
+              height: generatedCode && isMobilePortrait ? `${splitRatio}%` : '100%'
             }}
-            className="flex flex-col"
+            className="flex flex-col overflow-hidden"
           >
 
-        {/* Messages */}
+        {/* Messages - with scrolling support */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
           {messages.map((msg, idx) => (
             <div key={msg.id || idx}>
@@ -793,6 +793,168 @@ export const AgentModeChat: React.FC<Props> = ({
           <div ref={messagesEndRef} />
         </div>
 
+            {/* CostTracker and Input - conditionally rendered inside chat panel (desktop) or outside (mobile portrait) */}
+            {!isMobilePortrait && (
+              <>
+                {/* CostTracker (matching EmberAIChatSidebar) */}
+                <CostTracker
+                  costInfo={costInfo}
+                  language={language}
+                  userLabel={translatedUserLabel || userProfile?.coordinates?.label}
+                />
+
+                {/* Input */}
+                <form onSubmit={handleSubmit} className="p-4 border-t-4 border-black bg-white">
+                  <div className="flex gap-2 items-end">
+                    <textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                          e.preventDefault();
+                          if (input.trim()) {
+                            handleSubmit(e as any);
+                          }
+                        }
+                      }}
+                      placeholder={language === 'ZH' ? '描述你想要的应用...' :
+                                  language === 'JA' ? 'アプリを説明...' :
+                                  language === 'FR' ? 'Décrivez votre app...' :
+                                  language === 'ES' ? 'Describe tu app...' :
+                                  'Describe your app...'}
+                      className="flex-1 border-2 border-black p-3 font-mono text-sm focus:outline-none focus:border-blue-500 resize-none min-h-[48px] max-h-[120px]"
+                      disabled={isLoading}
+                      rows={1}
+                      style={{
+                        height: 'auto',
+                        overflowY: input.split('\n').length > 3 ? 'auto' : 'hidden'
+                      }}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = 'auto';
+                        target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+                      }}
+                    />
+                    {isLoading ? (
+                      <button
+                        type="button"
+                        onClick={stop}
+                        className="bg-red-600 text-white p-3 hover:bg-red-700 border-2 border-black transition-colors flex-shrink-0"
+                        title={language === 'ZH' ? '停止生成' :
+                               language === 'JA' ? '生成を停止' :
+                               language === 'FR' ? 'Arrêter' :
+                               language === 'ES' ? 'Detener' :
+                               'Stop'}
+                      >
+                        <Square size={20} />
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={!input.trim()}
+                        className="bg-black text-white p-3 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-black transition-colors flex-shrink-0"
+                      >
+                        <Send size={20} />
+                      </button>
+                    )}
+                  </div>
+                  <p className="font-mono text-[9px] text-gray-400 mt-1">
+                    {language === 'ZH' ? '按 Enter 发送，Shift+Enter 换行' :
+                     language === 'JA' ? 'Enterで送信、Shift+Enterで改行' :
+                     language === 'FR' ? 'Entrée pour envoyer, Maj+Entrée pour nouvelle ligne' :
+                     language === 'ES' ? 'Enter para enviar, Shift+Enter para nueva línea' :
+                     'Press Enter to send, Shift+Enter for new line'}
+                  </p>
+                </form>
+              </>
+            )}
+          </div>
+
+          {/* Split Divider - vertical on desktop, horizontal on mobile portrait */}
+          {generatedCode && (
+            <div
+              className={isMobilePortrait
+                ? "h-1 bg-gray-300 hover:bg-blue-500 cursor-row-resize border-t-2 border-b-2 border-black flex-shrink-0"
+                : "w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize border-l-2 border-r-2 border-black flex-shrink-0"}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const startPos = isMobilePortrait ? e.clientY : e.clientX;
+                const startRatio = splitRatio;
+                const handleMove = (moveEvent: MouseEvent) => {
+                  const container = (e.target as HTMLElement).closest('.flex');
+                  if (!container) return;
+                  const rect = container.getBoundingClientRect();
+                  const delta = isMobilePortrait
+                    ? moveEvent.clientY - startPos
+                    : moveEvent.clientX - startPos;
+                  const deltaPercent = (delta / (isMobilePortrait ? rect.height : rect.width)) * 100;
+                  const newRatio = Math.max(40, Math.min(60, startRatio + deltaPercent));
+                  setSplitRatio(newRatio);
+                };
+                const handleUp = () => {
+                  document.removeEventListener('mousemove', handleMove);
+                  document.removeEventListener('mouseup', handleUp);
+                };
+                document.addEventListener('mousemove', handleMove);
+                document.addEventListener('mouseup', handleUp);
+              }}
+            />
+          )}
+
+          {/* Code Panel */}
+          {generatedCode && (
+            <div
+              style={{
+                width: isMobilePortrait ? '100%' : `${100 - splitRatio}%`,
+                height: isMobilePortrait ? `${100 - splitRatio}%` : '100%'
+              }}
+              className="overflow-hidden"
+            >
+              <AgentCodePanel
+                stanseAgent={generatedCode}
+                sandboxResult={sandboxResult}
+                activeTab={codeTab}
+                onTabChange={setCodeTab}
+                onDeploy={async (duration: string) => {
+                  if (sandboxResult && 'url' in sandboxResult && sandboxResult.url) {
+                    try {
+                      // Call stanse-agent publish API to extend sandbox timeout
+                      const publishResponse = await fetch(`${STANSEAGENT_API_URL}/api/publish`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          url: sandboxResult.url,
+                          sbxId: sandboxResult.sbxId,
+                          duration: duration  // '15m', '30m', or '1h'
+                        })
+                      });
+
+                      const publishResult = await publishResponse.json();
+
+                      if (publishResult.url) {
+                        // Open the published URL (could be a Vercel KV short link or original URL)
+                        window.open(publishResult.url, '_blank');
+                        console.log(`[Agent Mode] Published sandbox with ${duration} duration:`, publishResult.url);
+                      } else {
+                        // Fallback to original URL
+                        window.open(sandboxResult.url, '_blank');
+                      }
+                    } catch (err) {
+                      console.error('[Agent Mode] Failed to publish with duration:', err);
+                      // Fallback: just open the URL
+                      window.open(sandboxResult.url, '_blank');
+                    }
+                  }
+                }}
+                language={language}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* CostTracker and Input at bottom - ONLY in mobile portrait mode */}
+        {isMobilePortrait && (
+          <>
             {/* CostTracker (matching EmberAIChatSidebar) */}
             <CostTracker
               costInfo={costInfo}
@@ -801,7 +963,7 @@ export const AgentModeChat: React.FC<Props> = ({
             />
 
             {/* Input */}
-            <form onSubmit={handleSubmit} className="p-4 border-t-4 border-black bg-white">
+            <form onSubmit={handleSubmit} className="p-4 border-t-4 border-black bg-white flex-shrink-0">
               <div className="flex gap-2 items-end">
                 <textarea
                   value={input}
@@ -863,88 +1025,8 @@ export const AgentModeChat: React.FC<Props> = ({
                  'Press Enter to send, Shift+Enter for new line'}
               </p>
             </form>
-          </div>
-
-          {/* Split Divider - vertical on desktop, horizontal on mobile portrait */}
-          {generatedCode && (
-            <div
-              className={isMobilePortrait
-                ? "h-1 bg-gray-300 hover:bg-blue-500 cursor-row-resize border-t-2 border-b-2 border-black"
-                : "w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize border-l-2 border-r-2 border-black"}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                const startPos = isMobilePortrait ? e.clientY : e.clientX;
-                const startRatio = splitRatio;
-                const handleMove = (moveEvent: MouseEvent) => {
-                  const container = (e.target as HTMLElement).closest('.flex');
-                  if (!container) return;
-                  const rect = container.getBoundingClientRect();
-                  const delta = isMobilePortrait
-                    ? moveEvent.clientY - startPos
-                    : moveEvent.clientX - startPos;
-                  const deltaPercent = (delta / (isMobilePortrait ? rect.height : rect.width)) * 100;
-                  const newRatio = Math.max(40, Math.min(60, startRatio + deltaPercent));
-                  setSplitRatio(newRatio);
-                };
-                const handleUp = () => {
-                  document.removeEventListener('mousemove', handleMove);
-                  document.removeEventListener('mouseup', handleUp);
-                };
-                document.addEventListener('mousemove', handleMove);
-                document.addEventListener('mouseup', handleUp);
-              }}
-            />
-          )}
-
-          {/* Code Panel */}
-          {generatedCode && (
-            <div
-              style={{
-                width: isMobilePortrait ? '100%' : `${100 - splitRatio}%`,
-                height: isMobilePortrait ? `${100 - splitRatio}%` : 'auto'
-              }}
-            >
-              <AgentCodePanel
-                stanseAgent={generatedCode}
-                sandboxResult={sandboxResult}
-                activeTab={codeTab}
-                onTabChange={setCodeTab}
-                onDeploy={async (duration: string) => {
-                  if (sandboxResult && 'url' in sandboxResult && sandboxResult.url) {
-                    try {
-                      // Call stanse-agent publish API to extend sandbox timeout
-                      const publishResponse = await fetch(`${STANSEAGENT_API_URL}/api/publish`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          url: sandboxResult.url,
-                          sbxId: sandboxResult.sbxId,
-                          duration: duration  // '15m', '30m', or '1h'
-                        })
-                      });
-
-                      const publishResult = await publishResponse.json();
-
-                      if (publishResult.url) {
-                        // Open the published URL (could be a Vercel KV short link or original URL)
-                        window.open(publishResult.url, '_blank');
-                        console.log(`[Agent Mode] Published sandbox with ${duration} duration:`, publishResult.url);
-                      } else {
-                        // Fallback to original URL
-                        window.open(sandboxResult.url, '_blank');
-                      }
-                    } catch (err) {
-                      console.error('[Agent Mode] Failed to publish with duration:', err);
-                      // Fallback: just open the URL
-                      window.open(sandboxResult.url, '_blank');
-                    }
-                  }
-                }}
-                language={language}
-              />
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </>
   );

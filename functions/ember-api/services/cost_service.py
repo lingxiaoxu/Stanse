@@ -274,10 +274,9 @@ class CostService:
             'claude-haiku-4-5': (0.8, 4.0),
             # Claude 4.0
             'claude-sonnet-4': (3.0, 15.0),
-            # Gemini
+            # Gemini (minimum 2.5 - no 2.0 or lower)
             'gemini-2.5-pro': (1.25, 5.0),
             'gemini-2.5-flash': (0.075, 0.3),
-            'gemini-2.0-flash': (0.0, 0.0),
             # GPT
             'gpt-5': (5.0, 15.0),
             'gpt-4o': (2.5, 10.0),

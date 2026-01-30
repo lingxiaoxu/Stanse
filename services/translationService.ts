@@ -44,7 +44,7 @@ export async function translateToChineseWithGemini(text: string): Promise<string
     const prompt = `Translate this English news headline into concise, natural Chinese. Output ONLY the Chinese translation, no explanations:\n\n${text}`;
 
     const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         temperature: 0.3,

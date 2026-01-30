@@ -345,7 +345,7 @@ export const ManageSubscriptionModal: React.FC<ManageSubscriptionModalProps> = (
             </button>
 
             {isSectionExpanded('payment') && (
-              <div className="p-6 bg-white border-t-2 border-black">
+              <div className="p-6 bg-white border-t-2 border-black overflow-y-auto md:overflow-visible max-h-[60vh] md:max-h-none">
                 {subscriptionStatus === 'active' && (
                   <div className="bg-yellow-50 border-2 border-yellow-600 p-4 mb-6">
                     <p className="font-mono text-xs text-yellow-900">
