@@ -563,6 +563,26 @@ export const AgentModeChat: React.FC<Props> = ({
   const [resizeStartX, setResizeStartX] = React.useState(0);
   const [resizeStartWidth, setResizeStartWidth] = React.useState(0);
 
+  // Detect mobile portrait mode (height > width AND width < 768px)
+  const [isMobilePortrait, setIsMobilePortrait] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkOrientation = () => {
+      const isMobile = window.innerWidth < 768;
+      const isPortrait = window.innerHeight > window.innerWidth;
+      setIsMobilePortrait(isMobile && isPortrait);
+    };
+
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, []);
+
   // Resizable handlers (matching EmberAIChatSidebar)
   const handleResizeStart = (e: React.MouseEvent) => {
     setIsResizing(true);
@@ -628,7 +648,11 @@ export const AgentModeChat: React.FC<Props> = ({
             <div className="flex-1">
               <h2 className="font-pixel text-2xl">{t('aiChat', 'title')}</h2>
               <div className="text-[10px] font-mono text-gray-500 mt-1">
-                Powered by Stanse AI
+                {language === 'ZH' ? '由 Stanse AI 提供支持' :
+                 language === 'JA' ? 'Stanse AI により提供' :
+                 language === 'FR' ? 'Propulsé par Stanse AI' :
+                 language === 'ES' ? 'Desarrollado por Stanse AI' :
+                 'Powered by Stanse AI'}
               </div>
             </div>
             <div className="flex gap-2">
@@ -671,10 +695,16 @@ export const AgentModeChat: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Content area with split view */}
-        <div className="flex h-full w-full overflow-hidden">
+        {/* Content area with split view - horizontal on desktop, vertical on mobile portrait */}
+        <div className={`flex ${isMobilePortrait ? 'flex-col' : 'flex-row'} h-full w-full overflow-hidden`}>
           {/* Chat Panel */}
-          <div style={{ width: generatedCode ? `${splitRatio}%` : '100%' }} className="flex flex-col h-full">
+          <div
+            style={{
+              width: generatedCode && !isMobilePortrait ? `${splitRatio}%` : '100%',
+              height: generatedCode && isMobilePortrait ? `${splitRatio}%` : 'auto'
+            }}
+            className="flex flex-col"
+          >
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
@@ -835,20 +865,24 @@ export const AgentModeChat: React.FC<Props> = ({
             </form>
           </div>
 
-          {/* Split Divider */}
+          {/* Split Divider - vertical on desktop, horizontal on mobile portrait */}
           {generatedCode && (
             <div
-              className="w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize border-l-2 border-r-2 border-black"
+              className={isMobilePortrait
+                ? "h-1 bg-gray-300 hover:bg-blue-500 cursor-row-resize border-t-2 border-b-2 border-black"
+                : "w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize border-l-2 border-r-2 border-black"}
               onMouseDown={(e) => {
                 e.preventDefault();
-                const startX = e.clientX;
+                const startPos = isMobilePortrait ? e.clientY : e.clientX;
                 const startRatio = splitRatio;
                 const handleMove = (moveEvent: MouseEvent) => {
                   const container = (e.target as HTMLElement).closest('.flex');
                   if (!container) return;
                   const rect = container.getBoundingClientRect();
-                  const deltaX = moveEvent.clientX - startX;
-                  const deltaPercent = (deltaX / rect.width) * 100;
+                  const delta = isMobilePortrait
+                    ? moveEvent.clientY - startPos
+                    : moveEvent.clientX - startPos;
+                  const deltaPercent = (delta / (isMobilePortrait ? rect.height : rect.width)) * 100;
                   const newRatio = Math.max(40, Math.min(60, startRatio + deltaPercent));
                   setSplitRatio(newRatio);
                 };
@@ -864,7 +898,12 @@ export const AgentModeChat: React.FC<Props> = ({
 
           {/* Code Panel */}
           {generatedCode && (
-            <div style={{ width: `${100 - splitRatio}%` }}>
+            <div
+              style={{
+                width: isMobilePortrait ? '100%' : `${100 - splitRatio}%`,
+                height: isMobilePortrait ? `${100 - splitRatio}%` : 'auto'
+              }}
+            >
               <AgentCodePanel
                 stanseAgent={generatedCode}
                 sandboxResult={sandboxResult}

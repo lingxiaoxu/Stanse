@@ -191,7 +191,11 @@ export const CostTracker: React.FC<Props> = ({
             {/* Token 使用 */}
             <div className="flex justify-between">
               <span className="text-gray-600">
-                {language === 'ZH' ? 'Tokens (输入/输出)' : 'Tokens (in/out)'}:
+                {language === 'ZH' ? 'Tokens (输入/输出)' :
+                 language === 'JA' ? 'トークン (入力/出力)' :
+                 language === 'FR' ? 'Tokens (entrée/sortie)' :
+                 language === 'ES' ? 'Tokens (entrada/salida)' :
+                 'Tokens (in/out)'}:
               </span>
               <span className="font-semibold">
                 {tokens.prompt} / {tokens.completion}
@@ -201,7 +205,11 @@ export const CostTracker: React.FC<Props> = ({
             {/* 总 Tokens */}
             <div className="flex justify-between">
               <span className="text-gray-600">
-                {language === 'ZH' ? '总 Tokens' : 'Total Tokens'}:
+                {language === 'ZH' ? '总 Tokens' :
+                 language === 'JA' ? '総トークン' :
+                 language === 'FR' ? 'Tokens totaux' :
+                 language === 'ES' ? 'Tokens totales' :
+                 'Total Tokens'}:
               </span>
               <span className="font-semibold">{tokens.total}</span>
             </div>
@@ -209,7 +217,11 @@ export const CostTracker: React.FC<Props> = ({
             {/* 使用模型 */}
             <div className="flex justify-between">
               <span className="text-gray-600">
-                {language === 'ZH' ? '模型' : 'Model'}:
+                {language === 'ZH' ? '模型' :
+                 language === 'JA' ? 'モデル' :
+                 language === 'FR' ? 'Modèle' :
+                 language === 'ES' ? 'Modelo' :
+                 'Model'}:
               </span>
               <span className="font-semibold text-blue-600">{modelUsed}</span>
             </div>
@@ -220,7 +232,11 @@ export const CostTracker: React.FC<Props> = ({
             {/* 本次成本 */}
             <div className="flex justify-between">
               <span className="text-gray-600">
-                {language === 'ZH' ? '本次成本' : 'Current Cost'}:
+                {language === 'ZH' ? '本次成本' :
+                 language === 'JA' ? '今回のコスト' :
+                 language === 'FR' ? 'Coût actuel' :
+                 language === 'ES' ? 'Costo actual' :
+                 'Current Cost'}:
               </span>
               <span className="font-semibold text-blue-600">
                 ${currentCost.toFixed(6)}
@@ -230,7 +246,11 @@ export const CostTracker: React.FC<Props> = ({
             {/* 今日成本 */}
             <div className="flex justify-between">
               <span className="text-gray-600">
-                {language === 'ZH' ? '今日总计' : 'Today Total'}:
+                {language === 'ZH' ? '今日总计' :
+                 language === 'JA' ? '本日の合計' :
+                 language === 'FR' ? 'Total aujourd\'hui' :
+                 language === 'ES' ? 'Total hoy' :
+                 'Today Total'}:
               </span>
               <span className={`font-semibold ${getBudgetColor()}`}>
                 ${todayCost.toFixed(4)}
@@ -240,7 +260,11 @@ export const CostTracker: React.FC<Props> = ({
             {/* 本月成本 */}
             <div className="flex justify-between">
               <span className="text-gray-600">
-                {language === 'ZH' ? '本月总计' : 'Month Total'}:
+                {language === 'ZH' ? '本月总计' :
+                 language === 'JA' ? '今月の合計' :
+                 language === 'FR' ? 'Total ce mois' :
+                 language === 'ES' ? 'Total mes' :
+                 'Month Total'}:
               </span>
               <span className="font-semibold text-purple-600">
                 ${monthCost.toFixed(4)}
@@ -250,7 +274,11 @@ export const CostTracker: React.FC<Props> = ({
             {/* 剩余预算 */}
             <div className="flex justify-between">
               <span className="text-gray-600">
-                {language === 'ZH' ? '今日剩余' : 'Remaining Today'}:
+                {language === 'ZH' ? '今日剩余' :
+                 language === 'JA' ? '本日の残高' :
+                 language === 'FR' ? 'Reste aujourd\'hui' :
+                 language === 'ES' ? 'Restante hoy' :
+                 'Remaining Today'}:
               </span>
               <span className={`font-semibold ${
                 (estimatedBudget - todayCost) > 0.1 ? 'text-green-600' : 'text-red-600'
@@ -263,9 +291,11 @@ export const CostTracker: React.FC<Props> = ({
           {/* 提示信息 */}
           <div className="mt-2 p-1 bg-blue-50 border border-blue-300">
             <div className="font-mono text-[8px] text-blue-700">
-              {language === 'ZH'
-                ? '💡 提示: 使用"快速问答"模式可节省成本'
-                : '💡 Tip: Use "Quick Answer" mode to save costs'}
+              {language === 'ZH' ? '💡 提示: 使用"快速问答"模式可节省成本' :
+               language === 'JA' ? '💡 ヒント: "クイック回答"モードでコストを節約' :
+               language === 'FR' ? '💡 Astuce: Utilisez le mode "Réponse rapide" pour économiser' :
+               language === 'ES' ? '💡 Consejo: Use el modo "Respuesta rápida" para ahorrar' :
+               '💡 Tip: Use "Quick Answer" mode to save costs'}
             </div>
           </div>
 
