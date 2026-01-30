@@ -634,7 +634,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
 
   if (!isOpen) return null;
 
-  // Agent Mode: Render with full UI inheritance (share sidebar width)
+  // Agent Mode: Render with full UI inheritance (share sidebar width, no re-animation)
   if (chatMode === 'agent') {
     return (
       <AgentModeChat
@@ -643,6 +643,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
         onModeChange={setChatMode}
         sidebarWidth={sidebarWidth}
         onSidebarWidthChange={setSidebarWidth}
+        isInitialOpen={false}  // Prevent re-animation when switching modes
       />
     );
   }

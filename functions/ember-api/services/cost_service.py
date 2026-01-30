@@ -252,6 +252,51 @@ class CostService:
 
         return base_cost * length_factor
 
+    def calculate_cost_from_tokens(self, model: str, tokens: dict) -> float:
+        """
+        根据实际 tokens 计算精确成本（统一定价逻辑）
+
+        Args:
+            model: 模型名称 (如 'claude-sonnet-4-5-20250929')
+            tokens: {"prompt": int, "completion": int}
+
+        Returns:
+            计算的成本（美元）
+        """
+        prompt_tokens = tokens.get('prompt', 0)
+        completion_tokens = tokens.get('completion', 0)
+
+        # 统一定价表（per 1M tokens）
+        pricing = {
+            # Claude 4.5
+            'claude-opus-4-5': (15.0, 75.0),
+            'claude-sonnet-4-5': (3.0, 15.0),
+            'claude-haiku-4-5': (0.8, 4.0),
+            # Claude 4.0
+            'claude-sonnet-4': (3.0, 15.0),
+            # Gemini
+            'gemini-2.5-pro': (1.25, 5.0),
+            'gemini-2.5-flash': (0.075, 0.3),
+            'gemini-2.0-flash': (0.0, 0.0),
+            # GPT
+            'gpt-5': (5.0, 15.0),
+            'gpt-4o': (2.5, 10.0),
+        }
+
+        # 匹配模型
+        input_price, output_price = (3.0, 15.0)  # 默认 Sonnet 4.5
+        model_lower = model.lower()
+        for model_key, (inp, out) in pricing.items():
+            if model_key in model_lower:
+                input_price, output_price = inp, out
+                break
+
+        # 计算
+        input_cost = (prompt_tokens / 1_000_000) * input_price
+        output_cost = (completion_tokens / 1_000_000) * output_price
+
+        return input_cost + output_cost
+
 
 # 单例实例
 _cost_service_instance = None

@@ -16,6 +16,7 @@ import { AgentModeControls } from './AgentModeControls';
 import { AgentCodePanel } from './AgentCodePanel';
 import { ChatModeSelector, ChatMode } from './ChatModeSelector';
 import { CostTracker } from './CostTracker';
+import { ChatBubble } from './ChatBubble';
 import { Send, X, Trash2, Square, Terminal } from 'lucide-react';
 import { isRateLimitError, isOverloadedError, isAccessDeniedError } from '../../lib/stanseagent/api-errors';
 import {
@@ -33,9 +34,10 @@ interface Props {
   onModeChange: (mode: ChatMode) => void;
   sidebarWidth: number;
   onSidebarWidthChange: (width: number) => void;
+  isInitialOpen?: boolean;
 }
 
-export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange, sidebarWidth: initialWidth, onSidebarWidthChange }) => {
+export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange, sidebarWidth: initialWidth, onSidebarWidthChange, isInitialOpen = true }) => {
   const { user, userProfile } = useAuth();
   const { t, language } = useLanguage();
 
@@ -50,7 +52,7 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
   const [splitRatio, setSplitRatio] = useState(50);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const [useMorphApply, setUseMorphApply] = useState(false);
+  const [useMorphApply, setUseMorphApply] = useState(true);
 
   // Store last request for retry functionality
   const [lastRequest, setLastRequest] = useState<{ input: string; files: File[] } | null>(null);
@@ -70,12 +72,44 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
   const [todayTotalCost, setTodayTotalCost] = useState(0);
   const [monthTotalCost, setMonthTotalCost] = useState(0);
 
-  // Load history on open or when switching to agent mode (matching EmberAIChatSidebar)
+  // Load cost statistics from Ember API cost_service.py
+  const loadCostStats = async () => {
+    if (!user) return;
+
+    try {
+      // Load today's cost using Ember cost_service.py
+      const todayResponse = await fetch(`${EMBER_API_URL}/cost/stats?user_id=${user.uid}&period=today`);
+      const todayData = await todayResponse.json();
+
+      // Load month's cost using Ember cost_service.py
+      const monthResponse = await fetch(`${EMBER_API_URL}/cost/stats?user_id=${user.uid}&period=month`);
+      const monthData = await monthResponse.json();
+
+      if (todayData.success && monthData.success) {
+        const todayCost = todayData.data?.summary?.total_cost || 0;
+        const monthCost = monthData.data?.summary?.total_cost || 0;
+
+        setCostInfo(prev => ({
+          ...prev,
+          todayCost: todayCost,
+          monthCost: monthCost
+        }));
+
+        console.log('[Agent Mode] Loaded cost from Ember cost_service.py:', { todayCost, monthCost });
+      }
+    } catch (err) {
+      console.error('[Agent Mode] Failed to load cost from Ember API:', err);
+    }
+  };
+
+  // Load history only once when component mounts, not when switching modes
+  // This prevents losing messages when switching between modes
   React.useEffect(() => {
     if (user) {
       loadChatHistory(user.uid).then(setMessages);
+      loadCostStats();  // Load cost stats from Ember API
     }
-  }, [user, chatMode]); // Reload when switching modes
+  }, [user]); // Don't include chatMode - only load once per user session
 
   // Clear history handler (matching EmberAIChatSidebar)
   const handleClearHistory = async () => {
@@ -108,6 +142,7 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
   };
 
   const STANSEAGENT_API_URL = process.env.NEXT_PUBLIC_STANSEAGENT_API_URL || 'https://stanseagent-837715360412.us-central1.run.app';
+  const EMBER_API_URL = process.env.NEXT_PUBLIC_EMBER_API_URL || 'https://us-central1-gen-lang-client-0960644135.cloudfunctions.net/ember_api';
 
   // Build template object
   const currentTemplate = agentTemplate === 'auto'
@@ -177,6 +212,54 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
       console.log('[Agent Mode] onFinish:', generatedAgent);
       if (!generatedAgent) return;
 
+      // 使用 Ember API cost_service.py 统一计算和记录 cost
+      try {
+        // 估算 tokens（前端只负责估算 tokens）
+        const estimateTokens = (text: string) => Math.ceil(text.length / 4);
+        const codeText = typeof generatedAgent.code === 'string' ? generatedAgent.code : JSON.stringify(generatedAgent.code);
+        const inputTokens = estimateTokens(input);
+        const outputTokens = estimateTokens(codeText + (generatedAgent.commentary || ''));
+
+        // 调用 Ember API /cost/record 端点
+        // 让 cost_service.py 的 calculate_cost_from_tokens() 计算 cost（统一定价逻辑）
+        const costResponse = await fetch(`${EMBER_API_URL}/cost/record`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.uid,
+            model: agentModel.model || 'claude-sonnet-4-5-20250929',
+            mode: 'agent',
+            tokens: {
+              prompt: inputTokens,
+              completion: outputTokens,
+              total: inputTokens + outputTokens
+            },
+            execution_time: 0
+          })
+        });
+
+        const costData = await costResponse.json();
+
+        if (costData.success) {
+          // 更新显示（使用 cost_service.py 计算的 cost）
+          setCostInfo(prev => ({
+            ...prev,
+            currentCost: costData.cost,
+            tokens: costData.tokens,
+            modelUsed: agentModel.model || 'claude-sonnet-4-5-20250929'
+          }));
+
+          // 重新加载统计（从 Firebase ember_cost_sessions 获取总和）
+          setTimeout(() => {
+            loadCostStats();
+          }, 1000);
+
+          console.log('[Agent Mode] Cost recorded via cost_service.py:', costData);
+        }
+      } catch (costErr) {
+        console.error('[Agent Mode] Failed to record cost:', costErr);
+      }
+
       // Track code generation (like posthog in page.tsx line 112)
       trackEvent('stanseAgent_generated', {
         template: (generatedAgent as any)?.template,
@@ -203,6 +286,29 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
 
         setSandboxResult(result);
         setCodeTab('preview');
+
+        // Save to Firebase chat history with agent metadata
+        if (user && lastRequest) {
+          try {
+            const title = (generatedAgent as any)?.title || 'Code Generated';
+            const commentary = (generatedAgent as any)?.commentary || 'Code has been generated successfully';
+            const historyCount = await saveChatMessage(
+              user.uid,
+              lastRequest.input,
+              `**${title}**\n\n${commentary}`,
+              LLMProvider.EMBER,
+              generatedAgent, // Save agent code object
+              result // Save agent execution result
+            );
+
+            // Clear oldest if exceeds limit
+            if (historyCount > 5) {
+              await clearOldestMessage(user.uid);
+            }
+          } catch (saveError) {
+            console.error('[Agent Mode] Failed to save chat history:', saveError);
+          }
+        }
       } catch (err) {
         console.error('[Agent Mode] Sandbox deployment failed:', err);
         setErrorMessage(String(err));
@@ -414,7 +520,7 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
 
       {/* Agent Mode Sidebar - matching EmberAIChatSidebar structure */}
       <div
-        className="fixed right-0 top-0 h-full bg-white border-l-4 border-black shadow-pixel z-50 flex flex-col animate-slide-in"
+        className={`fixed right-0 top-0 h-full bg-white border-l-4 border-black shadow-pixel z-50 flex flex-col ${isInitialOpen ? 'animate-slide-in' : ''}`}
         style={{
           width: `${initialWidth}px`,
           cursor: isResizing ? 'ew-resize' : 'default'
@@ -486,36 +592,11 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
           {messages.map((msg, idx) => (
-            <div key={idx} className={`p-3 border-2 border-black ${msg.role === 'user' ? 'bg-gray-100 ml-auto max-w-[80%]' : 'bg-white mr-auto max-w-[80%]'}`}>
-              {/* Render content - support both string and complex content */}
-              {typeof msg.content === 'string' ? (
-                <div className="font-mono text-sm whitespace-pre-wrap">{msg.content}</div>
-              ) : (
-                <div className="space-y-2">
-                  {(msg.content as MessageContentPart[]).map((content, id) => {
-                    if (content.type === 'text') {
-                      return (
-                        <div key={id} className="font-mono text-sm whitespace-pre-wrap">
-                          {content.text}
-                        </div>
-                      );
-                    }
-                    if (content.type === 'image') {
-                      return (
-                        <img
-                          key={id}
-                          src={content.image}
-                          alt="uploaded"
-                          className="w-12 h-12 object-cover border-2 border-black inline-block mr-2 mb-2"
-                        />
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-              )}
+            <div key={msg.id || idx}>
+              {/* Use ChatBubble for message display with avatars and timestamps */}
+              <ChatBubble message={msg} />
 
-              {/* Object Preview Card (for code generation) */}
+              {/* Object Preview Card (for code generation) - shown below ChatBubble */}
               {msg.object && (
                 <div
                   onClick={() => {
@@ -523,7 +604,7 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
                     if (msg.result) setSandboxResult(msg.result);
                     setCodeTab('code');
                   }}
-                  className="mt-2 p-2 w-full flex items-center border-2 border-black hover:bg-gray-50 cursor-pointer"
+                  className="mt-2 p-2 w-full flex items-center border-2 border-black hover:bg-gray-50 cursor-pointer bg-white"
                 >
                   <div className="w-10 h-10 bg-black/5 flex items-center justify-center border-2 border-black">
                     <Terminal strokeWidth={2} className="text-orange-500" size={20} />

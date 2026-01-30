@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, Bot } from 'lucide-react';
-import { ChatMessage, LLMProvider } from '../../types';
+import { ChatMessage, LLMProvider, MessageContentPart } from '../../types';
 
 interface Props {
   message: ChatMessage;
@@ -66,6 +66,31 @@ const providerLabels: Record<LLMProvider, string> = {
 export const ChatBubble: React.FC<Props> = ({ message }) => {
   const isUser = message.role === 'user';
 
+  // Convert content to string for markdown rendering
+  const getContentString = (): string => {
+    if (typeof message.content === 'string') {
+      return message.content;
+    }
+    // For complex content (MessageContentPart[]), extract text parts
+    return (message.content as MessageContentPart[])
+      .filter(part => part.type === 'text')
+      .map(part => part.text)
+      .join('\n');
+  };
+
+  // Extract images from complex content
+  const getImages = (): string[] => {
+    if (typeof message.content === 'string') {
+      return [];
+    }
+    return (message.content as MessageContentPart[])
+      .filter(part => part.type === 'image')
+      .map(part => part.image);
+  };
+
+  const contentString = getContentString();
+  const images = getImages();
+
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
@@ -76,10 +101,25 @@ export const ChatBubble: React.FC<Props> = ({ message }) => {
       {/* Message Content */}
       <div className={`flex-1 max-w-[70%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div className={`border-2 border-black p-3 ${isUser ? 'bg-gray-100' : providerColors[message.provider]}`}>
+          {/* Images (if any) */}
+          {images.length > 0 && (
+            <div className="flex gap-2 mb-2 flex-wrap">
+              {images.map((img, idx) => (
+                <img
+                  key={idx}
+                  src={img}
+                  alt="uploaded"
+                  className="w-12 h-12 object-cover border-2 border-black inline-block"
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Text Content */}
           <div
             className="font-mono text-sm break-words leading-relaxed"
             style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
-            dangerouslySetInnerHTML={{ __html: formatMarkdown(message.content) }}
+            dangerouslySetInnerHTML={{ __html: formatMarkdown(contentString) }}
           />
         </div>
 

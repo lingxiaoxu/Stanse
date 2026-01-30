@@ -32,9 +32,9 @@ export const CodeView: React.FC<Props> = ({ stanseAgent, language }) => {
   };
 
   return (
-    <div className="p-4 bg-gray-50">
+    <div className="h-full flex flex-col p-4 bg-gray-50">
       {/* Title and Description */}
-      <div className="mb-4">
+      <div className="mb-4 flex-shrink-0">
         <h3 className="font-pixel text-sm mb-1">{stanseAgent.title}</h3>
         <p className="font-mono text-[10px] text-gray-600">{stanseAgent.description}</p>
         {stanseAgent.commentary && (
@@ -44,9 +44,9 @@ export const CodeView: React.FC<Props> = ({ stanseAgent, language }) => {
         )}
       </div>
 
-      {/* Code Display */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-300">
+      {/* Code Display - takes remaining height */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-300 flex-shrink-0">
           <span className="font-mono text-xs text-gray-600">
             {stanseAgent.file_path || (language === 'ZH' ? '代码' :
                                       language === 'JA' ? 'コード' :
@@ -73,7 +73,7 @@ export const CodeView: React.FC<Props> = ({ stanseAgent, language }) => {
             </span>
           </button>
         </div>
-        <pre className="bg-white border-2 border-black p-3 overflow-auto font-mono text-xs max-h-96">
+        <pre className="flex-1 bg-white border-2 border-black p-3 overflow-auto font-mono text-xs min-h-0">
           <code>{stanseAgent.code}</code>
         </pre>
       </div>

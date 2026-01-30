@@ -623,6 +623,8 @@ export interface ChatHistoryRecord {
   provider: LLMProvider;
   timestamp: string; // ISO date string
   createdAt: any; // Firestore Timestamp
+  agentObject?: any; // Optional: For agent mode code objects
+  agentResult?: any; // Optional: For agent mode execution results
 }
 
 // StanseAgent Types (Agent Mode)

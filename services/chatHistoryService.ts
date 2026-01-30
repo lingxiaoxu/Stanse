@@ -42,13 +42,15 @@ export async function loadChatHistory(userId: string): Promise<ChatMessage[]> {
         provider: data.provider
       });
 
-      // Add assistant message
+      // Add assistant message with agent metadata if available
       messages.push({
         id: `${docSnap.id}-a`,
         role: 'assistant',
         content: data.answer,
         timestamp: data.timestamp,
-        provider: data.provider
+        provider: data.provider,
+        object: data.agentObject, // Restore agent code object
+        result: data.agentResult  // Restore agent execution result
       });
     });
 
@@ -66,27 +68,41 @@ export async function loadChatHistory(userId: string): Promise<ChatMessage[]> {
  * @param question The user's question
  * @param answer The assistant's answer
  * @param provider The LLM provider used
+ * @param agentObject Optional: Agent mode code object
+ * @param agentResult Optional: Agent mode execution result
  * @returns The total count of history records after saving
  */
 export async function saveChatMessage(
   userId: string,
   question: string,
   answer: string,
-  provider: LLMProvider
+  provider: LLMProvider,
+  agentObject?: any,
+  agentResult?: any
 ): Promise<number> {
   try {
     const historyRef = collection(db, 'users', userId, CHAT_HISTORY_COLLECTION);
 
-    await addDoc(historyRef, {
+    const messageData: any = {
       userId,
       question,
       answer,
       provider,
       timestamp: new Date().toISOString(),
       createdAt: serverTimestamp()
-    });
+    };
 
-    console.log(`[chatHistoryService] Saved message for user ${userId} using ${provider}`);
+    // Add agent metadata if available
+    if (agentObject) {
+      messageData.agentObject = agentObject;
+    }
+    if (agentResult) {
+      messageData.agentResult = agentResult;
+    }
+
+    await addDoc(historyRef, messageData);
+
+    console.log(`[chatHistoryService] Saved message for user ${userId} using ${provider}${agentObject ? ' (Agent Mode)' : ''}`);
 
     // Return current count
     const snapshot = await getDocs(query(historyRef));
