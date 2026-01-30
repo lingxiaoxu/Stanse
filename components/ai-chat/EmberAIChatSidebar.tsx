@@ -693,7 +693,11 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
             <div className="flex-1">
               <h2 className="font-pixel text-2xl">{t('aiChat', 'title')}</h2>
               <div className="text-[10px] font-mono text-gray-500 mt-1">
-                Powered by Stanse AI
+                {language === 'ZH' ? '由 Stanse AI 提供支持' :
+                 language === 'JA' ? 'Stanse AI により提供' :
+                 language === 'FR' ? 'Propulsé par Stanse AI' :
+                 language === 'ES' ? 'Desarrollado por Stanse AI' :
+                 'Powered by Stanse AI'}
               </div>
             </div>
             <div className="flex gap-2">
