@@ -34,23 +34,13 @@ const MODELS = [
   // Gemini 3.0 series
   { id: 'gemini-3.0-pro', name: 'Gemini 3.0 Pro', provider: 'Google' },
   { id: 'gemini-3.0-flash', name: 'Gemini 3.0 Flash', provider: 'Google' },
-  // Gemini 2.5 series
+  // Gemini 2.5 series (minimum version - no 2.0 or lower)
   { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'Google' },
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google' },
-  // Gemini 2.0 series
-  { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', provider: 'Google' },
-  // GPT 5.0 series
+  // GPT 5.0 series - ONLY GPT-5 models (removed GPT-4.x, o3, and local)
   { id: 'gpt-5', name: 'GPT-5', provider: 'OpenAI' },
   { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI' },
-  { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'OpenAI' },
-  // GPT 4.x series
-  { id: 'gpt-4.1', name: 'GPT-4.1', provider: 'OpenAI' },
-  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
-  // O-series
-  { id: 'o3', name: 'o3', provider: 'OpenAI' },
-  { id: 'o3-mini', name: 'o3-mini', provider: 'OpenAI' },
-  // Local model
-  { id: 'local', name: 'Local Model', provider: 'Local' }
+  { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'OpenAI' }
 ];
 
 export const AgentModeControls: React.FC<Props> = ({
