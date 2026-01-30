@@ -9,7 +9,7 @@ interface Props {
   sandboxResult: ExecutionResult | null;
   activeTab: 'code' | 'preview';
   onTabChange: (tab: 'code' | 'preview') => void;
-  onDeploy: () => void;
+  onDeploy: (duration: string) => void;  // Add duration parameter
   language: string;
 }
 
@@ -29,9 +29,8 @@ export const AgentCodePanel: React.FC<Props> = ({
 
   const handleDeployClick = (duration: string) => {
     setShowDeployDialog(false);
-    // For now, just open the URL directly
-    // In the future, this could call E2B publish API with duration
-    onDeploy();
+    // Call parent with duration to extend sandbox timeout
+    onDeploy(duration);
   };
 
   return (
@@ -94,11 +93,11 @@ export const AgentCodePanel: React.FC<Props> = ({
                 {/* Header */}
                 <div className="flex items-center justify-between p-2 border-b-2 border-white">
                   <span className="font-pixel text-xs">
-                    {language === 'ZH' ? '选择时长' :
-                     language === 'JA' ? '期間選択' :
-                     language === 'FR' ? 'Durée' :
-                     language === 'ES' ? 'Duración' :
-                     'Select Time'}
+                    {language === 'ZH' ? '选择部署有效时长' :
+                     language === 'JA' ? 'デプロイ有効期間を選択' :
+                     language === 'FR' ? 'Durée de déploiement' :
+                     language === 'ES' ? 'Duración del despliegue' :
+                     'Select Deploy Duration'}
                   </span>
                   <button
                     onClick={() => setShowDeployDialog(false)}
