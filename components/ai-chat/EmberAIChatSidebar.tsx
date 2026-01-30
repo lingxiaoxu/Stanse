@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader, Trash2, ChevronDown, ChevronUp, Check } from 'lucide-react';
+import { X, Send, Loader, Trash2, ChevronDown, ChevronUp, Check, Square, RotateCcw } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ChatMessage, LLMProvider } from '../../types';
@@ -14,6 +14,7 @@ import { ChatBubble } from './ChatBubble';
 import { ChatModeSelector, ChatMode } from './ChatModeSelector';
 import { CostTracker } from './CostTracker';
 import { AgentModeChat } from './AgentModeChat';
+import { isRateLimitError, isOverloadedError, isAccessDeniedError } from '../../lib/stanseagent/api-errors';
 
 interface Props {
   isOpen: boolean;
@@ -123,6 +124,15 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
   const [todayTotalCost, setTodayTotalCost] = useState(0);
   const [monthTotalCost, setMonthTotalCost] = useState(0);
 
+  // Track last request for retry functionality
+  const [lastRequest, setLastRequest] = useState<{input: string; mode: ChatMode} | null>(null);
+
+  // Add messagesEndRef for auto-scroll
+  const messagesEndRefEmber = useRef<HTMLDivElement>(null);
+
+  // AbortController for stopping fetch requests
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // Track Ensemble mode candidates for collapsible view
   const [ensembleCandidates, setEnsembleCandidates] = useState<{[messageId: string]: string[]}>({});
 
@@ -139,8 +149,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
   const [swipeStartX, setSwipeStartX] = useState<number | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // 可调整宽度（桌面端）
   const [sidebarWidth, setSidebarWidth] = useState(400); // 初始宽度 400px
@@ -160,9 +169,9 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
     }
   }, [isOpen, user, chatMode]); // Add chatMode to dependencies
 
-  // Auto-scroll
+  // Auto-scroll to messagesEndRefEmber (matching AgentModeChat pattern)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRefEmber.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
   // Handle prefilled message (但不自动 focus，避免手机弹出键盘)
@@ -346,6 +355,12 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
     setLoading(true);
     setError(null);
 
+    // Save request for retry functionality
+    setLastRequest({ input: trimmedInput, mode: chatMode });
+
+    // Create AbortController for this request
+    abortControllerRef.current = new AbortController();
+
     try {
       // Build context from user profile
       const userContext = userProfile ? {
@@ -355,7 +370,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
         label: userProfile.coordinates.label
       } : undefined;
 
-      // Call Ember API
+      // Call Ember API with abort signal
       const response = await fetch(`${EMBER_API_URL}/chat`, {
         method: 'POST',
         headers: {
@@ -369,7 +384,8 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
           model_preference: 'auto',
           user_id: user.uid,
           use_cache: true
-        })
+        }),
+        signal: abortControllerRef.current.signal
       });
 
       const result: EmberResponse = await response.json();
@@ -492,9 +508,38 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
 
     } catch (err: any) {
       console.error('Chat error:', err);
-      setError(err.message || t('aiChat', 'errorMessage'));
+
+      // Check if request was aborted
+      if (err.name === 'AbortError') {
+        setError(language === 'ZH' ? '请求已取消' :
+                language === 'JA' ? 'リクエストがキャンセルされました' :
+                language === 'FR' ? 'Requête annulée' :
+                language === 'ES' ? 'Solicitud cancelada' :
+                'Request cancelled');
+      } else if (isRateLimitError(err)) {
+        setError(language === 'ZH' ? '已达到请求限制。请稍后再试或使用您自己的 API 密钥。' :
+                language === 'JA' ? 'リクエスト制限に達しました。後でもう一度お試しいただくか、独自のAPIキーを使用してください。' :
+                language === 'FR' ? 'Limite de requêtes atteinte. Veuillez réessayer plus tard ou utiliser votre propre clé API.' :
+                language === 'ES' ? 'Límite de solicitudes alcanzado. Inténtelo más tarde o use su propia clave API.' :
+                'Rate limit reached. Please try again later or use your own API key.');
+      } else if (isOverloadedError(err)) {
+        setError(language === 'ZH' ? '服务当前不可用。请稍后再试。' :
+                language === 'JA' ? 'サービスは現在利用できません。後でもう一度お試しください。' :
+                language === 'FR' ? 'Service actuellement indisponible. Veuillez réessayer plus tard.' :
+                language === 'ES' ? 'Servicio actualmente no disponible. Inténtelo más tarde.' :
+                'Service currently unavailable. Please try again later.');
+      } else if (isAccessDeniedError(err)) {
+        setError(language === 'ZH' ? '访问被拒绝。请检查您的 API 密钥。' :
+                language === 'JA' ? 'アクセスが拒否されました。APIキーを確認してください。' :
+                language === 'FR' ? 'Accès refusé. Veuillez vérifier votre clé API.' :
+                language === 'ES' ? 'Acceso denegado. Verifique su clave API.' :
+                'Access denied. Please check your API key.');
+      } else {
+        setError(err.message || t('aiChat', 'errorMessage'));
+      }
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -511,10 +556,33 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+  // Stop handler - abort current request
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setLoading(false);
+    }
+  };
+
+  // Retry handler - resend last request
+  const handleRetry = () => {
+    if (!lastRequest) return;
+
+    setInput(lastRequest.input);
+    setError(null);
+
+    // Trigger send after state update
+    setTimeout(() => {
       handleSend();
+    }, 100);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && !(e.nativeEvent as any).isComposing) {
+      e.preventDefault();
+      if (input.trim() && !loading) {
+        handleSend();
+      }
     }
   };
 
@@ -705,12 +773,27 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
           )}
 
           {error && (
-            <div className="bg-red-100 border-2 border-red-500 p-3 font-mono text-sm text-red-700">
-              {error}
+            <div className="bg-red-100 border-2 border-red-500 p-3">
+              <div className="flex items-center justify-between">
+                <div className="font-mono text-sm text-red-700 flex-1">{error}</div>
+                {lastRequest && (
+                  <button
+                    onClick={handleRetry}
+                    className="ml-2 px-3 py-1 bg-red-500 text-white font-mono text-xs border-2 border-black hover:bg-red-600 transition-colors flex items-center gap-1"
+                  >
+                    <RotateCcw size={12} />
+                    {language === 'ZH' ? '重试' :
+                     language === 'JA' ? '再試行' :
+                     language === 'FR' ? 'Réessayer' :
+                     language === 'ES' ? 'Reintentar' :
+                     'Retry'}
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRefEmber} />
         </div>
 
         {/* Cost Tracker - 始终显示，使用翻译后的标签 */}
@@ -722,27 +805,54 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
 
         {/* Input */}
         <div className="p-4 border-t-4 border-black bg-white">
-          <div className="flex gap-2">
-            <input
-              ref={inputRef}
-              type="text"
+          <div className="flex gap-2 items-end">
+            <textarea
+              ref={inputRef as any}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyDown}
               placeholder={t('aiChat', 'inputPlaceholder')}
-              className="flex-1 border-2 border-black p-3 font-mono text-sm focus:outline-none focus:border-blue-500"
+              className="flex-1 border-2 border-black p-3 font-mono text-sm focus:outline-none focus:border-blue-500 resize-none min-h-[48px] max-h-[120px]"
               disabled={loading}
+              rows={1}
+              style={{
+                height: 'auto',
+                overflowY: input.split('\n').length > 3 ? 'auto' : 'hidden'
+              }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+              }}
             />
-            <button
-              onClick={handleSend}
-              disabled={loading || !input.trim()}
-              className="bg-black text-white p-3 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-black transition-colors"
-            >
-              <Send size={20} />
-            </button>
+            {loading ? (
+              <button
+                onClick={handleStop}
+                className="bg-red-600 text-white p-3 hover:bg-red-700 border-2 border-black transition-colors flex-shrink-0"
+                title={language === 'ZH' ? '停止生成' :
+                       language === 'JA' ? '生成を停止' :
+                       language === 'FR' ? 'Arrêter' :
+                       language === 'ES' ? 'Detener' :
+                       'Stop'}
+              >
+                <Square size={20} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className="bg-black text-white p-3 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-black transition-colors flex-shrink-0"
+              >
+                <Send size={20} />
+              </button>
+            )}
           </div>
           <p className="font-mono text-[9px] text-gray-400 mt-1">
-            {t('aiChat', 'hint') || 'Press Enter to send'}
+            {language === 'ZH' ? '按 Enter 发送，Shift+Enter 换行' :
+             language === 'JA' ? 'Enterで送信、Shift+Enterで改行' :
+             language === 'FR' ? 'Entrée pour envoyer, Maj+Entrée pour nouvelle ligne' :
+             language === 'ES' ? 'Enter para enviar, Shift+Enter para nueva línea' :
+             'Press Enter to send, Shift+Enter for new line'}
           </p>
         </div>
       </div>
