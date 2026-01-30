@@ -223,6 +223,67 @@ async def get_cost_stats():
         }), 500
 
 
+@app.route('/cost/record', methods=['POST'])
+@async_route
+async def record_cost():
+    """
+    记录 Agent Mode 的成本使用
+
+    前端只传递 tokens，由 cost_service.py 的 calculate_cost_from_tokens() 统一计算
+
+    请求体:
+    {
+        "user_id": "string",
+        "model": "string",
+        "mode": "agent",
+        "tokens": {"prompt": int, "completion": int, "total": int},
+        "execution_time": float (optional)
+    }
+    """
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        model = data.get('model', 'claude-sonnet-4-5-20250929')
+        mode = data.get('mode', 'agent')
+        tokens = data.get('tokens', {})
+        execution_time = data.get('execution_time', 0)
+
+        if not user_id or not tokens:
+            return jsonify({
+                "success": False,
+                "error": "user_id and tokens are required"
+            }), 400
+
+        # 使用 cost_service.py 的 calculate_cost_from_tokens() 计算成本（统一定价逻辑）
+        calculated_cost = cost_service.calculate_cost_from_tokens(model, tokens)
+
+        # 使用 cost_service.py 的 record_usage() 记录到 Firebase
+        # 数据格式匹配 ember_cost_sessions collection
+        await cost_service.record_usage(
+            user_id=user_id,
+            cost=calculated_cost,
+            metadata={
+                "model": model,
+                "mode": mode,
+                "tokens": tokens,
+                "execution_time": execution_time
+            }
+        )
+
+        return jsonify({
+            "success": True,
+            "cost": calculated_cost,
+            "tokens": tokens,
+            "message": "Cost calculated and recorded via cost_service.py"
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
 @app.route('/cache/stats', methods=['GET'])
 @async_route
 async def get_cache_stats():
