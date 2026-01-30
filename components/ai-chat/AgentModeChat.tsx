@@ -38,6 +38,8 @@ interface Props {
   isInitialOpen?: boolean;
   initialCode?: any;  // Restored agent code when switching from other modes
   initialResult?: any;  // Restored execution result when switching from other modes
+  sharedMessages?: ChatMessage[];  // Shared messages from parent (EmberAIChatSidebar)
+  onMessagesChange?: (messages: ChatMessage[]) => void;  // Callback to update parent messages
 }
 
 export const AgentModeChat: React.FC<Props> = ({
@@ -48,7 +50,9 @@ export const AgentModeChat: React.FC<Props> = ({
   onSidebarWidthChange,
   isInitialOpen = true,
   initialCode,
-  initialResult
+  initialResult,
+  sharedMessages,
+  onMessagesChange
 }) => {
   const { user, userProfile } = useAuth();
   const { t, language } = useLanguage();
@@ -62,7 +66,10 @@ export const AgentModeChat: React.FC<Props> = ({
   const [sandboxResult, setSandboxResult] = useState<ExecutionResult | null>(null);
   const [codeTab, setCodeTab] = useState<'code' | 'preview'>('code');
   const [splitRatio, setSplitRatio] = useState(50);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Use shared messages from parent if available, otherwise use local state
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
+  const messages = sharedMessages || localMessages;
+  const setMessages = onMessagesChange || setLocalMessages;
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [useMorphApply, setUseMorphApply] = useState(true);
 
@@ -117,14 +124,18 @@ export const AgentModeChat: React.FC<Props> = ({
     }
   };
 
-  // Load history only once when component mounts, not when switching modes
+  // Load history only once when component mounts AND only if not using shared messages
   // This prevents losing messages when switching between modes
   React.useEffect(() => {
-    if (user) {
-      loadChatHistory(user.uid).then(setMessages);
+    if (user && !sharedMessages) {
+      // Only load from Firebase if we don't have shared messages from parent
+      loadChatHistory(user.uid).then(setLocalMessages);
       loadCostStats();  // Load cost stats from Ember API
+    } else if (user && sharedMessages) {
+      // If using shared messages, just load cost stats
+      loadCostStats();
     }
-  }, [user]); // Don't include chatMode - only load once per user session
+  }, [user, sharedMessages]); // Don't include chatMode - only load once per user session
 
   // Restore code and result when switching to agent mode from other modes
   React.useEffect(() => {

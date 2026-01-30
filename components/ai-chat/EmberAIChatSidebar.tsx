@@ -649,6 +649,8 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
         isInitialOpen={false}  // Prevent re-animation when switching modes
         initialCode={lastAgentMessage?.object}
         initialResult={lastAgentMessage?.result}
+        sharedMessages={messages}  // Share messages across all modes
+        onMessagesChange={setMessages}  // Allow AgentModeChat to update shared messages
       />
     );
   }
