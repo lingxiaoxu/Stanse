@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader, Trash2, ChevronDown, ChevronUp, Check, Square, RotateCcw } from 'lucide-react';
+import { X, Send, Loader, Trash2, ChevronDown, ChevronUp, Check, Square, RotateCcw, Terminal } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ChatMessage, LLMProvider } from '../../types';
@@ -160,14 +160,14 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
   // Ember API URL (需要根据部署配置)
   const EMBER_API_URL = process.env.NEXT_PUBLIC_EMBER_API_URL || 'https://us-central1-gen-lang-client-0960644135.cloudfunctions.net/ember_api';
 
-  // Load history on open or when mode changes
+  // Load history on open - DO NOT reload when mode changes to preserve history
   useEffect(() => {
     if (isOpen && user) {
       loadChatHistory(user.uid).then(setMessages);
       // Load cost stats
       loadCostStats();
     }
-  }, [isOpen, user, chatMode]); // Add chatMode to dependencies
+  }, [isOpen, user]); // Removed chatMode to preserve history across mode switches
 
   // Auto-scroll to messagesEndRefEmber (matching AgentModeChat pattern)
   useEffect(() => {
@@ -636,6 +636,9 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
 
   // Agent Mode: Render with full UI inheritance (share sidebar width, no re-animation)
   if (chatMode === 'agent') {
+    // Find last agent message with code to restore
+    const lastAgentMessage = [...messages].reverse().find(m => m.object);
+
     return (
       <AgentModeChat
         onClose={onClose}
@@ -644,6 +647,8 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
         sidebarWidth={sidebarWidth}
         onSidebarWidthChange={setSidebarWidth}
         isInitialOpen={false}  // Prevent re-animation when switching modes
+        initialCode={lastAgentMessage?.object}
+        initialResult={lastAgentMessage?.result}
       />
     );
   }
@@ -738,6 +743,34 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
             return (
               <div key={msg.id}>
                 <ChatBubble message={msg} />
+
+                {/* Agent mode: Show code preview thumbnail for ALL modes (not just agent mode) */}
+                {msg.object && (
+                  <div
+                    onClick={() => {
+                      // Switch to agent mode and restore code
+                      setChatMode('agent');
+                    }}
+                    className="mt-2 p-2 w-full flex items-center border-2 border-black hover:bg-gray-50 cursor-pointer bg-white"
+                  >
+                    <div className="w-10 h-10 bg-black/5 flex items-center justify-center border-2 border-black">
+                      <Terminal strokeWidth={2} className="text-orange-500" size={20} />
+                    </div>
+                    <div className="pl-2 pr-4 flex flex-col">
+                      <span className="font-mono font-bold text-sm">
+                        {msg.object.title || 'Generated Code'}
+                      </span>
+                      <span className="font-mono text-xs text-gray-500">
+                        {language === 'ZH' ? '点击切换至代码模式' :
+                         language === 'JA' ? 'コードモードに切り替え' :
+                         language === 'FR' ? 'Passer au mode code' :
+                         language === 'ES' ? 'Cambiar a modo código' :
+                         'Click to switch to Agent mode'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Multi mode: selection button for each answer */}
                 {isPendingMultiAnswer && pendingAnswer && (
                   <div className="mt-2 flex justify-end">

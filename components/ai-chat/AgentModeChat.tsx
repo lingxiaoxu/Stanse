@@ -17,7 +17,7 @@ import { AgentCodePanel } from './AgentCodePanel';
 import { ChatModeSelector, ChatMode } from './ChatModeSelector';
 import { CostTracker } from './CostTracker';
 import { ChatBubble } from './ChatBubble';
-import { Send, X, Trash2, Square, Terminal } from 'lucide-react';
+import { Send, X, Trash2, Square, Terminal, Loader } from 'lucide-react';
 import { isRateLimitError, isOverloadedError, isAccessDeniedError } from '../../lib/stanseagent/api-errors';
 import {
   saveChatMessage,
@@ -27,6 +27,7 @@ import {
 } from '../../services/chatHistoryService';
 import { ChatMessage, LLMProvider, MessageContentPart } from '../../types';
 import { useLanguage as useLanguageContext } from '../../contexts/LanguageContext';
+import { translatePersonaLabel } from '../../services/agents/stanceAgent';
 
 interface Props {
   onClose: () => void;
@@ -35,9 +36,20 @@ interface Props {
   sidebarWidth: number;
   onSidebarWidthChange: (width: number) => void;
   isInitialOpen?: boolean;
+  initialCode?: any;  // Restored agent code when switching from other modes
+  initialResult?: any;  // Restored execution result when switching from other modes
 }
 
-export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange, sidebarWidth: initialWidth, onSidebarWidthChange, isInitialOpen = true }) => {
+export const AgentModeChat: React.FC<Props> = ({
+  onClose,
+  chatMode,
+  onModeChange,
+  sidebarWidth: initialWidth,
+  onSidebarWidthChange,
+  isInitialOpen = true,
+  initialCode,
+  initialResult
+}) => {
   const { user, userProfile } = useAuth();
   const { t, language } = useLanguage();
 
@@ -71,6 +83,9 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
   });
   const [todayTotalCost, setTodayTotalCost] = useState(0);
   const [monthTotalCost, setMonthTotalCost] = useState(0);
+
+  // Translated user label (synced with EmberAIChatSidebar and Stance tab translation)
+  const [translatedUserLabel, setTranslatedUserLabel] = useState<string | undefined>(undefined);
 
   // Load cost statistics from Ember API cost_service.py
   const loadCostStats = async () => {
@@ -110,6 +125,67 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
       loadCostStats();  // Load cost stats from Ember API
     }
   }, [user]); // Don't include chatMode - only load once per user session
+
+  // Restore code and result when switching to agent mode from other modes
+  React.useEffect(() => {
+    if (initialCode) {
+      setGeneratedCode(initialCode);
+      console.log('[Agent Mode] Restored code from other mode:', initialCode.title);
+    }
+    if (initialResult) {
+      setSandboxResult(initialResult);
+      console.log('[Agent Mode] Restored result from other mode');
+    }
+  }, [initialCode, initialResult]);
+
+  // Translate user label when language changes (sync with EmberAIChatSidebar and Stance tab)
+  React.useEffect(() => {
+    const translateLabel = async () => {
+      if (!userProfile?.coordinates?.label) {
+        setTranslatedUserLabel(undefined);
+        return;
+      }
+
+      const originalLabel = userProfile.coordinates.label;
+
+      // Check localStorage cache first - MUST match FingerprintView's cache key format!
+      // FingerprintView uses: `stanse_persona_${label}_${language.toLowerCase()}`
+      const cacheKey = `stanse_persona_${originalLabel}_${language.toLowerCase()}`;
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          console.log(`[Agent Mode] Using cached translated label for ${language}:`, cached);
+          setTranslatedUserLabel(cached);
+          return;
+        }
+      } catch (e) {
+        console.warn('[Agent Mode] Failed to read label cache');
+      }
+
+      // If English, use original
+      if (language === 'EN' || language === 'en') {
+        setTranslatedUserLabel(originalLabel);
+        return;
+      }
+
+      // Translate using the same service as Stance tab
+      try {
+        const translated = await translatePersonaLabel(userProfile.coordinates, language);
+        setTranslatedUserLabel(translated);
+        // Cache the result with the SAME key format as FingerprintView
+        try {
+          localStorage.setItem(cacheKey, translated);
+        } catch (e) {
+          console.warn('[Agent Mode] Failed to cache translated label');
+        }
+      } catch (error) {
+        console.error('[Agent Mode] Failed to translate label:', error);
+        setTranslatedUserLabel(originalLabel); // Fallback to original
+      }
+    };
+
+    translateLabel();
+  }, [language, userProfile?.coordinates?.label]);
 
   // Clear history handler (matching EmberAIChatSidebar)
   const handleClearHistory = async () => {
@@ -626,12 +702,15 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
             </div>
           ))}
           {isLoading && (
-            <div className="text-center text-gray-500 font-mono text-sm">
-              {language === 'ZH' ? '生成中...' :
-               language === 'JA' ? '生成中...' :
-               language === 'FR' ? 'Génération...' :
-               language === 'ES' ? 'Generando...' :
-               'Generating...'}
+            <div className="flex items-center gap-2 text-gray-500 font-mono text-sm">
+              <Loader size={16} className="animate-spin" />
+              <span>
+                {language === 'ZH' ? '思考中...' :
+                 language === 'JA' ? '考え中...' :
+                 language === 'FR' ? 'Réflexion...' :
+                 language === 'ES' ? 'Pensando...' :
+                 'Thinking...'}
+              </span>
             </div>
           )}
           {error && (
@@ -677,7 +756,7 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
             <CostTracker
               costInfo={costInfo}
               language={language}
-              userLabel={userProfile?.coordinates?.label}
+              userLabel={translatedUserLabel || userProfile?.coordinates?.label}
             />
 
             {/* Input */}
@@ -780,9 +859,35 @@ export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange
                 sandboxResult={sandboxResult}
                 activeTab={codeTab}
                 onTabChange={setCodeTab}
-                onDeploy={() => {
+                onDeploy={async (duration: string) => {
                   if (sandboxResult && 'url' in sandboxResult && sandboxResult.url) {
-                    window.open(sandboxResult.url, '_blank');
+                    try {
+                      // Call stanse-agent publish API to extend sandbox timeout
+                      const publishResponse = await fetch(`${STANSEAGENT_API_URL}/api/publish`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          url: sandboxResult.url,
+                          sbxId: sandboxResult.sbxId,
+                          duration: duration  // '15m', '30m', or '1h'
+                        })
+                      });
+
+                      const publishResult = await publishResponse.json();
+
+                      if (publishResult.url) {
+                        // Open the published URL (could be a Vercel KV short link or original URL)
+                        window.open(publishResult.url, '_blank');
+                        console.log(`[Agent Mode] Published sandbox with ${duration} duration:`, publishResult.url);
+                      } else {
+                        // Fallback to original URL
+                        window.open(sandboxResult.url, '_blank');
+                      }
+                    } catch (err) {
+                      console.error('[Agent Mode] Failed to publish with duration:', err);
+                      // Fallback: just open the URL
+                      window.open(sandboxResult.url, '_blank');
+                    }
                   }
                 }}
                 language={language}
