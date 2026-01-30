@@ -14,15 +14,30 @@ import templates from '../../lib/stanseagent/templates';
 import { toAISDKMessages, toMessageImage } from '../../lib/stanseagent/messages';
 import { AgentModeControls } from './AgentModeControls';
 import { AgentCodePanel } from './AgentCodePanel';
-import { Send } from 'lucide-react';
+import { ChatModeSelector, ChatMode } from './ChatModeSelector';
+import { CostTracker } from './CostTracker';
+import { Send, X, Trash2, Square, Terminal } from 'lucide-react';
+import { isRateLimitError, isOverloadedError, isAccessDeniedError } from '../../lib/stanseagent/api-errors';
+import {
+  saveChatMessage,
+  loadChatHistory,
+  clearOldestMessage,
+  clearAllChatHistory
+} from '../../services/chatHistoryService';
+import { ChatMessage, LLMProvider, MessageContentPart } from '../../types';
+import { useLanguage as useLanguageContext } from '../../contexts/LanguageContext';
 
 interface Props {
   onClose: () => void;
+  chatMode: ChatMode;
+  onModeChange: (mode: ChatMode) => void;
+  sidebarWidth: number;
+  onSidebarWidthChange: (width: number) => void;
 }
 
-export const AgentModeChat: React.FC<Props> = ({ onClose }) => {
-  const { user } = useAuth();
-  const { language } = useLanguage();
+export const AgentModeChat: React.FC<Props> = ({ onClose, chatMode, onModeChange, sidebarWidth: initialWidth, onSidebarWidthChange }) => {
+  const { user, userProfile } = useAuth();
+  const { t, language } = useLanguage();
 
   // Agent Mode state
   const [input, setInput] = useState('');
@@ -33,16 +48,56 @@ export const AgentModeChat: React.FC<Props> = ({ onClose }) => {
   const [sandboxResult, setSandboxResult] = useState<ExecutionResult | null>(null);
   const [codeTab, setCodeTab] = useState<'code' | 'preview'>('code');
   const [splitRatio, setSplitRatio] = useState(50);
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [useMorphApply, setUseMorphApply] = useState(false);
+
+  // Store last request for retry functionality
+  const [lastRequest, setLastRequest] = useState<{ input: string; files: File[] } | null>(null);
+
+  // Ref for auto-scroll (matching chat.tsx)
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Cost tracking state (matching EmberAIChatSidebar)
+  const [costInfo, setCostInfo] = useState<any>({
+    currentCost: 0,
+    todayCost: 0,
+    monthCost: 0,
+    tokens: { prompt: 0, completion: 0, total: 0 },
+    modelUsed: '',
+    estimatedBudget: 1.0
+  });
+  const [todayTotalCost, setTodayTotalCost] = useState(0);
+  const [monthTotalCost, setMonthTotalCost] = useState(0);
+
+  // Load history on open or when switching to agent mode (matching EmberAIChatSidebar)
+  React.useEffect(() => {
+    if (user) {
+      loadChatHistory(user.uid).then(setMessages);
+    }
+  }, [user, chatMode]); // Reload when switching modes
+
+  // Clear history handler (matching EmberAIChatSidebar)
+  const handleClearHistory = async () => {
+    if (!user) return;
+    if (!window.confirm(t('aiChat', 'confirmClear') || 'Clear all chat history?')) return;
+
+    try {
+      await clearAllChatHistory(user.uid);
+      setMessages([]);
+    } catch (err) {
+      console.error('Failed to clear history:', err);
+      setErrorMessage('Failed to clear history');
+    }
+  };
 
   // Message management helpers (like page.tsx addMessage/setMessage)
-  const addMessage = (msg: { role: 'user' | 'assistant'; content: string }) => {
+  const addMessage = (msg: ChatMessage) => {
     setMessages(prev => [...prev, msg]);
     return messages.concat(msg);
   };
 
-  const updateLastMessage = (updates: Partial<{ role: 'user' | 'assistant'; content: string }>) => {
+  const updateLastMessage = (updates: Partial<ChatMessage>) => {
     setMessages(prev => {
       const updated = [...prev];
       if (updated.length > 0) {
@@ -79,13 +134,44 @@ export const AgentModeChat: React.FC<Props> = ({ onClose }) => {
     // In production, this could send to your analytics service
   };
 
+  // Determine which API to use based on morph toggle and existing code (from page.tsx lines 84-86)
+  const shouldUseMorph = useMorphApply && generatedCode && generatedCode.code && generatedCode.file_path;
+  const apiEndpoint = shouldUseMorph ? '/api/morph-chat' : '/api/chat';
+
+  // Debug: Log morph mode changes only when it actually changes
+  React.useEffect(() => {
+    console.log('[Agent Mode] Morph mode:', { shouldUseMorph, useMorphApply, hasCode: !!generatedCode?.code, apiEndpoint });
+  }, [shouldUseMorph, apiEndpoint]);
+
   // useObject hook for streaming code generation (from page.tsx lines 88-136)
   const { object, submit, isLoading, stop, error } = useObject({
-    api: `${STANSEAGENT_API_URL}/api/chat`,
+    api: `${STANSEAGENT_API_URL}${apiEndpoint}`,
     schema: stanseAgentSchema,
     onError: (error) => {
       console.error('[Agent Mode] Error:', error);
-      setErrorMessage((error as any)?.message || String(error));
+
+      // Use api-errors.ts logic for better error categorization
+      if (isRateLimitError(error)) {
+        setErrorMessage(language === 'ZH' ? '已达到请求限制。请稍后再试或使用您自己的 API 密钥。' :
+                       language === 'JA' ? 'リクエスト制限に達しました。後でもう一度お試しいただくか、独自のAPIキーを使用してください。' :
+                       language === 'FR' ? 'Limite de requêtes atteinte. Veuillez réessayer plus tard ou utiliser votre propre clé API.' :
+                       language === 'ES' ? 'Límite de solicitudes alcanzado. Inténtelo más tarde o use su propia clave API.' :
+                       'Rate limit reached. Please try again later or use your own API key.');
+      } else if (isOverloadedError(error)) {
+        setErrorMessage(language === 'ZH' ? '服务当前不可用。请稍后再试。' :
+                       language === 'JA' ? 'サービスは現在利用できません。後でもう一度お試しください。' :
+                       language === 'FR' ? 'Service actuellement indisponible. Veuillez réessayer plus tard.' :
+                       language === 'ES' ? 'Servicio actualmente no disponible. Inténtelo más tarde.' :
+                       'Service currently unavailable. Please try again later.');
+      } else if (isAccessDeniedError(error)) {
+        setErrorMessage(language === 'ZH' ? '访问被拒绝。请检查您的 API 密钥。' :
+                       language === 'JA' ? 'アクセスが拒否されました。APIキーを確認してください。' :
+                       language === 'FR' ? 'Accès refusé. Veuillez vérifier votre clé API.' :
+                       language === 'ES' ? 'Acceso denegado. Verifique su clave API.' :
+                       'Access denied. Please check your API key.');
+      } else {
+        setErrorMessage((error as any)?.message || String(error));
+      }
     },
     onFinish: async ({ object: generatedAgent }) => {
       console.log('[Agent Mode] onFinish:', generatedAgent);
@@ -125,21 +211,80 @@ export const AgentModeChat: React.FC<Props> = ({ onClose }) => {
   });
 
   // Watch for object updates (from page.tsx lines 138-162)
+  // IMPORTANT: Only add message if last message is NOT already from assistant (avoid duplicates during streaming)
   useEffect(() => {
     if (object) {
       setGeneratedCode(object as StanseAgentSchema);
-      // Add assistant message
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: `**${(object as any).title}**\n\n${(object as any).commentary}`
-      }]);
+
+      // Safely add assistant message with type checking
+      const title = (object as any)?.title || 'Code Generated';
+      const commentary = (object as any)?.commentary || 'Code has been generated successfully';
+
+      const lastMessage = messages[messages.length - 1];
+
+      // Only add new message if last message is not from assistant (matching page.tsx logic)
+      if (!lastMessage || lastMessage.role !== 'assistant') {
+        const assistantMessage: ChatMessage = {
+          id: `${Date.now()}-assistant`,
+          role: 'assistant',
+          content: `**${title}**\n\n${commentary}`,
+          timestamp: new Date().toISOString(),
+          provider: LLMProvider.EMBER,
+          object: object, // Add object for preview card
+          result: sandboxResult // Add result if available
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
+      } else {
+        // Update existing assistant message (during streaming updates)
+        setMessages(prev => {
+          const updated = [...prev];
+          if (updated.length > 0) {
+            updated[updated.length - 1] = {
+              ...updated[updated.length - 1],
+              content: `**${title}**\n\n${commentary}`,
+              object: object,
+              result: sandboxResult
+            };
+          }
+          return updated;
+        });
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [object]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isLoading, error, errorMessage]);
+
+  // Retry handler
+  const handleRetry = () => {
+    if (!lastRequest) return;
+
+    setInput(lastRequest.input);
+    setAgentFiles(lastRequest.files);
+    setErrorMessage('');
+
+    // Trigger submit with saved request
+    setTimeout(() => {
+      const form = document.querySelector('form');
+      if (form) {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      }
+    }, 100);
+  };
 
   // Handle submit (from page.tsx lines 188-279)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !user) return;
+
+    // Save request for retry
+    setLastRequest({ input, files: agentFiles });
 
     // Check for base app request (lines 199-252)
     if (isBaseAppRequest(input)) {
@@ -191,9 +336,16 @@ export const AgentModeChat: React.FC<Props> = ({ onClose }) => {
       });
     }
 
-    // Add user message to chat history
-    const userMsg = { role: 'user' as const, content: input };
-    const updatedMessages = addMessage(userMsg);
+    // Add user message to chat history (with proper ChatMessage structure)
+    // If there are images, use complex content format, otherwise use simple string
+    const userMessage: ChatMessage = {
+      id: `${Date.now()}-user`,
+      role: 'user',
+      content: images.length > 0 ? content as MessageContentPart[] : input,
+      timestamp: new Date().toISOString(),
+      provider: LLMProvider.EMBER
+    };
+    setMessages(prev => [...prev, userMessage]);
 
     // Convert to AI SDK format using toAISDKMessages
     const aiMessages = [{ role: 'user' as const, content }];
@@ -202,37 +354,194 @@ export const AgentModeChat: React.FC<Props> = ({ onClose }) => {
     setAgentFiles([]);
 
     // Submit using AI SDK (like page.tsx lines 268-276)
+    // In morph mode, pass currentStanseAgent to enable incremental code editing
     submit({
       userID: user.uid,
       messages: aiMessages,
       template: currentTemplate,
       model: currentModel,
-      config: agentModel
+      config: agentModel,
+      ...(shouldUseMorph && generatedCode ? { currentStanseAgent: generatedCode } : {})
     });
   };
 
+  // UI state (matching EmberAIChatSidebar) - use shared width
+  const [isResizing, setIsResizing] = React.useState(false);
+  const [resizeStartX, setResizeStartX] = React.useState(0);
+  const [resizeStartWidth, setResizeStartWidth] = React.useState(0);
+
+  // Resizable handlers (matching EmberAIChatSidebar)
+  const handleResizeStart = (e: React.MouseEvent) => {
+    setIsResizing(true);
+    setResizeStartX(e.clientX);
+    setResizeStartWidth(initialWidth);
+    e.preventDefault();
+  };
+
+  const handleResizeMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+    const deltaX = resizeStartX - e.clientX;
+    const newWidth = resizeStartWidth + deltaX;
+    const maxWidth = Math.floor(window.innerWidth * 11 / 12);
+    const minWidth = 400;
+    const clampedWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
+    onSidebarWidthChange(clampedWidth);
+  };
+
+  const handleResizeEnd = () => {
+    setIsResizing(false);
+  };
+
+  // Listen for resize events
+  React.useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleResizeMove);
+      window.addEventListener('mouseup', handleResizeEnd);
+      return () => {
+        window.removeEventListener('mousemove', handleResizeMove);
+        window.removeEventListener('mouseup', handleResizeEnd);
+      };
+    }
+  }, [isResizing, resizeStartX, resizeStartWidth, onSidebarWidthChange]);
+
   return (
-    <div className="flex h-full">
-      {/* Chat Panel */}
-      <div style={{ width: generatedCode ? `${splitRatio}%` : '100%' }} className="flex flex-col h-full">
-        {/* Controls */}
-        <div className="p-4 border-b-2 border-black">
-          <AgentModeControls
-            selectedTemplate={agentTemplate}
-            onTemplateChange={setAgentTemplate}
-            selectedModel={agentModel}
-            onModelChange={setAgentModel}
-            files={agentFiles}
-            onFileChange={setAgentFiles}
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 z-[45]"
+        onClick={onClose}
+      />
+
+      {/* Agent Mode Sidebar - matching EmberAIChatSidebar structure */}
+      <div
+        className="fixed right-0 top-0 h-full bg-white border-l-4 border-black shadow-pixel z-50 flex flex-col animate-slide-in"
+        style={{
+          width: `${initialWidth}px`,
+          cursor: isResizing ? 'ew-resize' : 'default'
+        }}
+      >
+        {/* Left resize handle (matching EmberAIChatSidebar) */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1 hover:w-2 bg-transparent hover:bg-blue-500 cursor-ew-resize transition-all hidden md:block"
+          onMouseDown={handleResizeStart}
+          style={{ zIndex: 100 }}
+        >
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-12 bg-gray-400 rounded-full opacity-50 hover:opacity-100" />
+        </div>
+
+        {/* Header (matching EmberAIChatSidebar) */}
+        <div className="p-4 border-b-4 border-black bg-white">
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex-1">
+              <h2 className="font-pixel text-2xl">{t('aiChat', 'title')}</h2>
+              <div className="text-[10px] font-mono text-gray-500 mt-1">
+                Powered by Stanse AI
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleClearHistory}
+                className="p-2 hover:bg-gray-100 border-2 border-transparent hover:border-black transition-colors"
+                title={t('aiChat', 'clearHistory') || 'Clear history'}
+              >
+                <Trash2 size={20} />
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 border-2 border-transparent hover:border-black transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+          </div>
+
+          {/* Mode Selector (matching EmberAIChatSidebar) */}
+          <ChatModeSelector
+            activeMode={chatMode}
+            onChange={onModeChange}
             language={language}
           />
+
+          {/* Agent Mode Controls (only shown in agent mode) */}
+          <div className="mt-2">
+            <AgentModeControls
+              selectedTemplate={agentTemplate}
+              onTemplateChange={setAgentTemplate}
+              selectedModel={agentModel}
+              onModelChange={setAgentModel}
+              files={agentFiles}
+              onFileChange={setAgentFiles}
+              language={language}
+              useMorphApply={useMorphApply}
+              onUseMorphApplyChange={setUseMorphApply}
+            />
+          </div>
         </div>
+
+        {/* Content area with split view */}
+        <div className="flex h-full w-full overflow-hidden">
+          {/* Chat Panel */}
+          <div style={{ width: generatedCode ? `${splitRatio}%` : '100%' }} className="flex flex-col h-full">
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
           {messages.map((msg, idx) => (
             <div key={idx} className={`p-3 border-2 border-black ${msg.role === 'user' ? 'bg-gray-100 ml-auto max-w-[80%]' : 'bg-white mr-auto max-w-[80%]'}`}>
-              <div className="font-mono text-sm whitespace-pre-wrap">{msg.content}</div>
+              {/* Render content - support both string and complex content */}
+              {typeof msg.content === 'string' ? (
+                <div className="font-mono text-sm whitespace-pre-wrap">{msg.content}</div>
+              ) : (
+                <div className="space-y-2">
+                  {(msg.content as MessageContentPart[]).map((content, id) => {
+                    if (content.type === 'text') {
+                      return (
+                        <div key={id} className="font-mono text-sm whitespace-pre-wrap">
+                          {content.text}
+                        </div>
+                      );
+                    }
+                    if (content.type === 'image') {
+                      return (
+                        <img
+                          key={id}
+                          src={content.image}
+                          alt="uploaded"
+                          className="w-12 h-12 object-cover border-2 border-black inline-block mr-2 mb-2"
+                        />
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              )}
+
+              {/* Object Preview Card (for code generation) */}
+              {msg.object && (
+                <div
+                  onClick={() => {
+                    setGeneratedCode(msg.object);
+                    if (msg.result) setSandboxResult(msg.result);
+                    setCodeTab('code');
+                  }}
+                  className="mt-2 p-2 w-full flex items-center border-2 border-black hover:bg-gray-50 cursor-pointer"
+                >
+                  <div className="w-10 h-10 bg-black/5 flex items-center justify-center border-2 border-black">
+                    <Terminal strokeWidth={2} className="text-orange-500" size={20} />
+                  </div>
+                  <div className="pl-2 pr-4 flex flex-col">
+                    <span className="font-mono font-bold text-sm">
+                      {msg.object.title || 'Generated Code'}
+                    </span>
+                    <span className="font-mono text-xs text-gray-500">
+                      {language === 'ZH' ? '点击查看预览' :
+                       language === 'JA' ? 'クリックしてプレビュー' :
+                       language === 'FR' ? 'Cliquez pour voir' :
+                       language === 'ES' ? 'Haz clic para ver' :
+                       'Click to see preview'}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
           {isLoading && (
@@ -246,86 +555,161 @@ export const AgentModeChat: React.FC<Props> = ({ onClose }) => {
           )}
           {error && (
             <div className="p-3 border-2 border-red-500 bg-red-50">
-              <div className="font-mono text-sm text-red-700">{(error as any)?.message || String(error)}</div>
+              <div className="flex items-center justify-between">
+                <div className="font-mono text-sm text-red-700 flex-1">{(error as any)?.message || String(error)}</div>
+                <button
+                  onClick={handleRetry}
+                  className="ml-2 px-3 py-1 bg-red-500 text-white font-mono text-xs border-2 border-black hover:bg-red-600 transition-colors"
+                >
+                  {language === 'ZH' ? '重试' :
+                   language === 'JA' ? '再試行' :
+                   language === 'FR' ? 'Réessayer' :
+                   language === 'ES' ? 'Reintentar' :
+                   'Retry'}
+                </button>
+              </div>
             </div>
           )}
           {errorMessage && (
             <div className="p-3 border-2 border-red-500 bg-red-50">
-              <div className="font-mono text-sm text-red-700">{errorMessage}</div>
+              <div className="flex items-center justify-between">
+                <div className="font-mono text-sm text-red-700 flex-1">{errorMessage}</div>
+                <button
+                  onClick={handleRetry}
+                  className="ml-2 px-3 py-1 bg-red-500 text-white font-mono text-xs border-2 border-black hover:bg-red-600 transition-colors"
+                >
+                  {language === 'ZH' ? '重试' :
+                   language === 'JA' ? '再試行' :
+                   language === 'FR' ? 'Réessayer' :
+                   language === 'ES' ? 'Reintentar' :
+                   'Retry'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Auto-scroll anchor */}
+          <div ref={messagesEndRef} />
+        </div>
+
+            {/* CostTracker (matching EmberAIChatSidebar) */}
+            <CostTracker
+              costInfo={costInfo}
+              language={language}
+              userLabel={userProfile?.coordinates?.label}
+            />
+
+            {/* Input */}
+            <form onSubmit={handleSubmit} className="p-4 border-t-4 border-black bg-white">
+              <div className="flex gap-2 items-end">
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                      e.preventDefault();
+                      if (input.trim()) {
+                        handleSubmit(e as any);
+                      }
+                    }
+                  }}
+                  placeholder={language === 'ZH' ? '描述你想要的应用...' :
+                              language === 'JA' ? 'アプリを説明...' :
+                              language === 'FR' ? 'Décrivez votre app...' :
+                              language === 'ES' ? 'Describe tu app...' :
+                              'Describe your app...'}
+                  className="flex-1 border-2 border-black p-3 font-mono text-sm focus:outline-none focus:border-blue-500 resize-none min-h-[48px] max-h-[120px]"
+                  disabled={isLoading}
+                  rows={1}
+                  style={{
+                    height: 'auto',
+                    overflowY: input.split('\n').length > 3 ? 'auto' : 'hidden'
+                  }}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = 'auto';
+                    target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+                  }}
+                />
+                {isLoading ? (
+                  <button
+                    type="button"
+                    onClick={stop}
+                    className="bg-red-600 text-white p-3 hover:bg-red-700 border-2 border-black transition-colors flex-shrink-0"
+                    title={language === 'ZH' ? '停止生成' :
+                           language === 'JA' ? '生成を停止' :
+                           language === 'FR' ? 'Arrêter' :
+                           language === 'ES' ? 'Detener' :
+                           'Stop'}
+                  >
+                    <Square size={20} />
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={!input.trim()}
+                    className="bg-black text-white p-3 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-black transition-colors flex-shrink-0"
+                  >
+                    <Send size={20} />
+                  </button>
+                )}
+              </div>
+              <p className="font-mono text-[9px] text-gray-400 mt-1">
+                {language === 'ZH' ? '按 Enter 发送，Shift+Enter 换行' :
+                 language === 'JA' ? 'Enterで送信、Shift+Enterで改行' :
+                 language === 'FR' ? 'Entrée pour envoyer, Maj+Entrée pour nouvelle ligne' :
+                 language === 'ES' ? 'Enter para enviar, Shift+Enter para nueva línea' :
+                 'Press Enter to send, Shift+Enter for new line'}
+              </p>
+            </form>
+          </div>
+
+          {/* Split Divider */}
+          {generatedCode && (
+            <div
+              className="w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize border-l-2 border-r-2 border-black"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startRatio = splitRatio;
+                const handleMove = (moveEvent: MouseEvent) => {
+                  const container = (e.target as HTMLElement).closest('.flex');
+                  if (!container) return;
+                  const rect = container.getBoundingClientRect();
+                  const deltaX = moveEvent.clientX - startX;
+                  const deltaPercent = (deltaX / rect.width) * 100;
+                  const newRatio = Math.max(40, Math.min(60, startRatio + deltaPercent));
+                  setSplitRatio(newRatio);
+                };
+                const handleUp = () => {
+                  document.removeEventListener('mousemove', handleMove);
+                  document.removeEventListener('mouseup', handleUp);
+                };
+                document.addEventListener('mousemove', handleMove);
+                document.addEventListener('mouseup', handleUp);
+              }}
+            />
+          )}
+
+          {/* Code Panel */}
+          {generatedCode && (
+            <div style={{ width: `${100 - splitRatio}%` }}>
+              <AgentCodePanel
+                stanseAgent={generatedCode}
+                sandboxResult={sandboxResult}
+                activeTab={codeTab}
+                onTabChange={setCodeTab}
+                onDeploy={() => {
+                  if (sandboxResult && 'url' in sandboxResult && sandboxResult.url) {
+                    window.open(sandboxResult.url, '_blank');
+                  }
+                }}
+                language={language}
+              />
             </div>
           )}
         </div>
-
-        {/* Input */}
-        <form onSubmit={handleSubmit} className="p-4 border-t-4 border-black bg-white">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={language === 'ZH' ? '描述你想要的应用...' :
-                          language === 'JA' ? 'アプリを説明...' :
-                          language === 'FR' ? 'Décrivez votre app...' :
-                          language === 'ES' ? 'Describe tu app...' :
-                          'Describe your app...'}
-              className="flex-1 border-2 border-black p-3 font-mono text-sm focus:outline-none focus:border-blue-500"
-              disabled={isLoading}
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              className="bg-black text-white p-3 hover:bg-gray-800 disabled:opacity-50 border-2 border-black"
-            >
-              <Send size={20} />
-            </button>
-          </div>
-        </form>
       </div>
-
-      {/* Split Divider */}
-      {generatedCode && (
-        <div
-          className="w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize border-l-2 border-r-2 border-black"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            const startX = e.clientX;
-            const startRatio = splitRatio;
-            const handleMove = (moveEvent: MouseEvent) => {
-              const container = (e.target as HTMLElement).closest('.flex');
-              if (!container) return;
-              const rect = container.getBoundingClientRect();
-              const deltaX = moveEvent.clientX - startX;
-              const deltaPercent = (deltaX / rect.width) * 100;
-              const newRatio = Math.max(40, Math.min(60, startRatio + deltaPercent));
-              setSplitRatio(newRatio);
-            };
-            const handleUp = () => {
-              document.removeEventListener('mousemove', handleMove);
-              document.removeEventListener('mouseup', handleUp);
-            };
-            document.addEventListener('mousemove', handleMove);
-            document.addEventListener('mouseup', handleUp);
-          }}
-        />
-      )}
-
-      {/* Code Panel */}
-      {generatedCode && (
-        <div style={{ width: `${100 - splitRatio}%` }}>
-          <AgentCodePanel
-            stanseAgent={generatedCode}
-            sandboxResult={sandboxResult}
-            activeTab={codeTab}
-            onTabChange={setCodeTab}
-            onDeploy={() => {
-              if (sandboxResult && 'url' in sandboxResult && sandboxResult.url) {
-                window.open(sandboxResult.url, '_blank');
-              }
-            }}
-            language={language}
-          />
-        </div>
-      )}
-    </div>
+    </>
   );
 };

@@ -151,14 +151,14 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
   // Ember API URL (需要根据部署配置)
   const EMBER_API_URL = process.env.NEXT_PUBLIC_EMBER_API_URL || 'https://us-central1-gen-lang-client-0960644135.cloudfunctions.net/ember_api';
 
-  // Load history on open
+  // Load history on open or when mode changes
   useEffect(() => {
     if (isOpen && user) {
       loadChatHistory(user.uid).then(setMessages);
       // Load cost stats
       loadCostStats();
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, chatMode]); // Add chatMode to dependencies
 
   // Auto-scroll
   useEffect(() => {
@@ -566,9 +566,17 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
 
   if (!isOpen) return null;
 
-  // Agent Mode: Render completely separate component
+  // Agent Mode: Render with full UI inheritance (share sidebar width)
   if (chatMode === 'agent') {
-    return <AgentModeChat onClose={onClose} />;
+    return (
+      <AgentModeChat
+        onClose={onClose}
+        chatMode={chatMode}
+        onModeChange={setChatMode}
+        sidebarWidth={sidebarWidth}
+        onSidebarWidthChange={setSidebarWidth}
+      />
+    );
   }
 
   // Other 4 modes: Original Ember Chat UI

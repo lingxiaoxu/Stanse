@@ -1,10 +1,4 @@
-import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
-
+// Utility function to check if a file already exists in an array
 export function isFileInArray(file: File, existingFiles: File[]) {
   return existingFiles.some(
     (existing) =>

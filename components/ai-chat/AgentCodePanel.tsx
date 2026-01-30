@@ -62,11 +62,11 @@ export const AgentCodePanel: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* Deploy to E2B Button */}
+        {/* Deploy to E2B Button - matching black/white/gray theme */}
         {hasPreview && (
           <button
             onClick={onDeploy}
-            className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white font-mono text-xs border-2 border-black hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-1 px-3 py-1 bg-black text-white font-mono text-xs border-2 border-black hover:bg-gray-800 transition-colors"
           >
             <Rocket size={14} />
             <span>
