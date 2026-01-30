@@ -600,12 +600,19 @@ export enum LLMProvider {
   EMBER = 'EMBER'
 }
 
+// Content types for rich messages
+export type MessageContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image'; image: string };
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
-  content: string;
+  content: string | MessageContentPart[]; // Support both simple string and complex content
   timestamp: string; // ISO date string
   provider: LLMProvider;
+  object?: any; // Optional: For agent mode code preview objects
+  result?: any; // Optional: For agent mode execution results
 }
 
 export interface ChatHistoryRecord {

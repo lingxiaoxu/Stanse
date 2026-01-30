@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Paperclip, X, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import { LLMModelConfig } from '../../types';
+import { isFileInArray } from '../../lib/stanseagent/utils';
 
 interface Props {
   selectedTemplate: string;
@@ -10,6 +11,8 @@ interface Props {
   files: File[];
   onFileChange: (files: File[]) => void;
   language: string;
+  useMorphApply: boolean;
+  onUseMorphApplyChange: (value: boolean) => void;
 }
 
 const TEMPLATES = [
@@ -57,21 +60,66 @@ export const AgentModeControls: React.FC<Props> = ({
   onModelChange,
   files,
   onFileChange,
-  language
+  language,
+  useMorphApply,
+  onUseMorphApplyChange
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [useMorphApply, setUseMorphApply] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      onFileChange([...files, ...newFiles]);
+      const uniqueFiles = newFiles.filter(file => !isFileInArray(file, files));
+      onFileChange([...files, ...uniqueFiles]);
     }
   };
 
   const handleRemoveFile = (index: number) => {
     onFileChange(files.filter((_, i) => i !== index));
+  };
+
+  // Drag and drop handlers
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const droppedFiles = Array.from(e.dataTransfer.files).filter((file: File) =>
+      file.type.startsWith('image/')
+    );
+
+    if (droppedFiles.length > 0) {
+      const uniqueFiles = droppedFiles.filter((file: File) => !isFileInArray(file, files));
+      onFileChange([...files, ...uniqueFiles]);
+    }
+  };
+
+  // Paste handler
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = Array.from(e.clipboardData.items);
+
+    for (const item of items) {
+      if ((item as DataTransferItem).type.indexOf('image') !== -1) {
+        e.preventDefault();
+
+        const file = (item as DataTransferItem).getAsFile();
+        if (file && !isFileInArray(file, files)) {
+          onFileChange([...files, file]);
+        }
+      }
+    }
   };
 
   const getTemplateName = (template: typeof TEMPLATES[0]) => {
@@ -116,17 +164,24 @@ export const AgentModeControls: React.FC<Props> = ({
           ))}
         </select>
 
-        {/* File Upload Button - 40% width (25% wider than others) */}
+        {/* File Upload Button - 40% width (25% wider than others) with drag-and-drop */}
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center justify-center gap-1 border-2 border-black bg-white hover:bg-gray-100 transition-colors font-mono text-xs"
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          onPaste={handlePaste}
+          className={`flex items-center justify-center gap-1 border-2 bg-white hover:bg-gray-100 transition-colors font-mono text-xs relative ${
+            dragActive ? 'border-dashed border-blue-500' : 'border-black'
+          }`}
           style={{ width: '40%' }}
-          title={language === 'ZH' ? '上传文件' :
-                 language === 'JA' ? 'ファイルをアップロード' :
-                 language === 'FR' ? 'Télécharger fichier' :
-                 language === 'ES' ? 'Subir archivo' :
-                 'Upload file'}
+          title={language === 'ZH' ? '上传文件（拖放或粘贴）' :
+                 language === 'JA' ? 'ファイルをアップロード（ドラッグ＆ドロップまたは貼り付け）' :
+                 language === 'FR' ? 'Télécharger fichier (glisser-déposer ou coller)' :
+                 language === 'ES' ? 'Subir archivo (arrastrar y soltar o pegar)' :
+                 'Upload file (drag & drop or paste)'}
         >
           <Paperclip size={14} />
           <span>
@@ -148,14 +203,19 @@ export const AgentModeControls: React.FC<Props> = ({
         />
       </div>
 
-      {/* File Preview Chips */}
+      {/* File Preview Chips with Thumbnails */}
       {files.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
           {files.map((file, index) => (
             <div
               key={index}
-              className="flex items-center gap-1 px-2 py-1 bg-gray-100 border-2 border-black font-mono text-[10px]"
+              className="flex items-center gap-1 px-2 py-1 bg-gray-100 border-2 border-black font-mono text-[10px] relative"
             >
+              <img
+                src={URL.createObjectURL(file)}
+                alt={file.name}
+                className="w-5 h-5 object-cover border border-black"
+              />
               <span className="truncate max-w-[100px]">{file.name}</span>
               <button
                 onClick={() => handleRemoveFile(index)}
@@ -188,7 +248,7 @@ export const AgentModeControls: React.FC<Props> = ({
         {/* Advanced Settings Panel */}
         {showAdvanced && (
           <div className="mt-2 p-3 border-2 border-black bg-gray-50 space-y-3">
-            {/* Morph Apply Toggle */}
+            {/* Morph Apply Toggle - matching Settings toggle style */}
             <div className="flex items-center justify-between">
               <span className="font-mono text-[10px]">
                 {language === 'ZH' ? 'Morph 编辑模式' :
@@ -198,13 +258,13 @@ export const AgentModeControls: React.FC<Props> = ({
                  'Use Morph Apply'}
               </span>
               <button
-                onClick={() => setUseMorphApply(!useMorphApply)}
-                className={`relative w-12 h-6 border-2 border-black transition-colors ${
-                  useMorphApply ? 'bg-blue-600' : 'bg-gray-300'
+                onClick={() => onUseMorphApplyChange(!useMorphApply)}
+                className={`w-12 h-7 border-2 border-black relative transition-colors ${
+                  useMorphApply ? 'bg-black' : 'bg-white'
                 }`}
               >
-                <div className={`absolute top-0.5 w-4 h-4 bg-white border-2 border-black transition-all duration-200 ${
-                  useMorphApply ? 'left-6' : 'left-0.5'
+                <div className={`absolute top-0.5 bottom-0.5 w-4 bg-current border border-black transition-all ${
+                  useMorphApply ? 'left-6 bg-white' : 'left-0.5 bg-black'
                 }`} />
               </button>
             </div>
