@@ -117,6 +117,9 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
   // Track if this is initial open (for slide-in animation)
   const [isInitialOpen, setIsInitialOpen] = useState(true);
 
+  // Track if closing (for slide-out animation)
+  const [isClosing, setIsClosing] = useState(false);
+
   const [costInfo, setCostInfo] = useState<any>({
     currentCost: 0,
     todayCost: 0,
@@ -579,10 +582,14 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
     }
   };
 
-  // Handle close with animation reset
+  // Handle close with slide-out animation
   const handleClose = () => {
-    setIsInitialOpen(true);  // Reset for slide-in animation on next open
-    onClose();
+    setIsClosing(true);  // Trigger slide-out animation
+    setTimeout(() => {
+      setIsClosing(false);  // Reset closing state
+      setIsInitialOpen(true);  // Reset for slide-in animation on next open
+      onClose();  // Actually close after animation completes
+    }, 300);  // Match animation duration (300ms)
   };
 
   // Handle mode change without animation
@@ -702,7 +709,9 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
       {/* Sidebar */}
       <div
         ref={sidebarRef}
-        className={`fixed right-0 top-0 h-full bg-white border-l-4 border-black shadow-pixel z-50 flex flex-col ${isInitialOpen ? 'animate-slide-in' : ''}`}
+        className={`fixed right-0 top-0 h-full bg-white border-l-4 border-black shadow-pixel z-50 flex flex-col ${
+          isInitialOpen ? 'animate-slide-in' : ''
+        } ${isClosing ? 'animate-slide-out' : ''}`}
         style={{
           width: `${sidebarWidth}px`,
           transform: swipeOffset > 0 ? `translateX(${swipeOffset}px)` : 'translateX(0)',
