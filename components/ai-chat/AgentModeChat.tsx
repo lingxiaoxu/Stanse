@@ -482,12 +482,31 @@ export const AgentModeChat: React.FC<Props> = ({
     // Check for base app request (lines 199-252)
     if (isBaseAppRequest(input)) {
       try {
-        setMessages(prev => [...prev, { role: 'user', content: input }]);
+        // Add user message with proper structure
+        const userMessage: ChatMessage = {
+          id: `${Date.now()}-user`,
+          role: 'user',
+          content: input,
+          timestamp: new Date().toISOString(),
+          provider: LLMProvider.EMBER
+        };
+        setMessages(prev => [...prev, userMessage]);
 
         const response = await fetch(`${STANSEAGENT_API_URL}/api/base-app`);
         const baseApp = await response.json();
         setGeneratedCode(baseApp);
-        setMessages(prev => [...prev, { role: 'assistant', content: `**${baseApp.title}**\n\n${baseApp.commentary}` }]);
+
+        // Add assistant message with proper structure (matching normal flow)
+        const assistantMessage: ChatMessage = {
+          id: `${Date.now()}-assistant`,
+          role: 'assistant',
+          content: `**${baseApp.title}**\n\n${baseApp.commentary}`,
+          timestamp: new Date().toISOString(),
+          provider: LLMProvider.EMBER,
+          object: baseApp, // Add object for preview card
+          result: null // Will be updated after deployment
+        };
+        setMessages(prev => [...prev, assistantMessage]);
 
         // Track base app generation
         trackEvent('stanseAgent_generated', { template: baseApp.template });
@@ -505,6 +524,39 @@ export const AgentModeChat: React.FC<Props> = ({
 
         setSandboxResult(result);
         setCodeTab('preview');
+
+        // Update assistant message with result
+        setMessages(prev => {
+          const updated = [...prev];
+          if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
+            updated[updated.length - 1] = {
+              ...updated[updated.length - 1],
+              result: result
+            };
+          }
+          return updated;
+        });
+
+        // Save to Firebase chat history (matching normal flow)
+        if (user && lastRequest) {
+          try {
+            const historyCount = await saveChatMessage(
+              user.uid,
+              lastRequest.input,
+              `**${baseApp.title}**\n\n${baseApp.commentary}`,
+              LLMProvider.EMBER,
+              baseApp, // Save base app code object
+              result // Save sandbox execution result
+            );
+
+            // Clear oldest if exceeds limit
+            if (historyCount > 5) {
+              await clearOldestMessage(user.uid);
+            }
+          } catch (saveError) {
+            console.error('[Agent Mode] Failed to save base app to chat history:', saveError);
+          }
+        }
 
         setInput('');
         return;
