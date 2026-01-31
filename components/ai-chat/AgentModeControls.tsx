@@ -40,7 +40,9 @@ const MODELS = [
   // GPT 5.0 series - ONLY GPT-5 models (removed GPT-4.x, o3, and local)
   { id: 'gpt-5', name: 'GPT-5', provider: 'OpenAI' },
   { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI' },
-  { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'OpenAI' }
+  { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'OpenAI' },
+  // Local model (Ollama, etc.)
+  { id: 'local', name: 'Local Model', provider: 'Local' }
 ];
 
 export const AgentModeControls: React.FC<Props> = ({
@@ -267,40 +269,78 @@ export const AgentModeControls: React.FC<Props> = ({
               </button>
             </div>
 
-            {/* API Key Input */}
+            {/* Model Name / API Key Input (label changes based on Local Model selection) */}
             <div>
               <label className="block font-mono text-[10px] mb-1 text-gray-700">
-                {language === 'ZH' ? 'API密钥（可选）' :
-                 language === 'JA' ? 'APIキー（オプション）' :
-                 language === 'FR' ? 'Clé API (optionnel)' :
-                 language === 'ES' ? 'Clave API (opcional)' :
-                 'API Key (optional)'}
+                {selectedModel.model === 'local' ? (
+                  language === 'ZH' ? '模型名称（必填）' :
+                  language === 'JA' ? 'モデル名（必須）' :
+                  language === 'FR' ? 'Nom du modèle (requis)' :
+                  language === 'ES' ? 'Nombre del modelo (requerido)' :
+                  'Model Name (required)'
+                ) : (
+                  language === 'ZH' ? 'API密钥（可选）' :
+                  language === 'JA' ? 'APIキー（オプション）' :
+                  language === 'FR' ? 'Clé API (optionnel)' :
+                  language === 'ES' ? 'Clave API (opcional)' :
+                  'API Key (optional)'
+                )}
               </label>
               <input
-                type="password"
+                type={selectedModel.model === 'local' ? 'text' : 'password'}
                 value={selectedModel.apiKey || ''}
                 onChange={(e) => onModelChange({ ...selectedModel, apiKey: e.target.value })}
-                placeholder={language === 'ZH' ? '自动' : language === 'JA' ? '自動' : language === 'FR' ? 'Auto' : language === 'ES' ? 'Auto' : 'Auto'}
+                placeholder={selectedModel.model === 'local' ? 'deepseek-r1:latest' : (
+                  language === 'ZH' ? '自动' : language === 'JA' ? '自動' : language === 'FR' ? 'Auto' : language === 'ES' ? 'Auto' : 'Auto'
+                )}
                 className="w-full border-2 border-black px-2 py-1 font-mono text-[10px] focus:outline-none focus:border-blue-500"
               />
+              {selectedModel.model === 'local' && (
+                <div className="mt-1 font-mono text-[8px] text-gray-500">
+                  {language === 'ZH' ? '💡 例如: deepseek-r1:latest, llama3:70b' :
+                   language === 'JA' ? '💡 例: deepseek-r1:latest, llama3:70b' :
+                   language === 'FR' ? '💡 Ex: deepseek-r1:latest, llama3:70b' :
+                   language === 'ES' ? '💡 Ej: deepseek-r1:latest, llama3:70b' :
+                   '💡 e.g., deepseek-r1:latest, llama3:70b'}
+                </div>
+              )}
             </div>
 
-            {/* Base URL Input */}
+            {/* Base URL Input (required for Local Model) */}
             <div>
               <label className="block font-mono text-[10px] mb-1 text-gray-700">
-                {language === 'ZH' ? 'Base URL（可选）' :
-                 language === 'JA' ? 'Base URL（オプション）' :
-                 language === 'FR' ? 'Base URL (optionnel)' :
-                 language === 'ES' ? 'Base URL (opcional)' :
-                 'Base URL (optional)'}
+                {selectedModel.model === 'local' ? (
+                  language === 'ZH' ? 'Base URL（必填）' :
+                  language === 'JA' ? 'Base URL（必須）' :
+                  language === 'FR' ? 'Base URL (requis)' :
+                  language === 'ES' ? 'Base URL (requerido)' :
+                  'Base URL (required)'
+                ) : (
+                  language === 'ZH' ? 'Base URL（可选）' :
+                  language === 'JA' ? 'Base URL（オプション）' :
+                  language === 'FR' ? 'Base URL (optionnel)' :
+                  language === 'ES' ? 'Base URL (opcional)' :
+                  'Base URL (optional)'
+                )}
               </label>
               <input
                 type="text"
                 value={selectedModel.baseURL || ''}
                 onChange={(e) => onModelChange({ ...selectedModel, baseURL: e.target.value })}
-                placeholder={language === 'ZH' ? '自动' : language === 'JA' ? '自動' : language === 'FR' ? 'Auto' : language === 'ES' ? 'Auto' : 'Auto'}
+                placeholder={selectedModel.model === 'local' ? 'http://localhost:11434' : (
+                  language === 'ZH' ? '自动' : language === 'JA' ? '自動' : language === 'FR' ? 'Auto' : language === 'ES' ? 'Auto' : 'Auto'
+                )}
                 className="w-full border-2 border-black px-2 py-1 font-mono text-[10px] focus:outline-none focus:border-blue-500"
               />
+              {selectedModel.model === 'local' && (
+                <div className="mt-1 font-mono text-[8px] text-gray-500">
+                  {language === 'ZH' ? '💡 Ollama默认: http://localhost:11434' :
+                   language === 'JA' ? '💡 Ollamaデフォルト: http://localhost:11434' :
+                   language === 'FR' ? '💡 Ollama par défaut: http://localhost:11434' :
+                   language === 'ES' ? '💡 Ollama por defecto: http://localhost:11434' :
+                   '💡 Ollama default: http://localhost:11434'}
+                </div>
+              )}
             </div>
 
             {/* Parameters */}
