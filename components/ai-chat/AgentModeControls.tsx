@@ -60,8 +60,8 @@ export const AgentModeControls: React.FC<Props> = ({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      const uniqueFiles = newFiles.filter(file => !isFileInArray(file, files));
+      const newFiles = Array.from(e.target.files) as File[];
+      const uniqueFiles = newFiles.filter((file: File) => !isFileInArray(file, files));
       onFileChange([...files, ...uniqueFiles]);
     }
   };
@@ -126,41 +126,41 @@ export const AgentModeControls: React.FC<Props> = ({
     <div className="mb-2 space-y-2">
       {/* Controls Row - Unified height for all 3 controls */}
       <div className="flex items-stretch gap-2">
-        {/* Template Selector - 30% width */}
-        <select
-          value={selectedTemplate}
-          onChange={(e) => onTemplateChange(e.target.value)}
-          className="border-2 border-black bg-white font-mono text-xs pl-3 py-2 hover:bg-gray-50 focus:outline-none focus:border-blue-500"
-          style={{
-            width: '30%',
-            paddingRight: '2.5rem',  // 40px for arrow space
-            backgroundPosition: 'right 0.5rem center'  // Move arrow 8px from right
-          }}
-        >
-          {TEMPLATES.map((template) => (
-            <option key={template.id} value={template.id}>
-              {getTemplateName(template)}
-            </option>
-          ))}
-        </select>
+        {/* Template Selector - 30% width with custom arrow */}
+        <div className="relative" style={{ width: '30%' }}>
+          <select
+            value={selectedTemplate}
+            onChange={(e) => onTemplateChange(e.target.value)}
+            className="w-full border-2 border-black bg-white font-mono text-xs pl-3 pr-8 py-2 hover:bg-gray-50 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer"
+          >
+            {TEMPLATES.map((template) => (
+              <option key={template.id} value={template.id}>
+                {getTemplateName(template)}
+              </option>
+            ))}
+          </select>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-sm">
+            ▼
+          </div>
+        </div>
 
-        {/* Model Selector - 30% width */}
-        <select
-          value={selectedModel.model || 'claude-sonnet-4-5-20250929'}
-          onChange={(e) => onModelChange({ ...selectedModel, model: e.target.value })}
-          className="border-2 border-black bg-white font-mono text-xs pl-3 py-2 hover:bg-gray-50 focus:outline-none focus:border-blue-500"
-          style={{
-            width: '30%',
-            paddingRight: '2.5rem',  // 40px for arrow space
-            backgroundPosition: 'right 0.5rem center'  // Move arrow 8px from right
-          }}
-        >
-          {MODELS.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.name}
-            </option>
-          ))}
-        </select>
+        {/* Model Selector - 30% width with custom arrow */}
+        <div className="relative" style={{ width: '30%' }}>
+          <select
+            value={selectedModel.model || 'claude-sonnet-4-5-20250929'}
+            onChange={(e) => onModelChange({ ...selectedModel, model: e.target.value })}
+            className="w-full border-2 border-black bg-white font-mono text-xs pl-3 pr-8 py-2 hover:bg-gray-50 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer"
+          >
+            {MODELS.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name}
+              </option>
+            ))}
+          </select>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-sm">
+            ▼
+          </div>
+        </div>
 
         {/* File Upload Button - 40% width (25% wider than others) with drag-and-drop */}
         <button
