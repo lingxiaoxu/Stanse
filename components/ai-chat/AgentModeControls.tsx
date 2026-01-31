@@ -130,7 +130,7 @@ export const AgentModeControls: React.FC<Props> = ({
         <select
           value={selectedTemplate}
           onChange={(e) => onTemplateChange(e.target.value)}
-          className="border-2 border-black bg-white font-mono text-xs pl-3 pr-8 py-2 hover:bg-gray-50 focus:outline-none focus:border-blue-500"
+          className="border-2 border-black bg-white font-mono text-xs pl-3 pr-10 py-2 hover:bg-gray-50 focus:outline-none focus:border-blue-500"
           style={{ width: '30%' }}
         >
           {TEMPLATES.map((template) => (
@@ -144,7 +144,7 @@ export const AgentModeControls: React.FC<Props> = ({
         <select
           value={selectedModel.model || 'claude-sonnet-4-5-20250929'}
           onChange={(e) => onModelChange({ ...selectedModel, model: e.target.value })}
-          className="border-2 border-black bg-white font-mono text-xs pl-3 pr-8 py-2 hover:bg-gray-50 focus:outline-none focus:border-blue-500"
+          className="border-2 border-black bg-white font-mono text-xs pl-3 pr-10 py-2 hover:bg-gray-50 focus:outline-none focus:border-blue-500"
           style={{ width: '30%' }}
         >
           {MODELS.map((model) => (
