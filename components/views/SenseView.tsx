@@ -1,6 +1,6 @@
 
-import React, { useState, useRef, useCallback } from 'react';
-import { Search, ShieldAlert, CheckCircle, FileText, ExternalLink, Users, Newspaper, Twitter, Activity, X, ThumbsUp, ThumbsDown, AlertTriangle, DollarSign, Camera, RotateCcw, Scan } from 'lucide-react';
+import React, { useState, useRef, useCallback, lazy, Suspense } from 'react';
+import { Search, ShieldAlert, CheckCircle, FileText, ExternalLink, Users, Newspaper, Twitter, Activity, X, ThumbsUp, ThumbsDown, AlertTriangle, DollarSign, Camera, RotateCcw, Scan, Globe } from 'lucide-react';
 import { PixelCard } from '../ui/PixelCard';
 import { PixelButton } from '../ui/PixelButton';
 import { analyzeBrandAlignment, UserDemographicsForAnalysis, recognizeBrandedProduct } from '../../services/geminiService';
@@ -10,6 +10,9 @@ import { detectDeviceType, detectBrowser } from '../../services/locationService'
 import { PoliticalCoordinates, BrandAlignment, ViewState } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+
+// 懒加载地球组件以提升初始加载性能
+const GlobeViewer = lazy(() => import('../globe/GlobeViewer').then(module => ({ default: module.GlobeViewer })));
 
 interface SenseViewProps {
   userProfile: PoliticalCoordinates;
@@ -271,6 +274,29 @@ export const SenseView: React.FC<SenseViewProps> = ({
         </div>
       </PixelCard>
 
+      {/* Globe Viewer */}
+      <PixelCard className="!p-0">
+        {/* Custom Title - aligned with search label */}
+        <div className="px-6 pt-6 pb-4">
+          <div className="font-mono text-xs font-bold uppercase tracking-wide flex items-center gap-2">
+            <Globe size={14} />
+            GLOBAL INTELLIGENCE MAP
+          </div>
+        </div>
+        <div style={{ height: '450px', width: '100%' }}>
+          <Suspense fallback={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <div className="font-mono text-xs text-gray-400">Loading globe...</div>
+            </div>
+          }>
+            <GlobeViewer />
+          </Suspense>
+        </div>
+        <p className="font-mono text-[10px] text-gray-500 text-center py-4">
+          Drag to rotate • Scroll to zoom
+        </p>
+      </PixelCard>
+
       {loading && (
         <div className="flex flex-col items-center justify-center py-12 space-y-4 opacity-50">
           <div className="animate-spin w-8 h-8 border-4 border-black border-t-transparent rounded-full"></div>
@@ -283,10 +309,9 @@ export const SenseView: React.FC<SenseViewProps> = ({
       {result && (
         <div className="animate-fade-in">
           {/* INTELLIGENCE REPORT CARD */}
-          <div className="relative border-4 border-black bg-white p-0 shadow-pixel-lg">
-            
+          <PixelCard className="!p-0 overflow-hidden">
             {/* Header / File Tab */}
-            <div className="bg-black text-white p-4 flex justify-between items-start">
+            <div className="bg-black text-white p-4 flex justify-between items-start relative z-10">
                 <div>
                     <div className="font-mono text-[10px] opacity-60 tracking-widest mb-1">{t('sense', 'report')}</div>
                     <h3 className="font-pixel text-3xl uppercase leading-none">{result.brandName}</h3>
@@ -471,12 +496,11 @@ export const SenseView: React.FC<SenseViewProps> = ({
                     <span className="font-bold font-mono text-[10px] uppercase">{t('sense', 'btn_recal')}</span>
                 </button>
             </div>
-
-          </div>
+          </PixelCard>
 
           {/* Alternatives Section (Only if score is low) */}
           {result.alternatives && result.alternatives.length > 0 && result.score < 50 && (
-            <div className="mt-4 bg-black text-white p-4 shadow-pixel">
+            <div className="relative group bg-pixel-black text-pixel-white border-2 border-pixel-black shadow-pixel hover:shadow-pixel-lg transition-all duration-300 mb-6 p-4">
                 <span className="font-mono text-xs font-bold uppercase block mb-3">{t('sense', 'alternatives')}</span>
                 <div className="flex flex-col gap-2">
                     {result.alternatives.map((alt: string, i: number) => {
@@ -532,9 +556,15 @@ export const SenseView: React.FC<SenseViewProps> = ({
           />
 
           {/* Modal */}
-          <div className="relative bg-white border-4 border-black shadow-pixel-lg w-full max-w-sm animate-fade-in">
+          <div className="relative group bg-white border-2 border-black shadow-pixel hover:shadow-pixel-lg transition-all duration-300 w-full max-w-sm animate-fade-in">
+            {/* Decorative Corner Bits */}
+            <div className="absolute -top-1 -left-1 w-2 h-2 bg-black" />
+            <div className="absolute -top-1 -right-1 w-2 h-2 bg-black" />
+            <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-black" />
+            <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-black" />
+
             {/* Header */}
-            <div className="bg-black text-white p-3 flex justify-between items-center">
+            <div className="bg-black text-white p-3 flex justify-between items-center relative z-10">
               <div className="flex items-center gap-2">
                 <Activity size={16} />
                 <span className="font-pixel text-sm uppercase">Recalibrate</span>
@@ -552,7 +582,7 @@ export const SenseView: React.FC<SenseViewProps> = ({
             </div>
 
             {/* Content */}
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 relative z-10">
               <p className="font-mono text-xs text-gray-600 text-center">
                 How do you feel about <strong className="text-black uppercase">{result.brandName}</strong>?
               </p>

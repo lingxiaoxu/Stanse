@@ -667,9 +667,9 @@ export const UnionView: React.FC = () => {
       </div>
 
       {/* REDESIGNED Impact Stats Dashboard - Black & White Theme */}
-      <PixelCard className="p-0 border-4 border-black bg-white">
+      <PixelCard className="!p-0">
         {/* Header */}
-        <div className="p-6 border-b-2 border-black bg-gray-50">
+        <div className="p-6 border-b-2 border-black bg-gray-50 relative z-10">
             <div className="flex justify-between items-end">
                 <h3 className="font-pixel text-3xl tracking-wide">{t('union', 'your_impact')}</h3>
                 <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -679,7 +679,7 @@ export const UnionView: React.FC = () => {
         </div>
             
         {/* Personal Stats Row */}
-        <div className="grid grid-cols-3 divide-x-2 divide-black text-center py-6">
+        <div className="grid grid-cols-3 divide-x-2 divide-black text-center py-6 relative z-10">
             <div>
                 <div className="font-pixel text-4xl">{userStats.campaigns}</div>
                 <div className="text-[10px] font-mono font-bold text-gray-500 mt-1 uppercase">{t('union', 'camp_stat')}</div>
@@ -697,7 +697,7 @@ export const UnionView: React.FC = () => {
         {/* Connector - Clickable to toggle collapse */}
         <button
           onClick={() => setIsCollectiveStatsExpanded(!isCollectiveStatsExpanded)}
-          className="w-full bg-black text-white py-2 text-center border-y-2 border-black hover:bg-gray-900 transition-colors cursor-pointer"
+          className="w-full bg-black text-white py-2 text-center border-y-2 border-black hover:bg-gray-900 transition-colors cursor-pointer relative z-10"
         >
              <div className="text-[10px] font-mono tracking-[0.3em] flex items-center justify-center gap-4">
                 <span className={`transition-transform duration-200 ${isCollectiveStatsExpanded ? '' : 'rotate-180'}`}>▼</span>
@@ -707,7 +707,7 @@ export const UnionView: React.FC = () => {
         </button>
 
         {/* Collective Stats - Typography Focused (Collapsible) */}
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isCollectiveStatsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out relative z-10 ${isCollectiveStatsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="p-6 space-y-8">
               {/* Stat 1 */}
               <div className="flex flex-col items-center">

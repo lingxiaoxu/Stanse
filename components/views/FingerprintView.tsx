@@ -377,7 +377,7 @@ export const FingerprintView: React.FC<FingerprintViewProps> = ({ coords, isTour
         isTourActive={isTourActive}
       />
 
-      <div className="space-y-6 w-full max-w-md mx-auto pb-20">
+      <div className="space-y-6 w-full max-w-lg promax:max-w-xl mx-auto pb-20">
         <div className="text-center mb-10">
           <h2 className="font-pixel text-5xl">{t('fingerprint', 'title')}</h2>
           <p className="font-mono text-xs text-gray-400 uppercase">
