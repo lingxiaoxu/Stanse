@@ -130,8 +130,12 @@ export const AgentModeControls: React.FC<Props> = ({
         <select
           value={selectedTemplate}
           onChange={(e) => onTemplateChange(e.target.value)}
-          className="border-2 border-black bg-white font-mono text-xs pl-3 pr-10 py-2 hover:bg-gray-50 focus:outline-none focus:border-blue-500"
-          style={{ width: '30%' }}
+          className="border-2 border-black bg-white font-mono text-xs pl-3 py-2 hover:bg-gray-50 focus:outline-none focus:border-blue-500"
+          style={{
+            width: '30%',
+            paddingRight: '2.5rem',  // 40px for arrow space
+            backgroundPosition: 'right 0.5rem center'  // Move arrow 8px from right
+          }}
         >
           {TEMPLATES.map((template) => (
             <option key={template.id} value={template.id}>
@@ -144,8 +148,12 @@ export const AgentModeControls: React.FC<Props> = ({
         <select
           value={selectedModel.model || 'claude-sonnet-4-5-20250929'}
           onChange={(e) => onModelChange({ ...selectedModel, model: e.target.value })}
-          className="border-2 border-black bg-white font-mono text-xs pl-3 pr-10 py-2 hover:bg-gray-50 focus:outline-none focus:border-blue-500"
-          style={{ width: '30%' }}
+          className="border-2 border-black bg-white font-mono text-xs pl-3 py-2 hover:bg-gray-50 focus:outline-none focus:border-blue-500"
+          style={{
+            width: '30%',
+            paddingRight: '2.5rem',  // 40px for arrow space
+            backgroundPosition: 'right 0.5rem center'  // Move arrow 8px from right
+          }}
         >
           {MODELS.map((model) => (
             <option key={model.id} value={model.id}>
