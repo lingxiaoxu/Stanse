@@ -111,3 +111,4 @@ data/
 *.h5
 *.pth
 *.onnx
+planetary.js/
