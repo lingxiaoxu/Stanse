@@ -272,39 +272,76 @@ interface ConflictZone {
 - `country`
 - `status`
 
-### 4. Updates to Existing `users` Collection
+### 4. `users/{userId}/users_countries_locations` Subcollection (NEW)
+
+**Important:** This is a **subcollection** under each user document. Does not modify the main `users` document structure.
+
+**Trigger:** When user's `birthCountry`, `currentCountry`, or `currentState` is updated in the main `users` document, AI automatically generates coordinates and creates a new record.
+
+**Versioning:** Multiple records allowed (historical tracking). Always use the most recent record (order by `createdAt desc`).
 
 ```typescript
-interface UserProfile {
-  // ... existing fields ...
+interface UserCountryLocation {
+  // Auto-generated document ID
 
-  // Geographic data (enhanced)
-  location?: {
+  // User reference
+  userId: string;                    // Parent user document ID
+
+  // Birth country location
+  birthCountry?: string;             // e.g., "China"
+  birthCountryCode?: string;         // ISO 3166-1 alpha-2, e.g., "CN"
+  birthCountryCapital?: {
+    name: string;                    // e.g., "Beijing"
+    coordinates: {
+      latitude: number;              // e.g., 39.9042
+      longitude: number;             // e.g., 116.4074
+    };
+  };
+
+  // Current location
+  currentCountry?: string;           // e.g., "United States"
+  currentCountryCode?: string;       // e.g., "US"
+  currentState?: string;             // e.g., "New York"
+  currentStateCapital?: {
+    name: string;                    // e.g., "Albany"
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+  currentCountryCapital?: {
+    name: string;                    // e.g., "Washington, D.C."
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+
+  // Metadata
+  createdAt: FirebaseFirestore.Timestamp;  // Sort by this (desc) to get latest
+  aiModel: string;                   // "gemini-2.5-flash"
+  processingTimeMs: number;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+
+  // Source data snapshot (what triggered this record)
+  sourceData: {
     birthCountry?: string;
-    birthCountryCode?: string;
-    birthCountryCapital?: {
-      name: string;
-      coordinates: {
-        latitude: number;
-        longitude: number;
-      };
-    };
-
     currentCountry?: string;
-    currentCountryCode?: string;
-    currentCountryCapital?: {
-      name: string;
-      coordinates: {
-        latitude: number;
-        longitude: number;
-      };
-    };
-
-    // Set during onboarding or profile update
-    updatedAt?: FirebaseFirestore.Timestamp;
+    currentState?: string;
   };
 }
 ```
+
+**Document Path Example:**
+```
+users/abc123/users_countries_locations/xyz789
+users/abc123/users_countries_locations/xyz790  (newer record)
+users/abc123/users_countries_locations/xyz791  (latest - use this one)
+```
+
+**Index:**
+- `userId` + `createdAt` (desc) - to fetch latest location for a user
+- `createdAt` (desc)
 
 ---
 
@@ -374,9 +411,50 @@ export const onNewsCreated = functions.firestore
 /**
  * Analyzes news content using Gemini 2.5 Flash to extract location.
  */
+// Secret Manager setup (at top of file)
+import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
+
+const secretClient = new SecretManagerServiceClient();
+const CLOUD_RUN_PROJECT_ID = 'gen-lang-client-0960644135';
+const GEMINI_SECRET_NAME = 'GEMINI_API_KEY';
+
+// Cache for Gemini API key
+let geminiApiKey: string | null = null;
+
+/**
+ * Get Gemini API key from Google Secret Manager
+ */
+async function getGeminiApiKey(): Promise<string> {
+  if (geminiApiKey) {
+    return geminiApiKey;
+  }
+
+  try {
+    const [version] = await secretClient.accessSecretVersion({
+      name: `projects/${CLOUD_RUN_PROJECT_ID}/secrets/${GEMINI_SECRET_NAME}/versions/latest`,
+    });
+
+    const payload = version.payload?.data?.toString();
+    if (payload) {
+      geminiApiKey = payload;
+      console.log('✅ Gemini API key loaded from Secret Manager');
+      return payload;
+    }
+  } catch (error) {
+    console.error('Failed to load Gemini API key from Secret Manager:', error);
+  }
+
+  return '';
+}
+
 async function analyzeNewsLocation(content: string) {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-latest-exp' });
+  const apiKey = await getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Failed to load Gemini API key');
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const prompt = `
 You are a geolocation expert. Analyze the following news article and determine its primary geographic location.
@@ -467,8 +545,13 @@ export const onBreakingNewsCreated = functions.firestore
   });
 
 async function analyzeBreakingNewsLocation(content: string) {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-latest-exp' });
+  const apiKey = await getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Failed to load Gemini API key');
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const prompt = `
 You are analyzing a BREAKING NEWS event. Extract location and assess severity.
@@ -511,7 +594,156 @@ Return ONLY valid JSON:
 }
 ```
 
-#### 3. `getGlobeMarkers` API Endpoint
+#### 3. `onUserLocationUpdated` Trigger
+
+**File:** `functions/src/user-location-analyzer.ts`
+
+```typescript
+import * as functions from 'firebase-functions';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+
+/**
+ * Triggered when user document is updated.
+ * Detects changes to birthCountry, currentCountry, or currentState.
+ * Generates coordinates and stores in users/{userId}/users_countries_locations subcollection.
+ */
+export const onUserLocationUpdated = functions.firestore
+  .document('users/{userId}')
+  .onUpdate(async (change, context) => {
+    const userId = context.params.userId;
+    const beforeData = change.before.data();
+    const afterData = change.after.data();
+
+    // Check if location-related fields changed
+    const birthCountryChanged = beforeData.birthCountry !== afterData.birthCountry;
+    const currentCountryChanged = beforeData.currentCountry !== afterData.currentCountry;
+    const currentStateChanged = beforeData.currentState !== afterData.currentState;
+
+    if (!birthCountryChanged && !currentCountryChanged && !currentStateChanged) {
+      // No location changes, skip
+      return null;
+    }
+
+    console.log(`📍 User location updated for ${userId}`);
+
+    const startTime = Date.now();
+
+    try {
+      // Analyze locations using Gemini
+      const locationData = await analyzeUserCountryLocations({
+        birthCountry: afterData.birthCountry,
+        currentCountry: afterData.currentCountry,
+        currentState: afterData.currentState,
+      });
+
+      // Store in subcollection (creates new document each time)
+      await getFirestore()
+        .collection('users')
+        .doc(userId)
+        .collection('users_countries_locations')
+        .add({
+          userId,
+          ...locationData,
+          createdAt: FieldValue.serverTimestamp(),
+          aiModel: 'gemini-2.5-flash',
+          processingTimeMs: Date.now() - startTime,
+          sourceData: {
+            birthCountry: afterData.birthCountry,
+            currentCountry: afterData.currentCountry,
+            currentState: afterData.currentState,
+          },
+        });
+
+      console.log(`✅ User location analyzed and stored for ${userId}`);
+    } catch (error) {
+      console.error(`❌ Failed to analyze user location for ${userId}:`, error);
+    }
+
+    return null;
+  });
+
+/**
+ * Analyzes user's birth and current country locations using Gemini 2.5 Flash.
+ */
+async function analyzeUserCountryLocations(userData: {
+  birthCountry?: string;
+  currentCountry?: string;
+  currentState?: string;
+}) {
+  const apiKey = await getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Failed to load Gemini API key');
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+  const prompt = `
+You are a geolocation expert. Generate precise location data for a user's geographic information.
+
+User Data:
+- Birth Country: ${userData.birthCountry || 'Not specified'}
+- Current Country: ${userData.currentCountry || 'Not specified'}
+- Current State: ${userData.currentState || 'Not specified'}
+
+For each location provided, return:
+1. Country name and ISO code
+2. Capital city with coordinates
+3. For current location: if state is provided, also include state capital with coordinates
+
+Return ONLY valid JSON in this exact format:
+{
+  "birthCountry": "Full country name or null",
+  "birthCountryCode": "ISO code or null",
+  "birthCountryCapital": {
+    "name": "Capital city name",
+    "coordinates": {
+      "latitude": 0.0,
+      "longitude": 0.0
+    }
+  } or null,
+
+  "currentCountry": "Full country name or null",
+  "currentCountryCode": "ISO code or null",
+  "currentState": "State name or null",
+  "currentStateCapital": {
+    "name": "State capital name",
+    "coordinates": {
+      "latitude": 0.0,
+      "longitude": 0.0
+    }
+  } or null,
+  "currentCountryCapital": {
+    "name": "Country capital name",
+    "coordinates": {
+      "latitude": 0.0,
+      "longitude": 0.0
+    }
+  } or null,
+
+  "confidence": "HIGH|MEDIUM|LOW"
+}
+
+Examples:
+- Birth Country "China" → birthCountryCapital: {"name": "Beijing", "coordinates": {"latitude": 39.9042, "longitude": 116.4074}}
+- Current Country "United States", State "New York" → currentStateCapital: {"name": "Albany", "coordinates": {"latitude": 42.6526, "longitude": -73.7562}}, currentCountryCapital: {"name": "Washington, D.C.", "coordinates": {"latitude": 38.9072, "longitude": -77.0369}}
+`;
+
+  const result = await model.generateContent(prompt);
+  const response = result.response.text();
+
+  // Parse JSON response
+  const jsonMatch = response.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('Failed to parse user location data from AI response');
+  }
+
+  return JSON.parse(jsonMatch[0]);
+}
+```
+
+#### 4. `getGlobeMarkers` API Endpoint
 
 **File:** `functions/src/api/globe-markers.ts`
 
@@ -646,38 +878,65 @@ export const getGlobeMarkers = functions.https.onCall(async (data, context) => {
       });
     });
 
-    // 4. Get user's birth and current country
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
+    // 4. Get user's birth and current country from subcollection
+    // Fetch the LATEST location record (most recent createdAt)
+    const userLocationSnapshot = await db
+      .collection('users')
+      .doc(userId)
+      .collection('users_countries_locations')
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .get();
 
-    if (userData?.location?.birthCountryCapital) {
-      markers.push({
-        id: `user-birth-${userId}`,
-        type: 'USER_BIRTH',
-        coordinates: userData.location.birthCountryCapital.coordinates,
-        title: `Birth Country: ${userData.location.birthCountry}`,
-        summary: `Capital: ${userData.location.birthCountryCapital.name}`,
-        metadata: {
-          country: userData.location.birthCountry,
-          countryCode: userData.location.birthCountryCode,
-        },
-        clickable: true,
-      });
-    }
+    if (!userLocationSnapshot.empty) {
+      const userLocation = userLocationSnapshot.docs[0].data();
 
-    if (userData?.location?.currentCountryCapital) {
-      markers.push({
-        id: `user-current-${userId}`,
-        type: 'USER_CURRENT',
-        coordinates: userData.location.currentCountryCapital.coordinates,
-        title: `Current Country: ${userData.location.currentCountry}`,
-        summary: `Capital: ${userData.location.currentCountryCapital.name}`,
-        metadata: {
-          country: userData.location.currentCountry,
-          countryCode: userData.location.currentCountryCode,
-        },
-        clickable: true,
-      });
+      // Add birth country marker
+      if (userLocation.birthCountryCapital) {
+        markers.push({
+          id: `user-birth-${userId}`,
+          type: 'USER_BIRTH',
+          coordinates: userLocation.birthCountryCapital.coordinates,
+          title: `Birth Country: ${userLocation.birthCountry}`,
+          summary: `Capital: ${userLocation.birthCountryCapital.name}`,
+          metadata: {
+            country: userLocation.birthCountry,
+            countryCode: userLocation.birthCountryCode,
+          },
+          clickable: true,
+        });
+      }
+
+      // Add current country/state marker
+      // Prefer state capital if available, otherwise country capital
+      if (userLocation.currentStateCapital) {
+        markers.push({
+          id: `user-current-${userId}`,
+          type: 'USER_CURRENT',
+          coordinates: userLocation.currentStateCapital.coordinates,
+          title: `Current: ${userLocation.currentState}, ${userLocation.currentCountry}`,
+          summary: `State Capital: ${userLocation.currentStateCapital.name}`,
+          metadata: {
+            country: userLocation.currentCountry,
+            state: userLocation.currentState,
+            countryCode: userLocation.currentCountryCode,
+          },
+          clickable: true,
+        });
+      } else if (userLocation.currentCountryCapital) {
+        markers.push({
+          id: `user-current-${userId}`,
+          type: 'USER_CURRENT',
+          coordinates: userLocation.currentCountryCapital.coordinates,
+          title: `Current Country: ${userLocation.currentCountry}`,
+          summary: `Capital: ${userLocation.currentCountryCapital.name}`,
+          metadata: {
+            country: userLocation.currentCountry,
+            countryCode: userLocation.currentCountryCode,
+          },
+          clickable: true,
+        });
+      }
     }
 
     return {
@@ -694,7 +953,212 @@ export const getGlobeMarkers = functions.https.onCall(async (data, context) => {
 });
 ```
 
-#### 4. `analyzeEntityLocation` API Endpoint
+#### 4. `initializeUserLocations` Batch Service (One-time migration)
+
+**File:** `functions/src/scripts/initialize-user-locations.ts`
+
+```typescript
+/**
+ * One-time batch script to initialize location data for existing users.
+ * Should be run manually after deploying the onUserLocationUpdated trigger.
+ *
+ * Run: npx ts-node src/scripts/initialize-user-locations.ts
+ */
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Initialize Firebase Admin
+initializeApp({
+  credential: cert(require('../../../serviceAccountKey.json'))
+});
+
+const db = getFirestore();
+
+async function initializeUserLocations() {
+  console.log('🚀 Starting user location initialization...\n');
+
+  try {
+    // Fetch all users who have birthCountry or currentCountry
+    const usersSnapshot = await db.collection('users')
+      .where('birthCountry', '!=', null)
+      .get();
+
+    console.log(`Found ${usersSnapshot.size} users with location data\n`);
+
+    let processed = 0;
+    let succeeded = 0;
+    let failed = 0;
+
+    for (const userDoc of usersSnapshot.docs) {
+      const userId = userDoc.id;
+      const userData = userDoc.data();
+
+      // Skip if user already has location records
+      const existingLocations = await db
+        .collection('users')
+        .doc(userId)
+        .collection('users_countries_locations')
+        .limit(1)
+        .get();
+
+      if (!existingLocations.empty) {
+        console.log(`⏭️  Skipping ${userId} - already has location data`);
+        continue;
+      }
+
+      try {
+        console.log(`📍 Processing user ${userId}...`);
+
+        const startTime = Date.now();
+
+        // Analyze location
+        const locationData = await analyzeUserCountryLocations({
+          birthCountry: userData.birthCountry,
+          currentCountry: userData.currentCountry,
+          currentState: userData.currentState,
+        });
+
+        // Store in subcollection
+        await db
+          .collection('users')
+          .doc(userId)
+          .collection('users_countries_locations')
+          .add({
+            userId,
+            ...locationData,
+            createdAt: FieldValue.serverTimestamp(),
+            aiModel: 'gemini-2.5-flash',
+            processingTimeMs: Date.now() - startTime,
+            sourceData: {
+              birthCountry: userData.birthCountry,
+              currentCountry: userData.currentCountry,
+              currentState: userData.currentState,
+            },
+          });
+
+        console.log(`✅ Success for ${userId} (${Date.now() - startTime}ms)\n`);
+        succeeded++;
+
+      } catch (error) {
+        console.error(`❌ Failed for ${userId}:`, error.message);
+        failed++;
+      }
+
+      processed++;
+
+      // Rate limiting: wait 1 second between requests to avoid API quota
+      if (processed % 10 === 0) {
+        console.log(`\n--- Progress: ${processed}/${usersSnapshot.size} (${succeeded} succeeded, ${failed} failed) ---\n`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    console.log('\n✅ Initialization complete!');
+    console.log(`Total: ${processed}`);
+    console.log(`Succeeded: ${succeeded}`);
+    console.log(`Failed: ${failed}`);
+
+  } catch (error) {
+    console.error('❌ Fatal error:', error);
+    process.exit(1);
+  }
+}
+
+async function analyzeUserCountryLocations(userData: {
+  birthCountry?: string;
+  currentCountry?: string;
+  currentState?: string;
+}) {
+  const apiKey = await getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Failed to load Gemini API key');
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+  const prompt = `
+You are a geolocation expert. Generate precise location data for a user's geographic information.
+
+User Data:
+- Birth Country: ${userData.birthCountry || 'Not specified'}
+- Current Country: ${userData.currentCountry || 'Not specified'}
+- Current State: ${userData.currentState || 'Not specified'}
+
+For each location provided, return:
+1. Country name and ISO code
+2. Capital city with coordinates
+3. For current location: if state is provided, also include state capital with coordinates
+
+Return ONLY valid JSON in this exact format:
+{
+  "birthCountry": "Full country name or null",
+  "birthCountryCode": "ISO code or null",
+  "birthCountryCapital": {
+    "name": "Capital city name",
+    "coordinates": {
+      "latitude": 0.0,
+      "longitude": 0.0
+    }
+  } or null,
+
+  "currentCountry": "Full country name or null",
+  "currentCountryCode": "ISO code or null",
+  "currentState": "State name or null",
+  "currentStateCapital": {
+    "name": "State capital name",
+    "coordinates": {
+      "latitude": 0.0,
+      "longitude": 0.0
+    }
+  } or null,
+  "currentCountryCapital": {
+    "name": "Country capital name",
+    "coordinates": {
+      "latitude": 0.0,
+      "longitude": 0.0
+    }
+  } or null,
+
+  "confidence": "HIGH|MEDIUM|LOW"
+}
+`;
+
+  const result = await model.generateContent(prompt);
+  const response = result.response.text();
+  const jsonMatch = response.match(/\{[\s\S]*\}/);
+
+  if (!jsonMatch) {
+    throw new Error('Failed to parse user location data from AI response');
+  }
+
+  return JSON.parse(jsonMatch[0]);
+}
+
+// Run the script
+initializeUserLocations()
+  .then(() => {
+    console.log('\n🎉 Script completed successfully');
+    process.exit(0);
+  })
+  .catch(error => {
+    console.error('\n💥 Script failed:', error);
+    process.exit(1);
+  });
+```
+
+**Usage:**
+```bash
+# Set environment variable
+export GEMINI_API_KEY="your-api-key"
+
+# Run the script from functions directory
+cd functions
+npx ts-node src/scripts/initialize-user-locations.ts
+```
+
+#### 5. `analyzeEntityLocation` API Endpoint
 
 **File:** `functions/src/api/entity-location-analyzer.ts`
 
@@ -712,7 +1176,7 @@ export const analyzeEntityLocation = functions.https.onCall(async (data, context
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-latest-exp' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `
 You are a geolocation expert. Determine the primary geographic location associated with this entity.
@@ -1096,9 +1560,9 @@ export const SenseView: React.FC<SenseViewProps> = ({ ... }) => {
         <div className="px-6 pt-6 pb-4">
           <div className="font-mono text-xs font-bold uppercase tracking-wide flex items-center gap-2">
             <Globe size={14} />
-            GLOBAL INTELLIGENCE MAP
+            {t('sense', 'globe_title')}
             <span className="ml-auto text-[10px] opacity-50">
-              {globeMarkers.length} markers
+              {globeMarkers.length} {t('sense', 'globe_markers_count')}
             </span>
           </div>
         </div>
@@ -1111,7 +1575,7 @@ export const SenseView: React.FC<SenseViewProps> = ({ ... }) => {
           </Suspense>
         </div>
         <p className="font-mono text-[10px] text-gray-500 text-center py-4">
-          Drag to rotate • Scroll to zoom • Click markers for details
+          {t('sense', 'globe_hint')}
         </p>
       </PixelCard>
 
@@ -1151,6 +1615,8 @@ export const MarkerDetailModal: React.FC<MarkerDetailModalProps> = ({
   onClose,
   onNavigate
 }) => {
+  const { t } = useLanguage();
+
   const getMarkerIcon = () => {
     switch (marker.type) {
       case 'NEWS':
@@ -1206,7 +1672,7 @@ export const MarkerDetailModal: React.FC<MarkerDetailModalProps> = ({
           {marker.metadata?.country && (
             <div className="border-t-2 border-black/10 pt-4">
               <div className="font-mono text-[10px] uppercase text-gray-500 mb-1">
-                Location
+                {t('sense', 'marker_location')}
               </div>
               <div className="font-mono text-xs">
                 {[marker.metadata.city, marker.metadata.state, marker.metadata.country]
@@ -1222,7 +1688,7 @@ export const MarkerDetailModal: React.FC<MarkerDetailModalProps> = ({
           {marker.severity && (
             <div className="border-t-2 border-black/10 pt-4">
               <div className="font-mono text-[10px] uppercase text-gray-500 mb-1">
-                Severity
+                {t('sense', 'marker_severity')}
               </div>
               <div className={`inline-block px-3 py-1 font-mono text-xs font-bold border-2 ${
                 marker.severity === 'CRITICAL' ? 'border-red-600 bg-red-100 text-red-700' :
@@ -1245,7 +1711,7 @@ export const MarkerDetailModal: React.FC<MarkerDetailModalProps> = ({
               }}
               className="w-full py-3 bg-black text-white font-mono text-xs uppercase hover:bg-gray-800 transition-colors"
             >
-              View Full Article
+              {t('sense', 'marker_view_article')}
             </button>
           </div>
         )}
@@ -1486,9 +1952,13 @@ service cloud.firestore {
     // Users - protect location data
     match /users/{userId} {
       allow read: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId
-        && (!request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['location'])); // Prevent arbitrary location updates
+      allow update: if request.auth.uid == userId;
+
+      // User country locations subcollection - read own data only
+      match /users_countries_locations/{locationId} {
+        allow read: if request.auth.uid == userId;
+        allow write: if false; // Only Cloud Functions can write
+      }
     }
   }
 }
