@@ -113,6 +113,10 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
 
   // Ember 特定状态
   const [chatMode, setChatMode] = useState<ChatMode>('default');
+
+  // Track if this is initial open (for slide-in animation)
+  const [isInitialOpen, setIsInitialOpen] = useState(true);
+
   const [costInfo, setCostInfo] = useState<any>({
     currentCost: 0,
     todayCost: 0,
@@ -575,6 +579,18 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
     }
   };
 
+  // Handle close with animation reset
+  const handleClose = () => {
+    setIsInitialOpen(true);  // Reset for slide-in animation on next open
+    onClose();
+  };
+
+  // Handle mode change without animation
+  const handleModeChange = (mode: ChatMode) => {
+    setIsInitialOpen(false);  // No animation when switching modes
+    setChatMode(mode);
+  };
+
   // Stop handler - abort current request
   const handleStop = () => {
     if (abortControllerRef.current) {
@@ -660,12 +676,12 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
 
     return (
       <AgentModeChat
-        onClose={onClose}
+        onClose={handleClose}
         chatMode={chatMode}
-        onModeChange={setChatMode}
+        onModeChange={handleModeChange}
         sidebarWidth={sidebarWidth}
         onSidebarWidthChange={setSidebarWidth}
-        isInitialOpen={false}  // Prevent re-animation when switching modes
+        isInitialOpen={isInitialOpen}  // Use shared animation state
         initialCode={lastAgentMessage?.object}
         initialResult={lastAgentMessage?.result}
         sharedMessages={messages}  // Share messages across all modes
@@ -680,13 +696,13 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 z-[45]"
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       {/* Sidebar */}
       <div
         ref={sidebarRef}
-        className="fixed right-0 top-0 h-full bg-white border-l-4 border-black shadow-pixel z-50 flex flex-col animate-slide-in"
+        className={`fixed right-0 top-0 h-full bg-white border-l-4 border-black shadow-pixel z-50 flex flex-col ${isInitialOpen ? 'animate-slide-in' : ''}`}
         style={{
           width: `${sidebarWidth}px`,
           transform: swipeOffset > 0 ? `translateX(${swipeOffset}px)` : 'translateX(0)',
@@ -728,7 +744,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
                 <Trash2 size={20} />
               </button>
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="p-2 hover:bg-gray-100 border-2 border-transparent hover:border-black transition-colors"
               >
                 <X size={24} />
@@ -739,7 +755,7 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
           {/* Mode Selector */}
           <ChatModeSelector
             activeMode={chatMode}
-            onChange={setChatMode}
+            onChange={handleModeChange}
             language={language}
           />
         </div>
@@ -773,8 +789,8 @@ export const EmberAIChatSidebar: React.FC<Props> = ({ isOpen, onClose, prefilled
                 {msg.object && (
                   <div
                     onClick={() => {
-                      // Switch to agent mode and restore code
-                      setChatMode('agent');
+                      // Switch to agent mode and restore code (no animation)
+                      handleModeChange('agent');
                     }}
                     className="mt-2 p-2 w-full flex items-center border-2 border-black hover:bg-gray-50 cursor-pointer bg-white"
                   >
