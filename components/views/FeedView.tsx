@@ -772,7 +772,7 @@ export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
   };
 
   return (
-    <div className="max-w-md mx-auto w-full pb-20 relative">
+    <div className="max-w-lg promax:max-w-xl mx-auto w-full pb-20 relative">
       {/* Floating AI Question Icon - appears when text is selected */}
       {selectedText && selectionPosition && (
         <button
@@ -839,7 +839,7 @@ export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
             `}
          </style>
 
-         <PixelCard className="p-0 bg-white/50 backdrop-blur-sm">
+         <PixelCard className="!p-0 bg-white/50 backdrop-blur-sm">
              {loadingStocks && marketStocks.length === 0 ? (
                <div className="p-4 text-center">
                  <div className="font-mono text-xs text-gray-500 animate-pulse">Loading market data...</div>

@@ -44,10 +44,10 @@ export const PixelCard: React.FC<PixelCardProps> = ({
       {/* Decorative Corner Bits (The Masterpiece Detail) */}
       {!isOutline && (
         <>
-          <div className={`absolute -top-1 -left-1 w-2 h-2 ${isDark ? 'bg-white' : 'bg-black'}`} />
-          <div className={`absolute -top-1 -right-1 w-2 h-2 ${isDark ? 'bg-white' : 'bg-black'}`} />
-          <div className={`absolute -bottom-1 -left-1 w-2 h-2 ${isDark ? 'bg-white' : 'bg-black'}`} />
-          <div className={`absolute -bottom-1 -right-1 w-2 h-2 ${isDark ? 'bg-white' : 'bg-black'}`} />
+          <div className="absolute -top-1 -left-1 w-2 h-2 bg-black z-20" />
+          <div className="absolute -top-1 -right-1 w-2 h-2 bg-black z-20" />
+          <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-black z-20" />
+          <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-black z-20" />
         </>
       )}
 
