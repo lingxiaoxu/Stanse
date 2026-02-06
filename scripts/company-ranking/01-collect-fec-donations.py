@@ -148,7 +148,7 @@ class FECDonationCollector:
         """
         if not self.gemini_api_key:
             # 如果没有 API key，默认接受（fallback 到旧行为）
-            return (True, "AI verification disabled")
+            return (False, "AI verification disabled - rejecting for safety")
 
         # 构建 prompt
         prompt = f"""You are a company name matching expert. Your task is to determine if a candidate company name matches a target company.
@@ -192,7 +192,7 @@ Reason: <one sentence explanation>"""
 
             if response.status_code != 200:
                 print(f"  ⚠️  AI verification API error: {response.status_code}")
-                return (True, f"API error {response.status_code}, accepting match")
+                return (False, f"API error {response.status_code}, rejecting for safety")
 
             result = response.json()
 
@@ -222,14 +222,14 @@ Reason: <one sentence explanation>"""
 
             except (KeyError, IndexError) as e:
                 print(f"  ⚠️  AI response parsing error: {e}")
-                return (True, "Parse error, accepting match")
+                return (False, "Parse error, rejecting for safety")
 
         except requests.exceptions.Timeout:
             print(f"  ⚠️  AI verification timeout")
-            return (True, "Timeout, accepting match")
+            return (False, "Timeout, rejecting for safety")
         except Exception as e:
             print(f"  ⚠️  AI verification error: {str(e)}")
-            return (True, f"Error: {str(e)}, accepting match")
+            return (False, f"Error: {str(e)}, rejecting for safety")
 
     def _get_company_name_from_db(self, ticker: str) -> str:
         """
@@ -327,17 +327,41 @@ Reason: <one sentence explanation>"""
         # 从数据库加载搜索关键词（带缓存）
         search_keywords = self._load_search_keywords_from_db(ticker)
 
-        # 如果数据库中没有找到关键词，使用公司名作为后备
+        # 如果数据库中没有找到关键词，使用公司全名（从sp500Data获取）
         if not search_keywords:
-            search_keywords = [company_name.lower()]
-            print(f"  ⚠️  No search keywords found in database for {ticker}, using company name: {company_name}")
+            # 尝试从sp500Data.json获取公司全名
+            from data.sp500Companies import get_company_name
+            full_name = get_company_name(ticker)
+            if full_name:
+                print(f"  ℹ️  Using company full name from sp500Data: {full_name}")
 
-        # 过滤掉太短的关键词（< 3 字符），避免误匹配
-        search_keywords = [kw for kw in search_keywords if len(kw) >= 3]
+                # 拆分成单个关键词（而不是使用完整短语）
+                # 这样"BlackRock Inc"会生成["blackrock"]，能匹配"blackrock funds services group"
+                words = full_name.lower().split()
+                search_keywords = []
 
-        # 如果过滤后没有关键词，使用公司名
+                # 只添加长度>=5的单词
+                for word in words:
+                    # 移除标点
+                    import re
+                    word_clean = re.sub(r'[^\w]', '', word)
+                    if len(word_clean) >= 5:
+                        search_keywords.append(word_clean)
+
+                # 如果有多个长词，也添加完整短语（用于精确匹配）
+                clean_phrase = ' '.join([re.sub(r'[^\w]', '', w) for w in words])
+                if len(clean_phrase) > 10 and ' ' in clean_phrase:
+                    search_keywords.append(clean_phrase)
+
+                print(f"  🔍 Search keywords: {search_keywords}")
+            else:
+                search_keywords = [company_name.lower()]
+                print(f"  ⚠️  No search keywords found, using fallback: {company_name}")
+
+        # 如果没有有效关键词，跳过fuzzy search
         if not search_keywords:
-            search_keywords = [company_name.lower()]
+            print(f"  ⚠️  No valid search keywords, skipping fuzzy search")
+            return []
 
         # 获取所有 fec_company_consolidated 文档
         # 重要：我们需要读取文档的 normalized_name 字段，而不是文档 ID
@@ -347,8 +371,14 @@ Reason: <one sentence explanation>"""
         matched_normalized_names = set()
         rejected_candidates = []  # 记录被 AI 拒绝的候选
         total_checked = 0
+        MAX_CANDIDATES = 50  # 最多检查50个候选，避免ON匹配1941个
 
         for doc in all_docs:
+            # 如果已经检查了太多候选，停止搜索
+            if total_checked >= MAX_CANDIDATES:
+                print(f"  ⚠️  Too many candidates ({total_checked}), stopping fuzzy search")
+                print(f"     Hint: Add this company to fec_company_name_variants")
+                break
             data = doc.to_dict()
             normalized_name = data.get('normalized_name', '')
 
@@ -418,21 +448,56 @@ Reason: <one sentence explanation>"""
                     variant_names.append(variant.get('variant_name_lower', ''))
                 elif isinstance(variant, str):
                     variant_names.append(variant.lower())
-            print(f"  └─ Found {len(variant_names)} variants for {ticker} ({company_name})")
-            return variant_names
 
-        # 如果直接匹配失败，尝试模糊搜索
-        # 查询所有包含公司名关键词的文档
-        all_docs = variants_ref.stream()
+            print(f"  └─ Found {len(variant_names)} variants in fec_company_name_variants for {ticker}")
+
+            # 🤖 AI验证每个variant（防止错误的variants被包含）
+            from data.sp500Companies import get_company_name
+            full_company_name = get_company_name(ticker) or company_name
+
+            verified_variants = []
+            rejected_variants = []
+
+            for variant_name in variant_names[:50]:  # 最多验证50个
+                is_match, reason = self.verify_company_match_with_ai(
+                    ticker, full_company_name, variant_name
+                )
+                if is_match:
+                    verified_variants.append(variant_name)
+                else:
+                    rejected_variants.append((variant_name, reason))
+
+            if rejected_variants:
+                print(f"  ⚠️  AI rejected {len(rejected_variants)} variants from fec_company_name_variants:")
+                for variant, reason in rejected_variants[:3]:
+                    print(f"     - {variant}: {reason[:50]}")
+
+            print(f"  ✅ AI verified {len(verified_variants)}/{len(variant_names)} variants")
+            return verified_variants if verified_variants else []
+
+        # 在fec_company_name_variants中模糊搜索，但需要安全检查
+        # 只有当normalized_name足够长（>= 5字符）时才使用子字符串匹配
         matched_variants = []
 
-        for doc in all_docs:
-            doc_id = doc.id
-            data = doc.to_dict()
+        if len(normalized) >= 4:
+            # 安全的模糊搜索：normalized足够长，可以使用子字符串匹配
+            all_docs = variants_ref.stream()
 
-            if normalized in self.normalize_company_name(doc_id):
-                variants = data.get('variants', [])
-                matched_variants.extend(variants)
+            for doc in all_docs:
+                doc_id = doc.id
+                data = doc.to_dict()
+
+                # 使用word boundary确保完整词匹配
+                doc_normalized = self.normalize_company_name(doc_id)
+                # 使用正则表达式word boundary而不是简单的in
+                import re
+                pattern = r'\b' + re.escape(normalized) + r'\b'
+                if re.search(pattern, doc_normalized):
+                    variants = data.get('variants', [])
+                    matched_variants.extend(variants)
+        else:
+            # normalized太短（如"on"=2字符），跳过模糊搜索
+            print(f"  ⚠️  Normalized name too short ({len(normalized)} chars), skipping fec_company_name_variants fuzzy search")
 
         if matched_variants:
             # Extract variant_name_lower from each dict and deduplicate
@@ -447,8 +512,32 @@ Reason: <one sentence explanation>"""
                     name_lower = variant_dict.lower()
                     if name_lower and name_lower not in variant_names:
                         variant_names.append(name_lower)
-            print(f"  └─ Found {len(variant_names)} variants via fuzzy match for {ticker}")
-            return variant_names
+
+            print(f"  └─ Found {len(variant_names)} variants via fuzzy match in fec_company_name_variants")
+
+            # 🤖 AI验证每个variant（模糊搜索结果也需要验证）
+            from data.sp500Companies import get_company_name
+            full_company_name = get_company_name(ticker) or company_name
+
+            verified_variants = []
+            rejected_variants = []
+
+            for variant_name in variant_names[:50]:  # 最多验证50个
+                is_match, reason = self.verify_company_match_with_ai(
+                    ticker, full_company_name, variant_name
+                )
+                if is_match:
+                    verified_variants.append(variant_name)
+                else:
+                    rejected_variants.append((variant_name, reason))
+
+            if rejected_variants:
+                print(f"  ⚠️  AI rejected {len(rejected_variants)} fuzzy-matched variants:")
+                for variant, reason in rejected_variants[:3]:
+                    print(f"     - {variant}: {reason[:50]}")
+
+            print(f"  ✅ AI verified {len(verified_variants)}/{len(variant_names)} fuzzy-matched variants")
+            return verified_variants if verified_variants else []
 
         # Fallback: 直接在 fec_company_consolidated 中搜索公司名
         print(f"  └─ No variants found, trying direct fuzzy search in fec_company_consolidated...")

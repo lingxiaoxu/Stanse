@@ -18,44 +18,14 @@ from firebase_admin import credentials, firestore
 from typing import Set, Dict, List, Any
 from datetime import datetime
 
-# Add parent directory to path
+# Add project root to path to import unified data source
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_DIR = os.path.dirname(SCRIPT_DIR)
-sys.path.insert(0, PARENT_DIR)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(PARENT_DIR))
+sys.path.insert(0, PROJECT_ROOT)
 
-# Import SP500_TICKERS from parent scripts
-SP500_TICKERS = [
-    # Technology
-    'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'AVGO', 'ORCL', 'CRM',
-    'AMD', 'INTC', 'IBM', 'CSCO', 'ADBE',
-
-    # Financial
-    'BRK.B', 'JPM', 'V', 'MA', 'BAC', 'WFC', 'GS', 'MS', 'BLK', 'C',
-
-    # Healthcare
-    'UNH', 'JNJ', 'LLY', 'PFE', 'MRK', 'ABBV', 'TMO', 'ABT', 'CVS', 'BMY',
-
-    # Consumer
-    'WMT', 'PG', 'KO', 'PEP', 'COST', 'HD', 'MCD', 'NKE', 'SBUX', 'TGT', 'LOW', 'DIS',
-
-    # Energy
-    'XOM', 'CVX', 'COP', 'SLB', 'EOG', 'OXY', 'PSX', 'VLO',
-
-    # Industrial
-    'GE', 'CAT', 'RTX', 'HON', 'UPS', 'BA', 'LMT', 'DE', 'NOC', 'GD',
-
-    # Communications
-    'NFLX', 'CMCSA', 'T', 'VZ', 'TMUS',
-
-    # Utilities
-    'NEE', 'DUK', 'SO', 'D',
-
-    # Materials
-    'LIN', 'APD', 'SHW', 'FCX', 'NEM',
-
-    # Real Estate
-    'PLD', 'AMT', 'CCI', 'EQIX', 'SPG'
-]
+# Import SP500_TICKERS from unified data source
+from data.sp500Companies import SP500_TICKERS
 
 
 class TickerConsistencyVerifier:

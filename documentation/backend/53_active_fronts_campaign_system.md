@@ -48,10 +48,10 @@ union_ACTIVE_FRONTS/
 - Type: BUYCOTT
 - Companies in Sector: ["Apple Inc", "Microsoft Corp", ...]
 
-### 2. Company Campaigns (168 total)
+### 2. Company Campaigns (250 total)
 
-- **84 SP500 companies** (from `/data/sp500Data.json`)
-- **2 campaigns per company**:
+- **125 SP500 companies** (from `/data/sp500Data.json`, Phase 1: expanded from 84)
+- **2 campaigns per company** (125 × 2 = 250):
   - SUPPORT (BUYCOTT type)
   - OPPOSE (BOYCOTT type)
 
