@@ -38,6 +38,9 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
       onSwitchTab(step.requiredTab);
     }
 
+    // Track last rect to prevent redundant updates
+    let lastRect: DOMRect | null = null;
+
     const updateHighlight = () => {
       // Try to find element by data-tour-id first, then by selector
       let targetElement = document.querySelector(`[data-tour-id="${step.target}"]`);
@@ -45,26 +48,37 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
         targetElement = document.querySelector(step.target);
       }
 
-      console.log(`[Tour] Step ${currentStep}: target="${step.target}", element found:`, !!targetElement);
-
       if (targetElement) {
-        // Scroll element into view smoothly
-        targetElement.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'center'
-        });
+        // Scroll element into view smoothly (only on initial load, not on resize/scroll)
+        if (!lastRect) {
+          targetElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'center'
+          });
+        }
 
         // Wait for scroll animation, then update rect
         setTimeout(() => {
           const rect = targetElement!.getBoundingClientRect();
-          console.log(`[Tour] Setting highlightRect:`, rect);
-          setHighlightRect(rect);
-        }, 400); // 400ms for smooth scroll to complete
+
+          // Only update if rect changed significantly (>5px threshold to ignore minor scrolls)
+          if (!lastRect ||
+              Math.abs(rect.top - lastRect.top) > 5 ||
+              Math.abs(rect.left - lastRect.left) > 5 ||
+              Math.abs(rect.width - lastRect.width) > 5 ||
+              Math.abs(rect.height - lastRect.height) > 5) {
+            lastRect = rect;
+            setHighlightRect(rect);
+          }
+        }, lastRect ? 0 : 400); // No delay for updates, 400ms delay for initial scroll
       } else {
         // If target not found, use center of screen (no highlight)
-        console.warn(`[Tour] Target not found: ${step.target}`);
-        setHighlightRect(null);
+        if (lastRect !== null) {
+          console.warn(`[Tour] Target not found: ${step.target}`);
+          lastRect = null;
+          setHighlightRect(null);
+        }
       }
     };
 
@@ -72,14 +86,21 @@ export const AppTour: React.FC<AppTourProps> = ({ steps, isOpen, onComplete, onS
     const initialDelay = step.requiredTab ? 600 : 200;
     const timeout = setTimeout(updateHighlight, initialDelay);
 
-    // Update on resize/scroll
-    window.addEventListener('resize', updateHighlight);
-    window.addEventListener('scroll', updateHighlight);
+    // Debounce resize/scroll handlers to reduce redundant updates
+    let debounceTimer: NodeJS.Timeout;
+    const debouncedUpdate = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(updateHighlight, 100); // 100ms debounce
+    };
+
+    window.addEventListener('resize', debouncedUpdate);
+    window.addEventListener('scroll', debouncedUpdate, true); // Use capture for all scrolls
 
     return () => {
-      window.removeEventListener('resize', updateHighlight);
-      window.removeEventListener('scroll', updateHighlight);
+      window.removeEventListener('resize', debouncedUpdate);
+      window.removeEventListener('scroll', debouncedUpdate, true);
       clearTimeout(timeout);
+      clearTimeout(debounceTimer);
     };
   }, [currentStep, steps, isOpen, onSwitchTab]);
 

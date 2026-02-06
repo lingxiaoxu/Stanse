@@ -5,15 +5,23 @@ import { Language } from '../types';
 const TRANSLATIONS = {
   [Language.EN]: {
     slogan: "Don't just vote. Live your values.",
+    rotatingTexts: [
+      "Where you stand matters.",
+      "Don't just vote. Live your values.",
+      "Your stance. Your sense. Your data.",
+      "Politics shouldn't be a politician's game. See the world through data."
+    ],
     nav: { feed: "FEED", sense: "SENSE", stance: "STANCE", union: "UNION" },
     login: {
         title: "IDENTIFY YOURSELF",
-        title_signin: "PLATFORM GATEWAY",
+        title_signin: "POLITICAL AI AGENTIC PLATFORM",
         title_signup: "CREATE ACCOUNT",
         email: "EMAIL FREQUENCY",
         email_signin: "EMAIL LOGON",
         email_signup: "EMAIL REGISTRATION",
         key: "ACCESS KEY",
+        key_signin: "ACCESS KEY",
+        key_signup: "ACCESS KEY SETUP",
         btn: "ESTABLISH LINK",
         google: "CONTINUE WITH GOOGLE",
         protocol: "Zero-Knowledge Protocol",
@@ -314,6 +322,8 @@ const TRANSLATIONS = {
         neutral: "NEUTRAL",
         oppose: "OPPOSE",
         ask_ai_about_selection: "Ask AI about this",
+        ask_ai_news_excerpt: "Please explain this news excerpt:",
+        ask_ai_ticker_info: "Please give me further information about this ticker:",
         index_return: "Today's Return (Long/Short Equity)",
         index_return_tooltip: "Long Top 5 Aligned · Short Bottom 5 Opposed · Equal Weight",
         updated: "Updated",
@@ -443,15 +453,23 @@ const TRANSLATIONS = {
   },
   [Language.ZH]: {
     slogan: "不只投票，更要活出你的价值观。",
+    rotatingTexts: [
+      "你的立场很重要。",
+      "不只投票，更要活出你的价值观。",
+      "你的立场。你的感知。你的数据。",
+      "政治不应该是政客的游戏。用数据看世界。"
+    ],
     nav: { feed: "动态", sense: "感知", stance: "立场", union: "联合" },
     login: {
         title: "身份识别",
-        title_signin: "平台入口",
+        title_signin: "政治AI智能体平台",
         title_signup: "创建账户",
         email: "电子邮箱",
         email_signin: "登录邮箱",
         email_signup: "注册邮箱",
         key: "访问密钥",
+        key_signin: "访问密钥",
+        key_signup: "设置访问密钥",
         btn: "建立连接",
         google: "通过 GOOGLE 继续",
         protocol: "零知识证明协议",
@@ -752,6 +770,8 @@ const TRANSLATIONS = {
         neutral: "中立",
         oppose: "反对",
         ask_ai_about_selection: "让AI解读此内容",
+        ask_ai_news_excerpt: "请解读这段新闻内容：",
+        ask_ai_ticker_info: "请提供关于这个股票代码的更多信息：",
         index_return: "今日回报（多空股票）",
         index_return_tooltip: "做多前5支持 · 做空后5反对 · 等权配置",
         updated: "更新时间",
@@ -881,15 +901,23 @@ const TRANSLATIONS = {
   },
   [Language.JA]: {
     slogan: "ただ投票するだけでなく、価値観を生きる。",
+    rotatingTexts: [
+      "あなたの立場が重要です。",
+      "ただ投票するだけでなく、価値観を生きる。",
+      "あなたの立場。あなたのセンス。あなたのデータ。",
+      "政治は政治家のゲームではありません。データで世界を見る。"
+    ],
     nav: { feed: "フィード", sense: "センス", stance: "スタンス", union: "ユニオン" },
     login: {
         title: "本人確認",
-        title_signin: "プラットフォームゲートウェイ",
+        title_signin: "政治AIエージェントプラットフォーム",
         title_signup: "アカウント作成",
         email: "メールアドレス",
         email_signin: "ログインメール",
         email_signup: "登録メール",
         key: "アクセスキー",
+        key_signin: "アクセスキー",
+        key_signup: "アクセスキー設定",
         btn: "リンク確立",
         google: "GOOGLEで続行",
         protocol: "ゼロ知識証明プロトコル",
@@ -1189,6 +1217,9 @@ const TRANSLATIONS = {
         support: "支持",
         neutral: "中立",
         oppose: "反対",
+        ask_ai_about_selection: "AIにこの内容を解説させる",
+        ask_ai_news_excerpt: "このニュース記事を解説してください：",
+        ask_ai_ticker_info: "この銘柄についてもっと情報を教えてください：",
         index_return: "本日リターン（ロングショート）",
         index_return_tooltip: "上位5銘柄ロング · 下位5銘柄ショート · 等ウェイト",
         updated: "更新日時",
@@ -1318,15 +1349,23 @@ const TRANSLATIONS = {
   },
   [Language.FR]: {
     slogan: "Ne votez pas juste. Incarnez vos valeurs.",
+    rotatingTexts: [
+      "Votre position compte.",
+      "Ne votez pas juste. Incarnez vos valeurs.",
+      "Votre position. Votre sens. Vos données.",
+      "La politique ne devrait pas être un jeu de politiciens. Voyez le monde à travers les données."
+    ],
     nav: { feed: "FLUX", sense: "SENS", stance: "POSITION", union: "UNION" },
     login: {
         title: "IDENTIFICATION",
-        title_signin: "PORTAIL PLATEFORME",
+        title_signin: "PLATEFORME AGENTIQUE D'IA POLITIQUE",
         title_signup: "CRÉER UN COMPTE",
         email: "EMAIL",
         email_signin: "EMAIL DE CONNEXION",
         email_signup: "EMAIL D'INSCRIPTION",
         key: "CLÉ D'ACCÈS",
+        key_signin: "CLÉ D'ACCÈS",
+        key_signup: "CONFIGURER CLÉ D'ACCÈS",
         btn: "ÉTABLIR LIEN",
         google: "CONTINUER AVEC GOOGLE",
         protocol: "Protocole à Divulgation Nulle",
@@ -1750,15 +1789,23 @@ const TRANSLATIONS = {
   },
   [Language.ES]: {
     slogan: "No solo votes. Vive tus valores.",
+    rotatingTexts: [
+      "Tu postura importa.",
+      "No solo votes. Vive tus valores.",
+      "Tu postura. Tu sentido. Tus datos.",
+      "La política no debería ser un juego de políticos. Ve el mundo a través de los datos."
+    ],
     nav: { feed: "FEED", sense: "SENTIDO", stance: "POSTURA", union: "UNIÓN" },
     login: {
         title: "IDENTIFÍCATE",
-        title_signin: "PORTAL DE PLATAFORMA",
+        title_signin: "PLATAFORMA AGÉNTICA DE IA POLÍTICA",
         title_signup: "CREAR CUENTA",
         email: "CORREO ELECTRÓNICO",
         email_signin: "CORREO DE INICIO DE SESIÓN",
         email_signup: "CORREO DE REGISTRO",
         key: "CLAVE DE ACCESO",
+        key_signin: "CLAVE DE ACCESO",
+        key_signup: "CONFIGURAR CLAVE DE ACCESO",
         btn: "ESTABLECER ENLACE",
         google: "CONTINUAR CON GOOGLE",
         protocol: "Protocolo de Conocimiento Cero",
@@ -2053,6 +2100,9 @@ const TRANSLATIONS = {
         support: "APOYO",
         neutral: "NEUTRO",
         oppose: "CONTRA",
+        ask_ai_about_selection: "Preguntar a la IA sobre esto",
+        ask_ai_news_excerpt: "Por favor, explica este extracto de noticia:",
+        ask_ai_ticker_info: "Por favor, dame más información sobre este símbolo bursátil:",
         index_return: "Rendimiento del Día (Long/Short)",
         index_return_tooltip: "Long Top 5 Alineadas · Short Bottom 5 Opuestas · Peso Igual",
         updated: "Actualizado",
@@ -2197,11 +2247,11 @@ export const LanguageContext = createContext<LanguageContextType>({
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>(Language.EN);
 
-  const t = (section: string, key?: string): string => {
-    const translations = TRANSLATIONS[language] as Record<string, Record<string, string>>;
+  const t = (section: string, key?: string): any => {
+    const translations = TRANSLATIONS[language] as any;
     const sectionData = translations[section];
     if (!sectionData) return "MISSING_SECTION";
-    if (!key) return typeof sectionData === 'string' ? sectionData : "MISSING_KEY";
+    if (!key) return sectionData;
     return sectionData[key] || "MISSING_KEY";
   };
 

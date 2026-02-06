@@ -279,6 +279,11 @@ pub struct PolisProtocol {
 
 impl PolisProtocol {
     /// 创建新的协议实例
+    ///
+    /// 基于 8 种 coreStanceType 创建分片，完全覆盖政治立场空间：
+    /// - Economic: 左(-100~0) vs 右(0~100)
+    /// - Social: 保守(-100~0) vs 进步(0~100)
+    /// - Diplomatic: 民族主义(-100~0) vs 国际主义(0~100)
     pub fn new() -> Self {
         let mut protocol = Self {
             shards: HashMap::new(),
@@ -286,71 +291,111 @@ impl PolisProtocol {
             firebase_users: HashMap::new(),
         };
 
-        // 初始化基础分片 - 覆盖所有政治立场空间
-        // 这确保任何用户都能被正确路由到对应的shard
+        // 初始化 8 个基于 coreStanceType 的分片
+        // 每个分片覆盖一个象限，确保所有用户都能被正确路由
 
-        // Shard 1: 左翼-自由派-鸽派（经济左，社会自由，外交温和）
+        // Shard 1: progressive-globalist (经济左，社会进步，外交国际化)
         protocol.register_shard(StanceShard::new(
-            "progressive-left".to_string(),
+            "progressive-globalist".to_string(),
             IdeologyRange {
                 economic_min: -100.0,
-                economic_max: -20.0,
-                social_min: 20.0,
+                economic_max: 0.0,
+                social_min: 0.0,
                 social_max: 100.0,
-                diplomatic_min: -100.0,
+                diplomatic_min: 0.0,
                 diplomatic_max: 100.0,
             },
         ));
 
-        // Shard 2: 右翼-保守派-鹰派（经济右，社会保守，外交强硬）
+        // Shard 2: progressive-nationalist (经济左，社会进步，外交民族主义)
         protocol.register_shard(StanceShard::new(
-            "conservative-right".to_string(),
-            IdeologyRange {
-                economic_min: 20.0,
-                economic_max: 100.0,
-                social_min: -100.0,
-                social_max: -20.0,
-                diplomatic_min: -100.0,
-                diplomatic_max: 100.0,
-            },
-        ));
-
-        // Shard 3: 中立派（覆盖中间立场）
-        protocol.register_shard(StanceShard::new(
-            "centrist-moderate".to_string(),
-            IdeologyRange {
-                economic_min: -40.0,
-                economic_max: 40.0,
-                social_min: -40.0,
-                social_max: 40.0,
-                diplomatic_min: -100.0,
-                diplomatic_max: 100.0,
-            },
-        ));
-
-        // Shard 4: 经济左翼但社会保守（传统左派）
-        protocol.register_shard(StanceShard::new(
-            "traditional-left".to_string(),
+            "progressive-nationalist".to_string(),
             IdeologyRange {
                 economic_min: -100.0,
-                economic_max: -20.0,
-                social_min: -100.0,
-                social_max: 20.0,
+                economic_max: 0.0,
+                social_min: 0.0,
+                social_max: 100.0,
                 diplomatic_min: -100.0,
+                diplomatic_max: 0.0,
+            },
+        ));
+
+        // Shard 3: socialist-libertarian (经济左，社会保守，外交国际化)
+        // Note: "socialist" here means economically left, "libertarian" means pro-international
+        protocol.register_shard(StanceShard::new(
+            "socialist-libertarian".to_string(),
+            IdeologyRange {
+                economic_min: -100.0,
+                economic_max: 0.0,
+                social_min: -100.0,
+                social_max: 0.0,
+                diplomatic_min: 0.0,
                 diplomatic_max: 100.0,
             },
         ));
 
-        // Shard 5: 经济右翼但社会自由（自由意志主义者）
+        // Shard 4: socialist-nationalist (经济左，社会保守，外交民族主义)
         protocol.register_shard(StanceShard::new(
-            "libertarian-right".to_string(),
+            "socialist-nationalist".to_string(),
             IdeologyRange {
-                economic_min: 20.0,
+                economic_min: -100.0,
+                economic_max: 0.0,
+                social_min: -100.0,
+                social_max: 0.0,
+                diplomatic_min: -100.0,
+                diplomatic_max: 0.0,
+            },
+        ));
+
+        // Shard 5: capitalist-globalist (经济右，社会进步，外交国际化)
+        protocol.register_shard(StanceShard::new(
+            "capitalist-globalist".to_string(),
+            IdeologyRange {
+                economic_min: 0.0,
                 economic_max: 100.0,
-                social_min: 20.0,
+                social_min: 0.0,
+                social_max: 100.0,
+                diplomatic_min: 0.0,
+                diplomatic_max: 100.0,
+            },
+        ));
+
+        // Shard 6: capitalist-nationalist (经济右，社会进步，外交民族主义)
+        protocol.register_shard(StanceShard::new(
+            "capitalist-nationalist".to_string(),
+            IdeologyRange {
+                economic_min: 0.0,
+                economic_max: 100.0,
+                social_min: 0.0,
                 social_max: 100.0,
                 diplomatic_min: -100.0,
+                diplomatic_max: 0.0,
+            },
+        ));
+
+        // Shard 7: conservative-globalist (经济右，社会保守，外交国际化)
+        protocol.register_shard(StanceShard::new(
+            "conservative-globalist".to_string(),
+            IdeologyRange {
+                economic_min: 0.0,
+                economic_max: 100.0,
+                social_min: -100.0,
+                social_max: 0.0,
+                diplomatic_min: 0.0,
                 diplomatic_max: 100.0,
+            },
+        ));
+
+        // Shard 8: conservative-nationalist (经济右，社会保守，外交民族主义)
+        protocol.register_shard(StanceShard::new(
+            "conservative-nationalist".to_string(),
+            IdeologyRange {
+                economic_min: 0.0,
+                economic_max: 100.0,
+                social_min: -100.0,
+                social_max: 0.0,
+                diplomatic_min: -100.0,
+                diplomatic_max: 0.0,
             },
         ));
 

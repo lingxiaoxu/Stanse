@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useState, useRef, ReactNode } from 'react';
-import { NewsItem } from '../types';
+import { NewsEvent } from '../types';
+import { GlobeMarker } from '../services/globeService';
+
+// Re-export as NewsItem for backwards compatibility
+export type NewsItem = NewsEvent;
 
 interface CompanyRanking {
   company: string;
@@ -9,10 +13,14 @@ interface CompanyRanking {
 
 interface AppState {
   // Feed View State
-  feedNews: NewsItem[];
+  feedNews: NewsEvent[];
   feedLoading: boolean;
   feedProgress: number;
   feedError: string | null;
+
+  // Globe Markers State (synced with feedNews)
+  globeMarkers: GlobeMarker[];
+  globeMarkersLoading: boolean;
 
   // Company Ranking State
   companyRankings: CompanyRanking[];
@@ -28,10 +36,14 @@ interface AppState {
 
 interface AppStateContextType extends AppState {
   // Feed methods
-  setFeedNews: (news: NewsItem[]) => void;
+  setFeedNews: (news: NewsEvent[]) => void;
   setFeedLoading: (loading: boolean) => void;
   setFeedProgress: (progress: number) => void;
   setFeedError: (error: string | null) => void;
+
+  // Globe Markers methods
+  setGlobeMarkers: (markers: GlobeMarker[]) => void;
+  setGlobeMarkersLoading: (loading: boolean) => void;
 
   // Company Ranking methods
   setCompanyRankings: (rankings: CompanyRanking[]) => void;
@@ -45,9 +57,9 @@ interface AppStateContextType extends AppState {
   setPersonaError: (error: string | null) => void;
 
   // Background loading control
-  feedLoadingAbortController: React.MutableRefObject<AbortController | null>;
-  rankingLoadingAbortController: React.MutableRefObject<AbortController | null>;
-  personaLoadingAbortController: React.MutableRefObject<AbortController | null>;
+  feedLoadingAbortController: React.RefObject<AbortController | null>;
+  rankingLoadingAbortController: React.RefObject<AbortController | null>;
+  personaLoadingAbortController: React.RefObject<AbortController | null>;
 }
 
 const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
@@ -66,10 +78,14 @@ interface AppStateProviderProps {
 
 export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) => {
   // Feed View State
-  const [feedNews, setFeedNews] = useState<NewsItem[]>([]);
+  const [feedNews, setFeedNews] = useState<NewsEvent[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedProgress, setFeedProgress] = useState(0);
   const [feedError, setFeedError] = useState<string | null>(null);
+
+  // Globe Markers State (synced with feedNews)
+  const [globeMarkers, setGlobeMarkers] = useState<GlobeMarker[]>([]);
+  const [globeMarkersLoading, setGlobeMarkersLoading] = useState(false);
 
   // Company Ranking State
   const [companyRankings, setCompanyRankings] = useState<CompanyRanking[]>([]);
@@ -97,6 +113,12 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
     setFeedLoading,
     setFeedProgress,
     setFeedError,
+
+    // Globe Markers State
+    globeMarkers,
+    globeMarkersLoading,
+    setGlobeMarkers,
+    setGlobeMarkersLoading,
 
     // Company Ranking State
     companyRankings,

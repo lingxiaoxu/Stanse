@@ -27,6 +27,7 @@ export interface UserProfile {
   id: string;
   email: string;
   displayName?: string;
+  twitterScreenName?: string; // Twitter username (without @) for auto-populating social media handle
   coordinates: PoliticalCoordinates;
   onboarding?: OnboardingAnswers;
   hasCompletedOnboarding: boolean;
@@ -55,17 +56,31 @@ export interface ScanRecord {
 export const createUserProfile = async (
   userId: string,
   email: string,
-  coordinates: PoliticalCoordinates
+  coordinates: PoliticalCoordinates,
+  displayName?: string,
+  twitterScreenName?: string
 ): Promise<void> => {
   const userRef = doc(db, 'users', userId);
-  await setDoc(userRef, {
+  const profileData: any = {
     id: userId,
     email,
     coordinates,
     hasCompletedOnboarding: false,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
-  });
+  };
+
+  // Add displayName if provided (for Twitter/Apple users)
+  if (displayName) {
+    profileData.displayName = displayName;
+  }
+
+  // Add Twitter screen_name if provided (for Twitter users)
+  if (twitterScreenName) {
+    profileData.twitterScreenName = twitterScreenName;
+  }
+
+  await setDoc(userRef, profileData);
 };
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {

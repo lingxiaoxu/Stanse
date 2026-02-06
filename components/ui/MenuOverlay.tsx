@@ -35,12 +35,23 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose, onNav
       try {
         const connection = await getSocialMediaConnection(user.uid, SocialPlatform.TWITTER);
         if (connection) {
+          // Connection already exists - use the saved handle
           setTwitterHandle(connection.handle);
           setIsTwitterConnected(true);
         } else {
-          // No connection found - reset state
-          setTwitterHandle('');
-          setIsTwitterConnected(false);
+          // No connection found - check if user has Twitter screen_name from login
+          const { getUserProfile } = await import('../../services/userService');
+          const userProfile = await getUserProfile(user.uid);
+
+          if (userProfile?.twitterScreenName) {
+            // Auto-populate Twitter handle from login data
+            setTwitterHandle(userProfile.twitterScreenName);
+            setIsTwitterConnected(false); // Not yet saved to socialConnections
+          } else {
+            // No Twitter data - reset state
+            setTwitterHandle('');
+            setIsTwitterConnected(false);
+          }
         }
       } catch (error) {
         console.error('Error loading Twitter connection:', error);

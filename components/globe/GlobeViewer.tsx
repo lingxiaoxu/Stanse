@@ -1,7 +1,8 @@
 import React, { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
+import { GlobeMarker } from '../../services/globeService';
 
 // 解码TopoJSON
 function decodeTopoJSON(topology: any) {
@@ -22,9 +23,260 @@ function decodeTopoJSON(topology: any) {
   });
 }
 
+// Convert lat/lng to 3D coordinates on sphere
+function latLngToVector3(lat: number, lng: number, radius: number = 1): THREE.Vector3 {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lng + 180) * (Math.PI / 180);
+
+  const x = -(radius * Math.sin(phi) * Math.cos(theta));
+  const z = radius * Math.sin(phi) * Math.sin(theta);
+  const y = radius * Math.cos(phi);
+
+  return new THREE.Vector3(x, y, z);
+}
+
+// Marker colors by type
+const MARKER_COLORS: Record<string, string> = {
+  NEWS: '#3b82f6',      // blue
+  BREAKING: '#ef4444',  // red
+  CONFLICT: '#dc2626',  // dark red
+  USER_BIRTH: '#10b981', // green
+  USER_CURRENT: '#8b5cf6', // purple
+  SEARCH_RESULT: '#f59e0b', // orange
+};
+
+// 单个弹窗卡片组件
+function MarkerPopupCard({
+  marker,
+  showConnector = true,
+}: {
+  marker: GlobeMarker;
+  showConnector?: boolean;
+}) {
+  const color = MARKER_COLORS[marker.type] || '#6b7280';
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+    }}>
+      {/* 弹窗内容 */}
+      <div
+        className="relative bg-black text-white border border-white"
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '10px',
+          width: '182px',
+          padding: '6px 8px',
+        }}
+      >
+        {/* Pixel corner decorations */}
+        <div className="absolute -top-[2px] -left-[2px] w-1 h-1 bg-white" />
+        <div className="absolute -top-[2px] -right-[2px] w-1 h-1 bg-white" />
+        <div className="absolute -bottom-[2px] -left-[2px] w-1 h-1 bg-white" />
+        <div className="absolute -bottom-[2px] -right-[2px] w-1 h-1 bg-white" />
+
+        {/* Marker type badge */}
+        <div
+          className="text-[8px] uppercase tracking-wide mb-1 px-1 inline-block text-black font-bold"
+          style={{ backgroundColor: color }}
+        >
+          {marker.type.replace('_', ' ')}
+        </div>
+
+        {/* Title - 最多2行 */}
+        <div className="font-bold text-[9px] leading-tight mb-1" style={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+        }}>
+          {marker.title}
+        </div>
+
+        {/* Summary/Location - 显示更多信息，最多3行 */}
+        {marker.summary && (
+          <div className="text-[8px] leading-tight opacity-80" style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical',
+          }}>
+            {marker.summary}
+          </div>
+        )}
+      </div>
+
+      {/* 连接线 - 只有最后一个卡片显示 */}
+      {showConnector && (
+        <div style={{
+          width: '1.5px',
+          height: '20px',
+          backgroundColor: 'black',
+        }} />
+      )}
+    </div>
+  );
+}
+
+// Marker component
+function Marker({
+  marker,
+  onClick,
+  onHoverChange,
+  hoveredMarkerId,
+  onHoverMarker,
+  isFocused,
+  focusBlinkEndTime,
+}: {
+  marker: GlobeMarker;
+  onClick: () => void;
+  onHoverChange: (hovered: boolean) => void;
+  hoveredMarkerId: string | null;
+  onHoverMarker: (markerId: string | null) => void;
+  isFocused?: boolean;
+  focusBlinkEndTime?: number;
+}) {
+  const markerRef = useRef<THREE.Mesh>(null);
+
+  const position = latLngToVector3(
+    marker.coordinates.latitude,
+    marker.coordinates.longitude,
+    1.0 // Directly on earth surface
+  );
+
+  const color = MARKER_COLORS[marker.type] || '#6b7280';
+
+  // 获取要显示的标记列表（聚合或单个）
+  const markersToShow = marker.clusteredMarkers || [marker];
+
+  // 检查当前标记是否应该显示弹窗
+  // 1. 自己被悬停时显示
+  // 2. 如果有其他标记被悬停，且自己在那个标记的 clusteredMarkers 里，则不显示（让那个标记统一显示）
+  // 3. 如果是聚焦的搜索结果，自动显示弹窗
+  const isHovered = hoveredMarkerId === marker.id;
+  const isInOtherCluster = hoveredMarkerId !== null &&
+    hoveredMarkerId !== marker.id &&
+    marker.clusteredMarkers?.some(m => m.id === hoveredMarkerId);
+  const shouldShowPopup = (isHovered || isFocused) && !isInOtherCluster;
+
+  // Pulsing/blinking animation
+  useFrame(({ clock }) => {
+    if (markerRef.current) {
+      const now = Date.now();
+      const isBlinking = isFocused && focusBlinkEndTime && now < focusBlinkEndTime;
+
+      if (isBlinking) {
+        // 搜索结果闪烁动画 - 更快更明显的闪烁
+        const blink = Math.sin(clock.elapsedTime * 8) * 0.5 + 0.5;
+        const scale = 1 + blink * 0.5;
+        markerRef.current.scale.setScalar(scale);
+        // 更新材质亮度
+        const material = markerRef.current.material as THREE.MeshStandardMaterial;
+        if (material) {
+          material.emissiveIntensity = 0.5 + blink * 0.5;
+        }
+      } else if (marker.type === 'BREAKING' || marker.type === 'CONFLICT') {
+        // Breaking/conflict 脉冲动画
+        const scale = 1 + Math.sin(clock.elapsedTime * 2) * 0.2;
+        markerRef.current.scale.setScalar(scale);
+      } else {
+        // 恢复正常
+        markerRef.current.scale.setScalar(1);
+      }
+    }
+  });
+
+  const handlePointerOver = () => {
+    onHoverMarker(marker.id);
+    onHoverChange(true);
+  };
+
+  const handlePointerOut = () => {
+    // 如果是聚焦的标记，不清除悬停状态
+    if (!isFocused) {
+      onHoverMarker(null);
+      onHoverChange(false);
+    }
+  };
+
+  return (
+    <mesh
+      ref={markerRef}
+      position={position}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      onPointerOver={handlePointerOver}
+      onPointerOut={handlePointerOut}
+    >
+      <sphereGeometry args={[0.02, 16, 16]} />
+      <meshStandardMaterial
+        color={color}
+        emissive={color}
+        emissiveIntensity={isHovered || isFocused ? 0.8 : 0.4}
+      />
+
+      {/* Pixel-style popup on hover - 支持多条新闻上下并排 */}
+      {shouldShowPopup && (
+        <Html
+          position={[0, 0.03, 0]}
+          style={{
+            transform: 'translate(-50%, -100%) scale(1.25)',
+            transformOrigin: 'bottom center',
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '4px',
+          }}>
+            {/* 渲染所有标记卡片，只有最后一个显示连接线 */}
+            {markersToShow.map((m, index) => (
+              <MarkerPopupCard
+                key={m.id}
+                marker={m}
+                showConnector={index === markersToShow.length - 1}
+              />
+            ))}
+          </div>
+        </Html>
+      )}
+    </mesh>
+  );
+}
+
 // 地球组件 - 使用TopoJSON真实数据
-function EarthWithBorders({ topoData }: { topoData: any }) {
-  const earthRef = useRef<THREE.Mesh>(null);
+function EarthWithBorders({
+  topoData,
+  markers,
+  onMarkerClick,
+  isPaused,
+  onHoverChange,
+  focusedMarkerId,
+  focusBlinkEndTime,
+  targetRotation,
+}: {
+  topoData: any;
+  markers: GlobeMarker[];
+  onMarkerClick: (marker: GlobeMarker) => void;
+  isPaused: boolean;
+  onHoverChange: (hovered: boolean) => void;
+  focusedMarkerId?: string | null;
+  focusBlinkEndTime?: number;
+  targetRotation?: number | null; // 目标旋转角度 (Y轴)
+}) {
+  const groupRef = useRef<THREE.Group>(null); // 整个组（地球+标记）一起旋转
+  const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
+  const [isAnimatingToTarget, setIsAnimatingToTarget] = useState(false);
+  const animationStartRotation = useRef<number>(0);
+  const animationStartTime = useRef<number>(0);
 
   // 解码arcs
   const decodedArcs = useMemo(() => {
@@ -196,9 +448,44 @@ function EarthWithBorders({ topoData }: { topoData: any }) {
 
   // 不使用3D线条绘制边界，边界已经在纹理上绘制了
 
+  // 当有新的目标旋转时，开始动画
+  useEffect(() => {
+    if (targetRotation !== null && targetRotation !== undefined && groupRef.current) {
+      animationStartRotation.current = groupRef.current.rotation.y;
+      animationStartTime.current = Date.now();
+      setIsAnimatingToTarget(true);
+    }
+  }, [targetRotation]);
+
   useFrame(() => {
-    if (earthRef.current) {
-      earthRef.current.rotation.y += 0.003;
+    if (!groupRef.current) return;
+
+    // 如果正在动画到目标位置
+    if (isAnimatingToTarget && targetRotation !== null && targetRotation !== undefined) {
+      const elapsed = Date.now() - animationStartTime.current;
+      const duration = 1000; // 1秒动画
+      const progress = Math.min(elapsed / duration, 1);
+
+      // 使用 easeOutCubic 缓动函数
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      // 计算最短路径旋转
+      let diff = targetRotation - animationStartRotation.current;
+      // 确保旋转方向是最短的
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+
+      groupRef.current.rotation.y = animationStartRotation.current + diff * eased;
+
+      if (progress >= 1) {
+        setIsAnimatingToTarget(false);
+      }
+      return;
+    }
+
+    // 正常自动旋转
+    if (!isPaused) {
+      groupRef.current.rotation.y += 0.003;
     }
   });
 
@@ -207,20 +494,97 @@ function EarthWithBorders({ topoData }: { topoData: any }) {
   }
 
   return (
-    <group>
-      <mesh ref={earthRef}>
+    <group ref={groupRef}>
+      <mesh>
         <sphereGeometry args={[1, 128, 128]} />
         <meshStandardMaterial map={earthTexture} />
       </mesh>
+
+      {/* Render markers - 作为group的子元素，会随地球一起旋转 */}
+      {markers.map(marker => (
+        <Marker
+          key={marker.id}
+          marker={marker}
+          onClick={() => onMarkerClick(marker)}
+          onHoverChange={onHoverChange}
+          hoveredMarkerId={hoveredMarkerId}
+          onHoverMarker={setHoveredMarkerId}
+          isFocused={focusedMarkerId === marker.id}
+          focusBlinkEndTime={focusedMarkerId === marker.id ? focusBlinkEndTime : undefined}
+        />
+      ))}
     </group>
   );
 }
 
 // 主组件
-export function GlobeViewer() {
+interface GlobeViewerProps {
+  markers?: GlobeMarker[];
+  onMarkerClick?: (marker: GlobeMarker) => void;
+  paused?: boolean; // 外部控制暂停
+  onPausedChange?: (paused: boolean) => void; // 通知外部暂停状态变化
+  focusedMarkerId?: string | null; // 聚焦的标记ID（搜索结果）
+  onFocusClear?: () => void; // 清除聚焦
+}
+
+export function GlobeViewer({
+  markers = [],
+  onMarkerClick,
+  paused = false,
+  onPausedChange,
+  focusedMarkerId,
+  onFocusClear
+}: GlobeViewerProps) {
   const [topoData, setTopoData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [internalPaused, setInternalPaused] = useState(false);
+  const [focusBlinkEndTime, setFocusBlinkEndTime] = useState<number | undefined>();
+  const [targetRotation, setTargetRotation] = useState<number | null>(null);
+
+  // 合并外部和内部的暂停状态
+  const isPaused = paused || internalPaused;
+
+  // 当有新的聚焦标记时，计算目标旋转角度并开始闪烁
+  useEffect(() => {
+    if (focusedMarkerId) {
+      const focusedMarker = markers.find(m => m.id === focusedMarkerId);
+      if (focusedMarker) {
+        // 设置闪烁结束时间（10秒后）
+        setFocusBlinkEndTime(Date.now() + 10000);
+
+        // 计算目标旋转角度，使标记位于地球正中心
+        // 经度转换为Y轴旋转角度
+        const lng = focusedMarker.coordinates.longitude;
+        // 目标旋转角度：使经度对应的位置朝向相机
+        const targetY = -((lng + 90) * Math.PI / 180);
+        setTargetRotation(targetY);
+
+        // 暂停自动旋转
+        setInternalPaused(true);
+        onPausedChange?.(true);
+
+        // 10秒后取消聚焦状态
+        const timer = setTimeout(() => {
+          setFocusBlinkEndTime(undefined);
+          onFocusClear?.();
+        }, 10000);
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [focusedMarkerId, markers, onPausedChange, onFocusClear]);
+
+  const handleMarkerClick = (marker: GlobeMarker) => {
+    console.log('Marker clicked:', marker);
+    setInternalPaused(true); // 点击标记时暂停旋转
+    onPausedChange?.(true);
+    onMarkerClick?.(marker);
+  };
+
+  const handleHoverChange = (hovered: boolean) => {
+    setInternalPaused(hovered); // 悬停时暂停旋转
+  };
 
   useEffect(() => {
     // 检测是否为手机竖屏
@@ -294,7 +658,16 @@ export function GlobeViewer() {
         <ambientLight intensity={1.2} />
         <directionalLight position={[5, 3, 5]} intensity={1.0} />
 
-        <EarthWithBorders topoData={topoData} />
+        <EarthWithBorders
+          topoData={topoData}
+          markers={markers}
+          onMarkerClick={handleMarkerClick}
+          isPaused={isPaused}
+          onHoverChange={handleHoverChange}
+          focusedMarkerId={focusedMarkerId}
+          focusBlinkEndTime={focusBlinkEndTime}
+          targetRotation={targetRotation}
+        />
 
         <OrbitControls
           enablePan={false}

@@ -54,8 +54,11 @@ firestore = "0.41"
 gcloud-sdk = { version = "0.25", features = ["google-firestore-v1"] }
 reqwest = { version = "0.11", features = ["json"] }
 
-# Force older version of base64ct to avoid edition2024 requirement
+# Force older versions to avoid edition2024 requirement (requires Rust 1.88+)
 base64ct = "=1.6.0"
+time = "=0.3.36"
+time-core = "=0.1.2"
+time-macros = "=0.2.18"
 
 [dev-dependencies]
 tokio-test = "0.4"

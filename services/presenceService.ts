@@ -36,6 +36,12 @@ export function setUserOnline(
   const lastSeenRef = ref(rtdb, `presence/${userId}/lastSeen`);
 
   // Build user status data
+  // Email must always be provided (should come from userProfile which has our generated email)
+  if (!userData.email) {
+    console.error('Email is required for presence service but was not provided for user:', userId);
+    throw new Error('Email is required for presence tracking');
+  }
+
   const userStatusData: any = {
     userId,
     email: userData.email,

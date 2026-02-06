@@ -1072,3 +1072,16 @@ export { cleanupStalePresence } from './cleanup-stale-presence';
 // China News Listener
 // ========================================
 export { onChinaNewsCreate } from './china-news-listener';
+
+// ========================================
+// Global Intelligence Map - Location Analysis
+// ========================================
+export { onNewsCreated } from './news-location-analyzer';
+export { onBreakingNewsCreated } from './breaking-news-location-analyzer';
+export { onUserLocationUpdated } from './user-location-analyzer';
+
+// ========================================
+// Global Intelligence Map - API Endpoints
+// ========================================
+export { getGlobeMarkers } from './api/globe-markers';
+export { analyzeEntityLocation } from './api/entity-location-analyzer';

@@ -1,4 +1,3 @@
-use firestore::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -20,16 +19,39 @@ pub struct PartyTotal {
     pub contribution_count: u64,
 }
 
+/// Firestore document for company index
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CompanyIndexDoc {
+    pub normalized_name: Option<String>,
+    pub company_name: Option<String>,
+}
+
+/// Firestore document for company consolidated data
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CompanyConsolidatedDoc {
+    pub company_name: Option<String>,
+    pub normalized_name: Option<String>,
+    pub data_year: Option<i64>,
+    pub total_contributed: Option<f64>,
+    pub party_totals: Option<HashMap<String, PartyTotalDoc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct PartyTotalDoc {
+    pub total_amount: Option<f64>,
+    pub contribution_count: Option<u64>,
+}
+
 /// Firestore client wrapper
 pub struct FecClient {
-    db: Option<FirestoreDb>,
+    db: Option<firestore::FirestoreDb>,
 }
 
 impl FecClient {
     /// Create a new FEC client
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         // Try to initialize Firestore client
-        match FirestoreDb::new(PROJECT_ID).await {
+        match firestore::FirestoreDb::new(PROJECT_ID).await {
             Ok(db) => Ok(Self { db: Some(db) }),
             Err(e) => {
                 eprintln!("Warning: Failed to initialize Firestore client: {}. FEC queries will return None.", e);
@@ -80,7 +102,7 @@ impl FecClient {
         println!("Querying FEC data for company: {} (normalized: {})", company_name, normalized);
 
         // First, look up the company in fec_company_index
-        let company_index_result: Option<FirestoreResult<HashMap<String, serde_json::Value>>> = db
+        let company_index_result: Option<CompanyIndexDoc> = db
             .fluent()
             .select()
             .by_id_in("fec_company_index")
@@ -95,7 +117,7 @@ impl FecClient {
 
         // Query all consolidated summaries for this company (across all years)
         // Use fec_company_consolidated which merges linkage + PAC transfer data
-        let summaries: Vec<HashMap<String, serde_json::Value>> = db
+        let summaries: Vec<CompanyConsolidatedDoc> = db
             .fluent()
             .select()
             .from("fec_company_consolidated")
@@ -117,36 +139,28 @@ impl FecClient {
 
         for summary in summaries {
             // Extract company name for display
-            if let Some(name) = summary.get("company_name").and_then(|v| v.as_str()) {
-                company_display_name = name.to_string();
+            if let Some(name) = summary.company_name {
+                company_display_name = name;
             }
 
             // Extract year
-            if let Some(year) = summary.get("data_year").and_then(|v| v.as_i64()) {
+            if let Some(year) = summary.data_year {
                 data_years.push(year as i32);
             }
 
             // Extract total contributed for this year
-            if let Some(total) = summary.get("total_contributed").and_then(|v| v.as_f64()) {
+            if let Some(total) = summary.total_contributed {
                 total_contributed += total / 100.0; // Convert cents to dollars
             }
 
             // Extract party totals
-            if let Some(party_data) = summary.get("party_totals").and_then(|v| v.as_object()) {
+            if let Some(party_data) = summary.party_totals {
                 for (party, data) in party_data {
-                    let amount = data
-                        .get("total_amount")
-                        .and_then(|v| v.as_f64())
-                        .unwrap_or(0.0)
-                        / 100.0; // Convert cents to dollars
-
-                    let count = data
-                        .get("contribution_count")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0);
+                    let amount = data.total_amount.unwrap_or(0.0) / 100.0; // Convert cents to dollars
+                    let count = data.contribution_count.unwrap_or(0);
 
                     party_totals
-                        .entry(party.clone())
+                        .entry(party)
                         .and_modify(|e| {
                             e.total_amount += amount;
                             e.contribution_count += count;

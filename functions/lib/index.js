@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onChinaNewsCreate = exports.cleanupStalePresence = exports.scheduledNewsFetch = exports.fetchGoogleNewsRSS = exports.checkBreakingNews = exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
+exports.analyzeEntityLocation = exports.getGlobeMarkers = exports.onUserLocationUpdated = exports.onBreakingNewsCreated = exports.onNewsCreated = exports.onChinaNewsCreate = exports.cleanupStalePresence = exports.scheduledNewsFetch = exports.fetchGoogleNewsRSS = exports.checkBreakingNews = exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -926,4 +926,20 @@ Object.defineProperty(exports, "cleanupStalePresence", { enumerable: true, get: 
 // ========================================
 var china_news_listener_1 = require("./china-news-listener");
 Object.defineProperty(exports, "onChinaNewsCreate", { enumerable: true, get: function () { return china_news_listener_1.onChinaNewsCreate; } });
+// ========================================
+// Global Intelligence Map - Location Analysis
+// ========================================
+var news_location_analyzer_1 = require("./news-location-analyzer");
+Object.defineProperty(exports, "onNewsCreated", { enumerable: true, get: function () { return news_location_analyzer_1.onNewsCreated; } });
+var breaking_news_location_analyzer_1 = require("./breaking-news-location-analyzer");
+Object.defineProperty(exports, "onBreakingNewsCreated", { enumerable: true, get: function () { return breaking_news_location_analyzer_1.onBreakingNewsCreated; } });
+var user_location_analyzer_1 = require("./user-location-analyzer");
+Object.defineProperty(exports, "onUserLocationUpdated", { enumerable: true, get: function () { return user_location_analyzer_1.onUserLocationUpdated; } });
+// ========================================
+// Global Intelligence Map - API Endpoints
+// ========================================
+var globe_markers_1 = require("./api/globe-markers");
+Object.defineProperty(exports, "getGlobeMarkers", { enumerable: true, get: function () { return globe_markers_1.getGlobeMarkers; } });
+var entity_location_analyzer_1 = require("./api/entity-location-analyzer");
+Object.defineProperty(exports, "analyzeEntityLocation", { enumerable: true, get: function () { return entity_location_analyzer_1.analyzeEntityLocation; } });
 //# sourceMappingURL=index.js.map

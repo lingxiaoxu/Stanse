@@ -357,17 +357,17 @@ export const DuelModal: React.FC<DuelModalProps> = ({
         }
       }, 1000); // Check after 1 second
 
-      // Set up AI opponent timeout - trigger matchmaking check after 32 seconds
-      // (slightly longer than server's 30s to ensure server-side AI creation happens first)
+      // Set up AI opponent timeout - trigger matchmaking check after 13 seconds
+      // (slightly longer than server's 11s to ensure server-side AI creation happens first)
       aiOpponentTimeoutRef.current = window.setTimeout(async () => {
-        console.log('[DuelModal] Triggering AI opponent check after 32s...');
+        console.log('[DuelModal] Triggering AI opponent check after 13s...');
         try {
           await checkMatchmaking();
           console.log('[DuelModal] AI opponent check completed');
         } catch (e) {
           console.error('[DuelModal] AI opponent check failed:', e);
         }
-      }, 32000);
+      }, 13000);
 
       // Listen for match (server will create match when found or after 30s AI timeout)
       matchListenerRef.current = listenForMatch(

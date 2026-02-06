@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 16">
+  <!-- Black background -->
+  <rect width="72" height="16" fill="#000000"/>
+
+  <!-- S (x=2) -->
+  <rect x="4" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="6" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="8" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="2" y="4" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="4" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="6" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="8" y="8" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="2" y="10" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="4" y="10" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="6" y="10" width="2" height="2" fill="#FFFFFF"/>
+
+  <!-- T (x=12) -->
+  <rect x="12" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="14" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="16" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="18" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="20" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="16" y="4" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="16" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="16" y="8" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="16" y="10" width="2" height="2" fill="#FFFFFF"/>
+
+  <!-- A (x=22) -->
+  <rect x="24" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="26" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="22" y="4" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="28" y="4" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="22" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="24" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="26" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="28" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="22" y="8" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="28" y="8" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="22" y="10" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="28" y="10" width="2" height="2" fill="#FFFFFF"/>
+
+  <!-- N (x=32) -->
+  <rect x="32" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="38" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="32" y="4" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="34" y="4" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="38" y="4" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="32" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="36" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="38" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="32" y="8" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="38" y="8" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="32" y="10" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="38" y="10" width="2" height="2" fill="#FFFFFF"/>
+
+  <!-- S (x=42) -->
+  <rect x="44" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="46" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="48" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="42" y="4" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="44" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="46" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="48" y="8" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="42" y="10" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="44" y="10" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="46" y="10" width="2" height="2" fill="#FFFFFF"/>
+
+  <!-- E (x=52) -->
+  <rect x="52" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="54" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="56" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="58" y="2" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="52" y="4" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="52" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="54" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="56" y="6" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="52" y="8" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="52" y="10" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="54" y="10" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="56" y="10" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="58" y="10" width="2" height="2" fill="#FFFFFF"/>
+</svg>

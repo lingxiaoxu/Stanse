@@ -1,0 +1,196 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.onNewsCreated = void 0;
+const functions = __importStar(require("firebase-functions/v2"));
+const admin = __importStar(require("firebase-admin"));
+const secret_manager_1 = require("@google-cloud/secret-manager");
+const genai_1 = require("@google/genai");
+const secretClient = new secret_manager_1.SecretManagerServiceClient();
+const CLOUD_RUN_PROJECT_ID = 'gen-lang-client-0960644135';
+const GEMINI_SECRET_NAME = 'gemini-api-key';
+// Cache for Gemini API key
+let geminiApiKey = null;
+/**
+ * Get Gemini API key from Google Secret Manager
+ */
+async function getGeminiApiKey() {
+    if (geminiApiKey) {
+        return geminiApiKey;
+    }
+    try {
+        const [version] = await secretClient.accessSecretVersion({
+            name: `projects/${CLOUD_RUN_PROJECT_ID}/secrets/${GEMINI_SECRET_NAME}/versions/latest`,
+        });
+        const payload = version.payload?.data?.toString();
+        if (payload) {
+            geminiApiKey = payload;
+            console.log('✅ Gemini API key loaded from Secret Manager');
+            return payload;
+        }
+    }
+    catch (error) {
+        console.error('Failed to load Gemini API key from Secret Manager:', error);
+    }
+    return '';
+}
+/**
+ * Analyzes news content using Gemini 2.5 Flash to extract location.
+ */
+async function analyzeNewsLocation(content) {
+    const apiKey = await getGeminiApiKey();
+    if (!apiKey) {
+        throw new Error('Failed to load Gemini API key');
+    }
+    const ai = new genai_1.GoogleGenAI({ apiKey });
+    const prompt = `
+You are a geolocation expert. Analyze the following news article and determine its primary geographic location.
+
+News Article:
+${content}
+
+Extract:
+1. Country (required)
+2. State/Province (if mentioned or determinable)
+3. City (if mentioned or determinable)
+4. Precise latitude and longitude coordinates for the most specific location you can determine
+5. Your confidence level in this location assessment
+6. A brief location context (1 sentence)
+
+Return ONLY valid JSON in this exact format:
+{
+  "country": "Country Name",
+  "countryCode": "ISO 3166-1 alpha-2 code",
+  "state": "State/Province or null",
+  "city": "City name or null",
+  "coordinates": {
+    "latitude": 0.0,
+    "longitude": 0.0
+  },
+  "confidence": "HIGH|MEDIUM|LOW",
+  "specificityLevel": "CITY|STATE|COUNTRY",
+  "locationSummary": "Brief context about this location"
+}
+
+If the article doesn't have a clear geographic location, use the country most relevant to the story.
+`;
+    const result = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+        config: {
+            temperature: 0.1,
+            maxOutputTokens: 4096,
+            responseMimeType: 'application/json'
+        }
+    });
+    const response = result.text;
+    // Clean response
+    let cleanedResponse = response?.trim() || '';
+    cleanedResponse = cleanedResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+    const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+        console.error('Failed to parse AI response:', cleanedResponse);
+        throw new Error('Failed to parse location data from AI response');
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+    // Normalize field names (lat/lng → latitude/longitude)
+    if (parsed.coordinates) {
+        if (parsed.coordinates.lat !== undefined) {
+            parsed.coordinates.latitude = parsed.coordinates.lat;
+            delete parsed.coordinates.lat;
+        }
+        if (parsed.coordinates.lng !== undefined) {
+            parsed.coordinates.longitude = parsed.coordinates.lng;
+            delete parsed.coordinates.lng;
+        }
+    }
+    // Validate coordinates
+    if (!parsed.coordinates?.latitude || !parsed.coordinates?.longitude) {
+        throw new Error('Invalid or missing coordinates');
+    }
+    // Normalize fields
+    if (parsed.confidence)
+        parsed.confidence = parsed.confidence.toUpperCase();
+    if (parsed.specificityLevel)
+        parsed.specificityLevel = parsed.specificityLevel.toUpperCase();
+    return parsed;
+}
+/**
+ * Triggered when a new news document is created.
+ * Analyzes the news content and extracts location information.
+ */
+exports.onNewsCreated = functions.firestore.onDocumentCreated({
+    document: 'news/{newsId}',
+    region: 'us-central1',
+    timeoutSeconds: 60,
+    memory: '512MiB'
+}, async (event) => {
+    const startTime = Date.now();
+    const newsId = event.params.newsId;
+    const newsData = event.data?.data();
+    if (!newsData) {
+        console.log('❌ No data in news document:', newsId);
+        return;
+    }
+    try {
+        // Extract news content
+        const content = `
+Title: ${newsData.title || ''}
+Description: ${newsData.description || ''}
+Content: ${newsData.content || newsData.summary || ''}
+      `.trim();
+        console.log(`📍 Analyzing location for news: ${newsId}`);
+        // Call Gemini 2.5 Flash for location analysis
+        const locationData = await analyzeNewsLocation(content);
+        // Store in news_locations collection
+        const db = admin.firestore();
+        await db
+            .collection('news_locations')
+            .doc(newsId)
+            .set({
+            newsId,
+            ...locationData,
+            analyzedAt: admin.firestore.FieldValue.serverTimestamp(),
+            aiModel: 'gemini-2.5-flash',
+            processingTimeMs: Date.now() - startTime,
+        });
+        console.log(`✅ Location analyzed for news ${newsId}: ${locationData.country}, ${locationData.city || locationData.state || 'N/A'}`);
+    }
+    catch (error) {
+        console.error(`❌ Failed to analyze location for news ${newsId}:`, error);
+        // Don't create error record - allow Cloud Function to retry on next trigger
+    }
+});
+//# sourceMappingURL=news-location-analyzer.js.map
