@@ -24,7 +24,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY data/ /app/data/
 
 # 复制 company-ranking 脚本
-COPY scripts/company-ranking/*.py ./
+# 分别复制每个Python文件以避免glob pattern问题
+COPY scripts/company-ranking/00-orchestrator.py ./
+COPY scripts/company-ranking/01-collect-fec-donations.py ./
+COPY scripts/company-ranking/02-collect-esg-scores.py ./
+COPY scripts/company-ranking/03-collect-polygon-news.py ./
+COPY scripts/company-ranking/04-analyze-executive-statements.py ./
+COPY scripts/company-ranking/05-generate-enhanced-rankings.py ./
+COPY scripts/company-ranking/email_notifier.py ./
+COPY scripts/company-ranking/check-firebase-schema.py ./
 COPY scripts/company-ranking/verification/ ./verification/
 COPY scripts/company-ranking/maintenance/ ./maintenance/
 

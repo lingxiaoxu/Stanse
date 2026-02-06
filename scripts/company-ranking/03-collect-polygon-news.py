@@ -295,7 +295,7 @@ def main():
     # - 每批10个公司处理后暂停
     # - Polygon free tier 限制: 5 calls/min，所以12秒间隔
     # - 如果是 paid tier，可以缩短到 1-2 秒
-    # - 总共84个公司，预计耗时约 84 * 12s = 16.8分钟 (free tier)
+    # - 总共125个公司，预计耗时约 125 * 12s = 25分钟 (free tier)
     collector.run(batch_size=10, delay_between_requests=12.0)
 
 

@@ -30,26 +30,24 @@ if [ -f .gcloudignore ]; then
     cp .gcloudignore .gcloudignore.backup
 fi
 
-# 创建临时的 .gcloudignore 专门用于此次构建（只包含 scripts/company-ranking/）
+# 创建临时的 .gcloudignore (使用白名单方式，只包含需要的)
 cat > .gcloudignore <<'EOF'
-.git
-.gitignore
-node_modules/
-dist/
-.vscode/
-.idea/
-*.log
-.DS_Store
-.env.local
-.env.*.local
-backend/
-documentation/
-metadata.json
-firestore.rules
-scripts/fec-data/
-scripts/test/
-scripts/*.py
-scripts/*.sh
+# 排除一切
+*
+
+# 明确包含需要的文件和目录
+!requirements.txt
+!data/
+!data/sp500Data.json
+!data/sp500Companies.py
+!scripts/
+scripts/*
+!scripts/company-ranking/
+!scripts/company-ranking/*.py
+!scripts/company-ranking/verification/
+!scripts/company-ranking/verification/*.py
+!scripts/company-ranking/maintenance/
+!scripts/company-ranking/maintenance/*.py
 EOF
 
 # 创建临时的 cloudbuild.yaml

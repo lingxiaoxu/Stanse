@@ -1567,7 +1567,7 @@ REASONING: [Brief explanation based on general knowledge about this company]
                 successful_personas=len(successful_personas),
                 failed_personas=failed_personas,
                 duration=duration,
-                total_companies=84 if not self.test_mode else 10
+                total_companies=125 if not self.test_mode else 10
             )
 
 

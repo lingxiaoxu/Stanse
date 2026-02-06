@@ -554,7 +554,7 @@ def main():
     # 运行采集
     # - 每批10个公司处理后暂停
     # - 公司间隔1.5秒（每个公司内部调用3个API，已有0.3秒间隔）
-    # - 总共84个公司，预计耗时约 84 * 1.5s = 2分钟
+    # - 总共125个公司，预计耗时约 125 * 1.5s = 3.2分钟
     collector.run(batch_size=10, delay_between_requests=1.5, tickers_to_process=tickers_to_process)
 
 

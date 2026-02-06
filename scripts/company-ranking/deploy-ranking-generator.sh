@@ -34,24 +34,24 @@ if [ -f .gcloudignore ]; then
     cp .gcloudignore .gcloudignore.backup
 fi
 
-# 创建临时的 .gcloudignore (允许scripts/company-ranking/)
+# 创建临时的 .gcloudignore (使用白名单方式，只包含需要的)
 cat > .gcloudignore <<'IGNORE_EOF'
-.git
-.gitignore
-node_modules/
-dist/
-.vscode/
-.idea/
-*.log
-.DS_Store
-.env.local
-.env.*.local
-backend/
-documentation/
-metadata.json
-firestore.rules
-scripts/fec-data/
-scripts/test/
+# 排除一切
+*
+
+# 明确包含需要的文件和目录
+!requirements.txt
+!data/
+!data/sp500Data.json
+!data/sp500Companies.py
+!scripts/
+scripts/*
+!scripts/company-ranking/
+!scripts/company-ranking/*.py
+!scripts/company-ranking/verification/
+!scripts/company-ranking/verification/*.py
+!scripts/company-ranking/maintenance/
+!scripts/company-ranking/maintenance/*.py
 IGNORE_EOF
 
 # 创建临时的 cloudbuild.yaml (指定使用Python Dockerfile)
@@ -168,7 +168,7 @@ documentation:
 
     ### 任务说明:
     - 为所有8个persona生成enhanced company rankings
-    - 处理84个 S&P 500 公司
+    - 处理125个 S&P 500 公司
     - 使用 AI-Data Based (FEC + ESG + Executive + News) + LLM 方法
     - 每12小时运行一次 (6:00 AM & 6:00 PM Pacific Time)
 
@@ -176,7 +176,7 @@ documentation:
     1. Gemini API 配额耗尽或访问失败
     2. Firebase Firestore 写入权限问题
     3. Secret Manager 密钥失效 (gemini-api-key, sendgrid-api-key)
-    4. 内存不足 (处理84公司 x 8 personas = 672 LLM调用)
+    4. 内存不足 (处理125公司 x 8 personas = 1000 LLM调用)
     5. 超时 (task-timeout 设置为 3600s = 1小时)
 
     ### 排查步骤:
@@ -197,7 +197,7 @@ documentation:
 
     4. 检查 Gemini API 配额:
        - 访问: https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas?project=${PROJECT_ID}
-       - 预估: 84 companies x 8 personas = 672 LLM 调用
+       - 预估: 125 companies x 8 personas = 1000 LLM 调用
 
     5. 检查 Secret Manager 密钥:
        \`\`\`

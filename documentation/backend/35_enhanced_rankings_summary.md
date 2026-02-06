@@ -254,13 +254,13 @@ gcloud logging read "resource.type=cloud_run_revision" --limit 50
 ## 📊 性能优化
 
 ### 缓存策略
-- **Python 预计算**: 12小时有效期，覆盖 84 家公司 × 8 种 persona = 672 个评估
+- **Python 预计算**: 12小时有效期，覆盖 125 家公司 × 8 种 persona = 1000 个评估
 - **TypeScript fallback**: 按需计算，立即保存到 Firebase
 - **避免重复计算**: 同一 persona 在 12 小时内只计算一次
 
 ### 加载时间
 - **使用 Python 缓存**: ~100-200ms（Firebase 读取）
-- **TypeScript fallback**: ~30-60 秒（实时计算 84 家公司）
+- **TypeScript fallback**: ~30-60 秒（实时计算 125 家公司）
 - **建议**: 确保 Python 定时任务正常运行
 
 ---
