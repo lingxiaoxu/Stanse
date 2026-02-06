@@ -5,6 +5,8 @@ import {
   signInWithEmail,
   signUpWithEmail,
   signInWithGoogle,
+  signInWithTwitter,
+  signInWithApple,
   logOut,
   resetPassword
 } from '../services/authService';
@@ -30,6 +32,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
   signInGoogle: () => Promise<void>;
+  signInTwitter: () => Promise<void>;
+  signInApple: () => Promise<void>;
   logout: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   updateCoordinates: (coords: PoliticalCoordinates) => Promise<void>;
@@ -167,7 +171,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
+      const errorCode = err.code || '';
+
+      // Map specific error codes to user-friendly messages
+      switch (errorCode) {
+        case 'auth/user-not-found':
+          setError('No account found with this email. Please sign up first.');
+          break;
+        case 'auth/wrong-password':
+          setError('Incorrect password. Please try again.');
+          break;
+        case 'auth/invalid-credential':
+          setError('Incorrect email or password. Please try again.');
+          break;
+        case 'auth/invalid-email':
+          setError('Invalid email address format.');
+          break;
+        case 'auth/user-disabled':
+          setError('This account has been disabled. Please contact support.');
+          break;
+        case 'auth/too-many-requests':
+          setError('Too many failed attempts. Please wait a few minutes and try again.');
+          break;
+        default:
+          const cleanMessage = err.message?.replace(/^Firebase:\s*/i, '') || 'Failed to sign in';
+          setError(cleanMessage);
+      }
       throw err;
     } finally {
       setLoading(false);
@@ -189,6 +218,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     } catch (err: any) {
+      // Check if waitlist mode (registration closed)
+      if (err.message?.startsWith('WAITLIST:')) {
+        setError('Due to overwhelming demand, we are temporarily not accepting new registrations. You are in queue. Please try again later.');
+        throw err;
+      }
+
       // Check if error is network-related (likely Great Firewall blocking Firebase)
       const isNetworkError = err.code === 'auth/network-request-failed' ||
                             err.message?.includes('network') ||
@@ -196,9 +231,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                             err.message?.includes('CORS');
 
       if (isNetworkError) {
-        setError('Network error: Unable to connect to Firebase. If you are in China, please use a VPN to access this service. 网络错误:无法连接Firebase。如果您在中国,请使用VPN访问此服务。');
+        setError('Network error: Unable to connect. If you are in China, please use a VPN. 网络错误:无法连接。如果您在中国,请使用VPN。');
       } else {
-        setError(err.message || 'Failed to sign up');
+        // Map specific error codes to user-friendly messages
+        const errorCode = err.code || '';
+        switch (errorCode) {
+          case 'auth/email-already-in-use':
+            setError('This email is already registered. Try signing in instead.');
+            break;
+          case 'auth/weak-password':
+            setError('Password should be at least 6 characters.');
+            break;
+          case 'auth/invalid-email':
+            setError('Invalid email address format.');
+            break;
+          case 'auth/operation-not-allowed':
+            setError('Email/password sign up is currently disabled.');
+            break;
+          default:
+            const cleanMessage = err.message?.replace(/^Firebase:\s*/i, '') || 'Failed to sign up';
+            setError(cleanMessage);
+        }
       }
       throw err;
     } finally {
@@ -222,6 +275,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     } catch (err: any) {
+      // Check if waitlist mode (registration closed)
+      if (err.message?.startsWith('WAITLIST:')) {
+        setError('Due to overwhelming demand, we are temporarily not accepting new registrations. You are in queue. Please try again later. 由于需求量激增，暂时不接受新注册。您已在排队中，请稍后再试。');
+        throw err;
+      }
+
       // Check if error is network-related (likely Great Firewall blocking Firebase)
       const isNetworkError = err.code === 'auth/network-request-failed' ||
                             err.message?.includes('network') ||
@@ -229,9 +288,119 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                             err.message?.includes('CORS');
 
       if (isNetworkError) {
-        setError('Network error: Unable to connect to Firebase. If you are in China, please use a VPN to access this service. 网络错误:无法连接Firebase。如果您在中国,请使用VPN访问此服务。');
+        setError('Network error: Unable to connect. If you are in China, please use a VPN. 网络错误:无法连接。如果您在中国,请使用VPN。');
       } else {
-        setError(err.message || 'Failed to sign in with Google');
+        // Map specific error codes to user-friendly messages
+        const errorCode = err.code || '';
+        switch (errorCode) {
+          case 'auth/popup-closed-by-user':
+            setError('Sign-in cancelled. Please try again.');
+            break;
+          case 'auth/popup-blocked':
+            setError('Pop-up blocked. Please allow pop-ups for this site.');
+            break;
+          case 'auth/cancelled-popup-request':
+            setError('Sign-in cancelled. Please try again.');
+            break;
+          case 'auth/account-exists-with-different-credential':
+            setError('An account already exists with this email using a different sign-in method.');
+            break;
+          default:
+            const cleanMessage = err.message?.replace(/^Firebase:\s*/i, '') || 'Failed to sign in with Google';
+            setError(cleanMessage);
+        }
+      }
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signInTwitter = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const twitterUser = await signInWithTwitter();
+      if (twitterUser) {
+        try {
+          const profile = await getUserProfile(twitterUser.uid);
+          setUserProfile(profile);
+        } catch (err) {
+          console.error('Error fetching user profile after Twitter login:', err);
+        }
+      }
+    } catch (err: any) {
+      if (err.message?.startsWith('WAITLIST:')) {
+        setError('Due to overwhelming demand, we are temporarily not accepting new registrations. You are in queue. Please try again later.');
+        throw err;
+      }
+
+      const isNetworkError = err.code === 'auth/network-request-failed' ||
+                            err.message?.includes('network') ||
+                            err.message?.includes('Failed to fetch') ||
+                            err.message?.includes('CORS');
+
+      if (isNetworkError) {
+        setError('Network error: Unable to connect. If you are in China, please use a VPN. 网络错误:无法连接。如果您在中国,请使用VPN。');
+      } else {
+        const errorCode = err.code || '';
+        switch (errorCode) {
+          case 'auth/popup-closed-by-user':
+            setError('Sign-in cancelled. Please try again.');
+            break;
+          case 'auth/popup-blocked':
+            setError('Pop-up blocked. Please allow pop-ups for this site.');
+            break;
+          default:
+            const cleanMessage = err.message?.replace(/^Firebase:\s*/i, '') || 'Failed to sign in with Twitter';
+            setError(cleanMessage);
+        }
+      }
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signInApple = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const appleUser = await signInWithApple();
+      if (appleUser) {
+        try {
+          const profile = await getUserProfile(appleUser.uid);
+          setUserProfile(profile);
+        } catch (err) {
+          console.error('Error fetching user profile after Apple login:', err);
+        }
+      }
+    } catch (err: any) {
+      if (err.message?.startsWith('WAITLIST:')) {
+        setError('Due to overwhelming demand, we are temporarily not accepting new registrations. You are in queue. Please try again later.');
+        throw err;
+      }
+
+      const isNetworkError = err.code === 'auth/network-request-failed' ||
+                            err.message?.includes('network') ||
+                            err.message?.includes('Failed to fetch') ||
+                            err.message?.includes('CORS');
+
+      if (isNetworkError) {
+        setError('Network error: Unable to connect. If you are in China, please use a VPN. 网络错误:无法连接。如果您在中国,请使用VPN。');
+      } else {
+        const errorCode = err.code || '';
+        switch (errorCode) {
+          case 'auth/popup-closed-by-user':
+            setError('Sign-in cancelled. Please try again.');
+            break;
+          case 'auth/popup-blocked':
+            setError('Pop-up blocked. Please allow pop-ups for this site.');
+            break;
+          default:
+            const cleanMessage = err.message?.replace(/^Firebase:\s*/i, '') || 'Failed to sign in with Apple';
+            setError(cleanMessage);
+        }
       }
       throw err;
     } finally {
@@ -261,7 +430,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await logOut();
       setUserProfile(null);
     } catch (err: any) {
-      setError(err.message || 'Failed to log out');
+      setError(err.message?.replace(/^Firebase:\s*/i, '') || 'Failed to log out');
       throw err;
     }
   };
@@ -271,7 +440,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await resetPassword(email);
     } catch (err: any) {
-      setError(err.message || 'Failed to send password reset email');
+      setError(err.message?.replace(/^Firebase:\s*/i, '') || 'Failed to send password reset email');
       throw err;
     }
   };
@@ -285,7 +454,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         prev ? { ...prev, coordinates: coords } : null
       );
     } catch (err: any) {
-      setError(err.message || 'Failed to update coordinates');
+      setError(err.message?.replace(/^Firebase:\s*/i, '') || 'Failed to update coordinates');
       throw err;
     }
   };
@@ -344,7 +513,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return coordinates;
     } catch (err: any) {
-      setError(err.message || 'Failed to complete onboarding');
+      setError(err.message?.replace(/^Firebase:\s*/i, '') || 'Failed to complete onboarding');
       throw err;
     }
   };
@@ -379,7 +548,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } : null
       );
     } catch (err: any) {
-      setError(err.message || 'Failed to reset onboarding');
+      setError(err.message?.replace(/^Firebase:\s*/i, '') || 'Failed to reset onboarding');
       throw err;
     }
   };
@@ -397,6 +566,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signIn,
     signUp,
     signInGoogle,
+    signInTwitter,
+    signInApple,
     logout,
     sendPasswordReset,
     updateCoordinates,

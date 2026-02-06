@@ -5,6 +5,9 @@ service cloud.firestore {
     // 用户数据 - 只有认证用户可以读写自己的数据
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Allow count aggregation for registration check (no document data exposed)
+      allow get: if false;
+      allow list: if request.auth != null && request.query.limit == null;
     }
 
     // Polis Protocol user data
@@ -359,6 +362,38 @@ service cloud.firestore {
       // History subcollection - users can read/write their own embedding history
       match /history/{historyId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // ==================== Global Intelligence Map - Location Collections ====================
+
+    // News Locations - AI-analyzed geographic locations from news articles
+    // Public read for globe display, only Cloud Functions can write
+    match /news_locations/{docId} {
+      allow read: if true;  // Allow public read for globe markers
+      allow write: if false; // Only Cloud Functions
+    }
+
+    // Breaking News Locations - AI-analyzed locations with severity assessment
+    match /breaking_news_locations/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only Cloud Functions
+    }
+
+    // Conflict Zones - Global conflict monitoring data
+    match /conflict_zones/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admins via Cloud Functions
+    }
+
+    // User Country Locations Subcollection - User's birth and current country coordinates
+    // Structure: users/{userId}/users_countries_locations/{locationId}
+    // Note: This is already covered by the users/{userId} match above, but we add explicit rules
+    match /users/{userId} {
+      // User countries locations subcollection
+      match /users_countries_locations/{locationId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false; // Only Cloud Functions can write
       }
     }
 

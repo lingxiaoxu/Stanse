@@ -72,15 +72,23 @@ const extractPoliticalPersona = (label: string, nationalityPrefix?: string): str
 
 interface FeedViewProps {
   onTextSelected?: (text: string) => void;
+  targetNewsId?: string | null;  // 从 Globe 点击跳转过来时的目标新闻 ID
+  targetFeedIndex?: number | null;  // 从 Globe 点击跳转过来时的目标新闻在 Feed 中的索引
+  onTargetNewsIdClear?: () => void;  // 滚动完成后清除目标
 }
 
-export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
+export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected, targetNewsId, targetFeedIndex, onTargetNewsIdClear }) => {
   const [activePrism, setActivePrism] = useState<string | null>(null);
   const [prismData, setPrismData] = useState<Record<string, any>>({});
 
   // Text selection for AI feature
   const [selectedText, setSelectedText] = useState('');
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
+
+  // Stock ticker hover for AI feature
+  const [hoveredTicker, setHoveredTicker] = useState<string | null>(null);
+  const [tickerPosition, setTickerPosition] = useState<{ x: number; y: number } | null>(null);
+  const tickerHideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [prismGeneratedAt, setPrismGeneratedAt] = useState<Record<string, string>>({}); // Track when prism was generated
   const [loadingPrism, setLoadingPrism] = useState(false);
 
@@ -103,6 +111,66 @@ export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
     setFeedError,
     feedLoadingAbortController
   } = useAppState();
+
+  // Ref for news item elements to scroll to (by index)
+  const newsItemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Scroll to target news when navigating from Globe
+  // Use ref to prevent duplicate execution in React Strict Mode
+  const scrollingToIndexRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // 使用 feedIndex 直接定位，更简单可靠
+    if (targetFeedIndex !== null && targetFeedIndex !== undefined && feedNews.length > 0) {
+      // 防止重复执行
+      if (scrollingToIndexRef.current === targetFeedIndex) {
+        return;
+      }
+      scrollingToIndexRef.current = targetFeedIndex;
+
+      console.log('🎯 FeedView: Starting scroll to index:', targetFeedIndex, 'newsId:', targetNewsId);
+
+      // Clear immediately to prevent re-triggering
+      onTargetNewsIdClear?.();
+
+      // 等待 DOM 渲染完成后滚动
+      setTimeout(() => {
+        const targetElement = newsItemRefs.current[targetFeedIndex];
+
+        if (targetElement) {
+          console.log('🎯 FeedView: Element found at index', targetFeedIndex);
+
+          // 计算元素在文档中的绝对位置
+          const rect = targetElement.getBoundingClientRect();
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          const elementTop = rect.top + scrollTop;
+          const windowHeight = window.innerHeight;
+          const scrollTarget = elementTop - (windowHeight / 2) + (rect.height / 2);
+
+          console.log('🎯 FeedView: Scroll target:', scrollTarget, 'elementTop:', elementTop);
+
+          // 滚动到目标位置
+          window.scrollTo({
+            top: Math.max(0, scrollTarget),
+            behavior: 'smooth'
+          });
+
+          // 添加高亮效果
+          targetElement.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.5)';
+          targetElement.style.transition = 'box-shadow 0.3s ease';
+
+          // 3秒后移除高亮
+          setTimeout(() => {
+            targetElement.style.boxShadow = '';
+            scrollingToIndexRef.current = null;
+          }, 3000);
+        } else {
+          console.warn('🎯 FeedView: Element not found at index:', targetFeedIndex);
+          scrollingToIndexRef.current = null;
+        }
+      }, 500);
+    }
+  }, [targetFeedIndex, targetNewsId, feedNews.length, onTargetNewsIdClear]);
 
   // Translated persona label state
   const [translatedPersona, setTranslatedPersona] = useState<string | null>(null);
@@ -692,26 +760,38 @@ export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
   // Handle text selection in news content
   useEffect(() => {
     const handleSelection = () => {
-      const selection = window.getSelection();
-      const text = selection?.toString().trim();
+      // Use a small delay to ensure selection is complete
+      setTimeout(() => {
+        const selection = window.getSelection();
+        const text = selection?.toString().trim();
 
-      if (text && text.length > 10) {
-        // Get selection position for floating icon
-        const range = selection?.getRangeAt(0);
-        const rect = range?.getBoundingClientRect();
+        if (text && text.length > 10 && selection && selection.rangeCount > 0) {
+          // Get selection position for floating icon
+          try {
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
 
-        if (rect) {
-          setSelectedText(text);
-          setSelectionPosition({
-            x: rect.right + 10,
-            y: rect.top + window.scrollY
-          });
+            // Only show icon if selection has valid dimensions
+            if (rect && rect.width > 0 && rect.height > 0) {
+              setSelectedText(text);
+              setSelectionPosition({
+                x: rect.right + 10,
+                y: rect.top  // Use rect.top directly for fixed positioning (no scrollY needed)
+              });
+            } else {
+              setSelectedText('');
+              setSelectionPosition(null);
+            }
+          } catch (e) {
+            setSelectedText('');
+            setSelectionPosition(null);
+          }
+        } else {
+          // Clear selection if text is too short or no valid selection
+          setSelectedText('');
+          setSelectionPosition(null);
         }
-      } else {
-        // Clear selection if text is too short
-        setSelectedText('');
-        setSelectionPosition(null);
-      }
+      }, 10);
     };
 
     document.addEventListener('selectionchange', handleSelection);
@@ -721,10 +801,55 @@ export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
   // Handle AI analysis of selected text
   const handleAskAI = () => {
     if (selectedText && onTextSelected) {
-      onTextSelected(`Please explain this news excerpt: "${selectedText}"`);
+      const prompt = t('feed', 'ask_ai_news_excerpt') || 'Please explain this news excerpt:';
+      onTextSelected(`${prompt} "${selectedText}"`);
       // Clear selection
       setSelectedText('');
       setSelectionPosition(null);
+    }
+  };
+
+  // Handle AI inquiry about stock ticker
+  const handleAskAITicker = () => {
+    if (hoveredTicker && onTextSelected) {
+      const prompt = t('feed', 'ask_ai_ticker_info') || 'Please give me further information about this ticker:';
+      onTextSelected(`${prompt} "${hoveredTicker}"`);
+      // Clear ticker hover
+      setHoveredTicker(null);
+      setTickerPosition(null);
+    }
+  };
+
+  // Handle stock ticker hover
+  const handleTickerHover = (ticker: string, event: React.MouseEvent) => {
+    // Clear any pending hide timeout
+    if (tickerHideTimeoutRef.current) {
+      clearTimeout(tickerHideTimeoutRef.current);
+      tickerHideTimeoutRef.current = null;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    setHoveredTicker(ticker);
+    setTickerPosition({
+      x: rect.right + 4,
+      y: rect.top
+    });
+  };
+
+  const handleTickerLeave = () => {
+    // Add a delay before hiding the button
+    // This allows the user to move their mouse to the button
+    tickerHideTimeoutRef.current = setTimeout(() => {
+      setHoveredTicker(null);
+      setTickerPosition(null);
+    }, 1000);
+  };
+
+  const cancelTickerHide = () => {
+    // Cancel the hide timeout when mouse enters the button
+    if (tickerHideTimeoutRef.current) {
+      clearTimeout(tickerHideTimeoutRef.current);
+      tickerHideTimeoutRef.current = null;
     }
   };
 
@@ -775,19 +900,54 @@ export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
     <div className="max-w-lg promax:max-w-xl mx-auto w-full pb-20 relative">
       {/* Floating AI Question Icon - appears when text is selected */}
       {selectedText && selectionPosition && (
-        <button
-          onClick={handleAskAI}
-          className="fixed z-50 bg-black text-white border-2 border-white shadow-pixel hover:scale-110 transition-all duration-200 flex items-center justify-center animate-fade-in"
+        <div
+          className="fixed z-[9999] pointer-events-auto"
           style={{
             left: `${selectionPosition.x}px`,
             top: `${selectionPosition.y}px`,
-            width: '36px',
-            height: '36px'
           }}
-          title={t('feed', 'ask_ai_about_selection') || 'Ask AI about this'}
         >
-          <span className="text-xl">?</span>
-        </button>
+          <button
+            onClick={handleAskAI}
+            className="bg-black text-white border-2 border-white shadow-lg hover:scale-110 transition-all duration-200 flex items-center justify-center cursor-help rounded-sm"
+            style={{
+              width: '36px',
+              height: '36px'
+            }}
+            title={t('feed', 'ask_ai_about_selection') || 'Ask AI about this'}
+          >
+            <span className="text-xl font-bold">?</span>
+          </button>
+        </div>
+      )}
+
+      {/* Floating AI Question Icon - appears when hovering over stock ticker */}
+      {hoveredTicker && tickerPosition && (
+        <div
+          className="fixed z-[9999] pointer-events-auto"
+          style={{
+            left: `${tickerPosition.x}px`,
+            top: `${tickerPosition.y}px`,
+          }}
+          onMouseEnter={cancelTickerHide}
+          onMouseLeave={() => {
+            // Hide the button when leaving it
+            setHoveredTicker(null);
+            setTickerPosition(null);
+          }}
+        >
+          <button
+            onClick={handleAskAITicker}
+            className="bg-black text-white border-2 border-white shadow-lg hover:scale-110 transition-all duration-200 flex items-center justify-center cursor-help rounded-sm"
+            style={{
+              width: '36px',
+              height: '36px'
+            }}
+            title="Ask AI about this stock"
+          >
+            <span className="text-xl font-bold">?</span>
+          </button>
+        </div>
       )}
 
       {/* VALUES MARKET ALIGNMENT - Combined Sections */}
@@ -1069,12 +1229,17 @@ export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
                     >
                       {/* First set of stocks */}
                       {marketStocks.map((stock, i) => (
-                          <div key={`${stock.symbol}-${i}`} className={`
-                              flex-shrink-0 flex flex-col p-2 border-r-2 border-black w-[79.3px]
-                              ${stock.alignment === 'HIGH' ? 'bg-white hover:bg-green-50' : 'bg-gray-100 hover:bg-red-50'}
-                              ${i === 0 ? 'border-l-2' : ''}
-                              transition-colors cursor-pointer
-                          `}>
+                          <div
+                              key={`${stock.symbol}-${i}`}
+                              className={`
+                                  flex-shrink-0 flex flex-col p-2 border-r-2 border-black w-[79.3px]
+                                  ${stock.alignment === 'HIGH' ? 'bg-white hover:bg-green-50' : 'bg-gray-100 hover:bg-red-50'}
+                                  ${i === 0 ? 'border-l-2' : ''}
+                                  transition-colors cursor-pointer
+                              `}
+                              onMouseEnter={(e) => handleTickerHover(stock.symbol, e)}
+                              onMouseLeave={handleTickerLeave}
+                          >
                               <div className="flex justify-between items-start gap-1 mb-1">
                                   <span className="font-bold font-mono text-xs">{stock.symbol}</span>
                                   {stock.change >= 0 ? <TrendingUp size={12} className="text-black"/> : <TrendingDown size={12} className="text-gray-500"/>}
@@ -1087,11 +1252,16 @@ export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
                       ))}
                       {/* Duplicate set for seamless loop */}
                       {marketStocks.map((stock, i) => (
-                          <div key={`${stock.symbol}-dup-${i}`} className={`
-                              flex-shrink-0 flex flex-col p-2 border-r-2 border-black w-[79.3px]
-                              ${stock.alignment === 'HIGH' ? 'bg-white hover:bg-green-50' : 'bg-gray-100 hover:bg-red-50'}
-                              transition-colors cursor-pointer
-                          `}>
+                          <div
+                              key={`${stock.symbol}-dup-${i}`}
+                              className={`
+                                  flex-shrink-0 flex flex-col p-2 border-r-2 border-black w-[79.3px]
+                                  ${stock.alignment === 'HIGH' ? 'bg-white hover:bg-green-50' : 'bg-gray-100 hover:bg-red-50'}
+                                  transition-colors cursor-pointer
+                              `}
+                              onMouseEnter={(e) => handleTickerHover(stock.symbol, e)}
+                              onMouseLeave={handleTickerLeave}
+                          >
                               <div className="flex justify-between items-start gap-1 mb-1">
                                   <span className="font-bold font-mono text-xs">{stock.symbol}</span>
                                   {stock.change >= 0 ? <TrendingUp size={12} className="text-black"/> : <TrendingDown size={12} className="text-gray-500"/>}
@@ -1148,7 +1318,12 @@ export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
                        {rankings.supportCompanies.slice(0, 5).map((company, i) => {
                          const stock = marketStocks.find(s => s.symbol === company.symbol);
                          return (
-                           <div key={`long-${i}`} className="p-2 hover:bg-green-50 transition-colors cursor-pointer">
+                           <div
+                              key={`long-${i}`}
+                              className="p-2 hover:bg-green-50 transition-colors cursor-pointer"
+                              onMouseEnter={(e) => handleTickerHover(company.symbol, e)}
+                              onMouseLeave={handleTickerLeave}
+                          >
                              <div className="flex items-center justify-between gap-2">
                                <div className="flex items-center gap-1 flex-1 min-w-0">
                                  <span className="font-mono font-bold text-xs">+</span>
@@ -1194,7 +1369,12 @@ export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
                        {rankings.opposeCompanies.slice(0, 5).map((company, i) => {
                          const stock = marketStocks.find(s => s.symbol === company.symbol);
                          return (
-                           <div key={`short-${i}`} className="p-2 hover:bg-red-50 transition-colors cursor-pointer">
+                           <div
+                               key={`short-${i}`}
+                               className="p-2 hover:bg-red-50 transition-colors cursor-pointer"
+                               onMouseEnter={(e) => handleTickerHover(company.symbol, e)}
+                               onMouseLeave={handleTickerLeave}
+                           >
                              <div className="flex items-center justify-between gap-2">
                                <div className="flex items-center gap-1 flex-1 min-w-0">
                                  <span className="font-mono font-bold text-xs">-</span>
@@ -1326,7 +1506,11 @@ export const FeedView: React.FC<FeedViewProps> = ({ onTextSelected }) => {
 
           <div className="space-y-12 relative z-10">
               {feedNews.map((newsItem, index) => (
-              <div key={`${newsItem.id}-${index}`} className="relative">
+              <div
+                key={`${newsItem.id}-${index}`}
+                className="relative transition-all duration-300"
+                ref={(el) => { newsItemRefs.current[index] = el; }}
+              >
                   {/* Timeline Dot */}
                   <div className="absolute -left-[24px] top-6 w-3 h-3 bg-black border-2 border-white box-content"></div>
 

@@ -409,13 +409,16 @@ export const translateFullPersonaLabel = async (
   fullLabel: string,
   targetLanguage: string
 ): Promise<string> => {
+  // Normalize language code to lowercase for consistent lookup
+  const langCode = targetLanguage.toLowerCase();
+
   const opId = stanceLogger.operationStart('translateFullPersonaLabel', {
     fullLabel,
-    targetLanguage
+    targetLanguage: langCode
   });
 
   // If English, return original
-  if (targetLanguage === 'en') {
+  if (langCode === 'en') {
     stanceLogger.info('translateFullPersonaLabel', `Using original English label: ${fullLabel}`);
     return fullLabel;
   }
@@ -429,7 +432,7 @@ export const translateFullPersonaLabel = async (
       'es': 'Spanish (Español)'
     };
 
-    const targetLang = languageNames[targetLanguage] || 'English';
+    const targetLang = languageNames[langCode] || 'English';
 
     const prompt = `
       Translate this complete persona identity label to ${targetLang}:
@@ -465,7 +468,7 @@ export const translateFullPersonaLabel = async (
     stanceLogger.operationSuccess(opId, 'translateFullPersonaLabel', {
       original: fullLabel,
       translated: translatedLabel,
-      targetLanguage
+      targetLanguage: langCode
     });
 
     return translatedLabel;

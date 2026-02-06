@@ -48,6 +48,12 @@ const StanseApp: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [hasSetInitialView, setHasSetInitialView] = useState(false);
+
+  // Scroll to top when view changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [view]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedTextForAI, setSelectedTextForAI] = useState<string>('');
   const [showChatButton, setShowChatButton] = useState(() => {
@@ -70,6 +76,16 @@ const StanseApp: React.FC = () => {
   const { t, language } = useLanguage();
   const { user, userProfile: authUserProfile, logout, loading, updateCoordinates, hasCompletedOnboarding } = useAuth();
 
+  // Set initial view based on onboarding status after user profile loads
+  useEffect(() => {
+    if (user && authUserProfile && !hasSetInitialView && !loading) {
+      if (!hasCompletedOnboarding) {
+        setView(ViewState.FINGERPRINT);
+      }
+      setHasSetInitialView(true);
+    }
+  }, [user, authUserProfile, hasCompletedOnboarding, hasSetInitialView, loading]);
+
   // Use profile from Firebase or fallback to initial
   const userProfile = authUserProfile?.coordinates || INITIAL_PROFILE;
 
@@ -77,6 +93,10 @@ const StanseApp: React.FC = () => {
   const [senseResult, setSenseResult] = useState<BrandAlignment | null>(null);
   const [senseQuery, setSenseQuery] = useState('');
   const [senseFecData, setSenseFecData] = useState<FECCompanyData | null>(null);
+
+  // Target news for scrolling from Globe marker click
+  const [targetNewsId, setTargetNewsId] = useState<string | null>(null);
+  const [targetFeedIndex, setTargetFeedIndex] = useState<number | null>(null);
 
   // Note: We intentionally do NOT clear the sense report when coordinates change.
   // The report should persist until the user manually searches again.
@@ -87,7 +107,7 @@ const StanseApp: React.FC = () => {
 
   // Track user online presence and recover state
   useEffect(() => {
-    if (user) {
+    if (user && authUserProfile) {
       console.log('[App] Setting up presence for user:', user.uid, authUserProfile?.coordinates);
 
       // Recover any abandoned state first
@@ -95,12 +115,12 @@ const StanseApp: React.FC = () => {
         console.warn('[App] State recovery failed:', err);
       });
 
-      // Set user online and track activity
+      // Set user online and track activity - only when authUserProfile is loaded
       const cleanup = setUserOnline(user.uid, {
-        email: user.email || undefined,
-        personaLabel: authUserProfile?.coordinates?.label || 'Unknown',
-        stanceType: authUserProfile?.coordinates?.nationalityPrefix || 'Unknown',
-        coreStanceType: authUserProfile?.coordinates?.coreStanceType
+        email: authUserProfile.email || user.email || 'unknownuser@stanse.ai',  // Use profile email first (includes generated emails for Twitter/Apple)
+        personaLabel: authUserProfile.coordinates?.label || 'Unknown',
+        stanceType: authUserProfile.coordinates?.nationalityPrefix || 'Unknown',
+        coreStanceType: authUserProfile.coordinates?.coreStanceType
       });
 
       return cleanup;
@@ -191,7 +211,9 @@ const StanseApp: React.FC = () => {
   }, [user, authUserProfile, language, showSplash]);
 
   const handleLogin = () => {
-    setView(ViewState.FEED);
+    // Reset the initial view flag so useEffect can set the correct view
+    // based on the user's onboarding status after profile loads
+    setHasSetInitialView(false);
   };
 
   const handleTourComplete = async () => {
@@ -282,6 +304,12 @@ const StanseApp: React.FC = () => {
               setSelectedTextForAI(text);
               setIsChatOpen(true);
             }}
+            targetNewsId={targetNewsId}
+            targetFeedIndex={targetFeedIndex}
+            onTargetNewsIdClear={() => {
+              setTargetNewsId(null);
+              setTargetFeedIndex(null);
+            }}
           />
         );
       case ViewState.SENSE:
@@ -295,6 +323,10 @@ const StanseApp: React.FC = () => {
               currentCountry: demographics.currentCountry
             } : undefined}
             onNavigate={setView}
+            onNavigateToNews={(feedIndex, newsId) => {
+              setTargetFeedIndex(feedIndex);
+              setTargetNewsId(newsId);
+            }}
             onRecalibrate={handleRecalibrate}
             persistedResult={senseResult}
             onResultChange={setSenseResult}
@@ -324,6 +356,12 @@ const StanseApp: React.FC = () => {
             onTextSelected={(text) => {
               setSelectedTextForAI(text);
               setIsChatOpen(true);
+            }}
+            targetNewsId={targetNewsId}
+            targetFeedIndex={targetFeedIndex}
+            onTargetNewsIdClear={() => {
+              setTargetNewsId(null);
+              setTargetFeedIndex(null);
             }}
           />
         );

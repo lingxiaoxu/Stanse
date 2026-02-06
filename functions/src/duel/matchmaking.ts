@@ -23,7 +23,7 @@ const GEMINI_SECRET_NAME = 'gemini-api-key';
 const MAX_PING_DIFF = 60; // Maximum ping difference (ms)
 const MAX_FEE_DIFF = 1; // Maximum entry fee difference ($)
 const QUEUE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
-const AI_OPPONENT_WAIT_TIME = 30 * 1000; // Wait 30s before creating AI opponent
+const AI_OPPONENT_WAIT_TIME = 11 * 1000; // Wait 11s before creating AI opponent
 
 // Feature flag - use RTDB for queue (complete migration)
 const USE_RTDB_QUEUE = true;

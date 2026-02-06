@@ -1,6 +1,6 @@
 
-import React, { useState, useRef, useCallback, lazy, Suspense } from 'react';
-import { Search, ShieldAlert, CheckCircle, FileText, ExternalLink, Users, Newspaper, Twitter, Activity, X, ThumbsUp, ThumbsDown, AlertTriangle, DollarSign, Camera, RotateCcw, Scan, Globe } from 'lucide-react';
+import React, { useState, useRef, useCallback, lazy, Suspense, useEffect } from 'react';
+import { Search, ShieldAlert, CheckCircle, FileText, ExternalLink, Users, Newspaper, Twitter, Activity, X, ThumbsUp, ThumbsDown, AlertTriangle, DollarSign, Camera, RotateCcw, Scan, Globe, Pause, Play } from 'lucide-react';
 import { PixelCard } from '../ui/PixelCard';
 import { PixelButton } from '../ui/PixelButton';
 import { analyzeBrandAlignment, UserDemographicsForAnalysis, recognizeBrandedProduct } from '../../services/geminiService';
@@ -10,6 +10,9 @@ import { detectDeviceType, detectBrowser } from '../../services/locationService'
 import { PoliticalCoordinates, BrandAlignment, ViewState } from '../../types';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAppState } from '../../contexts/AppStateContext';
+import { fetchMarkersForFeedNews, fetchNonNewsMarkers, analyzeEntityLocation, GlobeMarker, clusterMarkers } from '../../services/globeService';
+import { MarkerDetailModal } from '../globe/MarkerDetailModal';
 
 // 懒加载地球组件以提升初始加载性能
 const GlobeViewer = lazy(() => import('../globe/GlobeViewer').then(module => ({ default: module.GlobeViewer })));
@@ -18,6 +21,7 @@ interface SenseViewProps {
   userProfile: PoliticalCoordinates;
   userDemographics?: UserDemographicsForAnalysis;
   onNavigate: (view: ViewState) => void;
+  onNavigateToNews?: (feedIndex: number, newsId: string) => void;  // 从 Globe 跳转到 Feed 指定新闻
   onRecalibrate?: (entityName: string, stance: 'SUPPORT' | 'OPPOSE', reason?: string) => Promise<void>;
   // Lifted state for persistence across tab switches
   persistedResult?: BrandAlignment | null;
@@ -33,10 +37,27 @@ const formatElectionCycle = (year: number): string => {
   return `${year - 1}-${year}`;
 };
 
+// Helper function to properly capitalize entity names
+const capitalizeEntityName = (name: string): string => {
+  // Common acronyms that should stay uppercase
+  const acronyms = ['IBM', 'AMD', 'HP', 'AT&T', 'BMW', 'UPS', 'USA', 'UK', 'EU', 'CEO', 'CFO', 'CTO', 'AI', 'API'];
+
+  return name.split(' ').map(word => {
+    const upperWord = word.toUpperCase();
+    // If the word is an acronym, keep it uppercase
+    if (acronyms.includes(upperWord)) {
+      return upperWord;
+    }
+    // Otherwise, capitalize first letter
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  }).join(' ');
+};
+
 export const SenseView: React.FC<SenseViewProps> = ({
   userProfile,
   userDemographics,
   onNavigate,
+  onNavigateToNews,
   onRecalibrate,
   persistedResult,
   onResultChange,
@@ -46,6 +67,7 @@ export const SenseView: React.FC<SenseViewProps> = ({
   onFecDataChange
 }) => {
   const { user } = useAuth();
+  const { feedNews, globeMarkers, setGlobeMarkers, globeMarkersLoading, setGlobeMarkersLoading } = useAppState();
 
   // Use persisted state if available, otherwise fall back to local state
   const [localQuery, setLocalQuery] = useState('');
@@ -77,6 +99,71 @@ export const SenseView: React.FC<SenseViewProps> = ({
   const [imageSearchBrand, setImageSearchBrand] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Globe state
+  const [selectedMarker, setSelectedMarker] = useState<GlobeMarker | null>(null);
+  const [isGlobePaused, setIsGlobePaused] = useState(false);
+  const [focusedMarkerId, setFocusedMarkerId] = useState<string | null>(null);
+
+  // Ref for scrolling to Sense Report
+  const senseReportRef = useRef<HTMLDivElement>(null);
+
+  // 当 feedNews 变化时，同步更新 globe markers
+  useEffect(() => {
+    if (feedNews.length > 0) {
+      loadMarkersFromFeedNews();
+    }
+  }, [feedNews]);
+
+  // 从 feedNews 加载对应的位置标记
+  const loadMarkersFromFeedNews = async () => {
+    console.log('🌍 loadMarkersFromFeedNews called, feedNews count:', feedNews.length);
+    setGlobeMarkersLoading(true);
+    try {
+      // 并行获取：1) feedNews 的位置 2) 非新闻类标记（用户位置、冲突区域等）
+      const [newsMarkers, otherMarkers] = await Promise.all([
+        fetchMarkersForFeedNews(feedNews),
+        fetchNonNewsMarkers()
+      ]);
+
+      console.log('🌍 NEWS markers:', newsMarkers.length, newsMarkers.map(m => m.type));
+      console.log('🌍 Other markers:', otherMarkers.length, otherMarkers.map(m => m.type));
+
+      // 合并所有标记，并去重
+      const allMarkers = [...newsMarkers, ...otherMarkers];
+      const seenTitles = new Set<string>();
+      const uniqueMarkers = allMarkers.filter(m => {
+        // 对于新闻类型（NEWS, BREAKING），只用 title 去重
+        // 因为同一条新闻可能有多个位置记录但 id 不同
+        if (m.type === 'NEWS' || m.type === 'BREAKING') {
+          const titleKey = m.title.toLowerCase().trim();
+          if (seenTitles.has(titleKey)) {
+            console.log('🌍 Duplicate marker removed by title:', m.title);
+            return false;
+          }
+          seenTitles.add(titleKey);
+          return true;
+        }
+        // 其他类型用 id 去重
+        const idKey = m.id;
+        if (seenTitles.has(idKey)) {
+          console.log('🌍 Duplicate marker removed by id:', m.id);
+          return false;
+        }
+        seenTitles.add(idKey);
+        return true;
+      });
+
+      // 为每个标记找到附近的标记（用于悬停时一起显示）
+      const clusteredMarkers = clusterMarkers(uniqueMarkers);
+      console.log('🌍 Total markers:', allMarkers.length, '-> Unique:', uniqueMarkers.length, '-> With nearby:', clusteredMarkers.length);
+      setGlobeMarkers(clusteredMarkers);
+    } catch (error) {
+      console.error('Failed to load globe markers:', error);
+    } finally {
+      setGlobeMarkersLoading(false);
+    }
+  };
 
   // Start camera
   const startCamera = useCallback(async () => {
@@ -224,13 +311,31 @@ export const SenseView: React.FC<SenseViewProps> = ({
     setResult(null);
     setFecData(null);
     try {
-      // Query both Gemini and FEC data in parallel
-      const [brandData, fecResult] = await Promise.all([
+      // Query Gemini, FEC data, and entity location in parallel
+      const [brandData, fecResult, entityMarker] = await Promise.all([
         analyzeBrandAlignment(query, userProfile, userDemographics, user?.uid),
-        queryCompanyFECData(query)
+        queryCompanyFECData(query),
+        analyzeEntityLocation(query)
       ]);
       setResult(brandData);
       setFecData(fecResult);
+
+      // Add entity location to globe markers
+      if (entityMarker) {
+        // Capitalize the title properly
+        const capitalizedMarker = {
+          ...entityMarker,
+          title: capitalizeEntityName(entityMarker.title)
+        };
+        // 移除之前的搜索结果，添加新的
+        const updatedMarkers = [
+          capitalizedMarker,
+          ...globeMarkers.filter((m: GlobeMarker) => m.type !== 'SEARCH_RESULT')
+        ];
+        setGlobeMarkers(updatedMarkers);
+        // Focus on the new search result marker (triggers rotation + blinking)
+        setFocusedMarkerId(capitalizedMarker.id);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -280,7 +385,20 @@ export const SenseView: React.FC<SenseViewProps> = ({
         <div className="px-6 pt-6 pb-4">
           <div className="font-mono text-xs font-bold uppercase tracking-wide flex items-center gap-2">
             <Globe size={14} />
-            GLOBAL INTELLIGENCE MAP
+            {t('sense', 'globe_title')}
+            <span className="ml-auto flex items-center gap-2">
+              {/* 暂停/播放按钮 */}
+              <button
+                onClick={() => setIsGlobePaused(!isGlobePaused)}
+                className="p-1 border border-black hover:bg-black hover:text-white transition-colors"
+                title={isGlobePaused ? 'Resume rotation' : 'Pause rotation'}
+              >
+                {isGlobePaused ? <Play size={12} /> : <Pause size={12} />}
+              </button>
+              <span className="text-[10px] opacity-50">
+                {globeMarkers.length} {t('sense', 'globe_markers_count')}
+              </span>
+            </span>
           </div>
         </div>
         <div style={{ height: '450px', width: '100%' }}>
@@ -289,13 +407,44 @@ export const SenseView: React.FC<SenseViewProps> = ({
               <div className="font-mono text-xs text-gray-400">Loading globe...</div>
             </div>
           }>
-            <GlobeViewer />
+            <GlobeViewer
+              markers={globeMarkers}
+              paused={isGlobePaused}
+              onPausedChange={setIsGlobePaused}
+              onMarkerClick={(marker) => {
+                setSelectedMarker(marker);
+                // If clicking search result, scroll to Sense Report
+                if (marker.type === 'SEARCH_RESULT' && senseReportRef.current) {
+                  setTimeout(() => {
+                    senseReportRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 100);
+                }
+              }}
+              focusedMarkerId={focusedMarkerId}
+              onFocusClear={() => setFocusedMarkerId(null)}
+            />
           </Suspense>
         </div>
         <p className="font-mono text-[10px] text-gray-500 text-center py-4">
-          Drag to rotate • Scroll to zoom
+          {t('sense', 'globe_hint')}
         </p>
       </PixelCard>
+
+      {/* Marker Detail Modal */}
+      {selectedMarker && (
+        <MarkerDetailModal
+          marker={selectedMarker}
+          onClose={() => setSelectedMarker(null)}
+          onNavigate={(feedIndex, newsId) => {
+            // 跳转到 Feed 视图并滚动到对应新闻
+            console.log('Navigate to news:', feedIndex, newsId);
+            setSelectedMarker(null);
+            // 先设置目标新闻索引和 ID，再跳转到 Feed
+            onNavigateToNews?.(feedIndex, newsId);
+            onNavigate(ViewState.FEED);
+          }}
+        />
+      )}
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-12 space-y-4 opacity-50">
@@ -307,7 +456,7 @@ export const SenseView: React.FC<SenseViewProps> = ({
       )}
 
       {result && (
-        <div className="animate-fade-in">
+        <div ref={senseReportRef} className="animate-fade-in">
           {/* INTELLIGENCE REPORT CARD */}
           <PixelCard className="!p-0 overflow-hidden">
             {/* Header / File Tab */}
