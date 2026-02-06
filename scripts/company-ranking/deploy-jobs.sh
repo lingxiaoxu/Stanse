@@ -93,7 +93,7 @@ gcloud run jobs create fec-donations-collector \
     --image=gcr.io/${PROJECT_ID}/${IMAGE_NAME}:latest \
     --region=${REGION} \
     --project=${PROJECT_ID} \
-    --set-secrets=FMP_API_KEY=FMP_API_KEY:latest,POLYGON_API_KEY=polygon-api-key:latest,SENDGRID_API_KEY=SENDGRID_API_KEY:latest \
+    --set-secrets=GEMINI_API_KEY=gemini-api-key:latest,FMP_API_KEY=FMP_API_KEY:latest,POLYGON_API_KEY=polygon-api-key:latest,SENDGRID_API_KEY=SENDGRID_API_KEY:latest \
     --max-retries=1 \
     --task-timeout=30m \
     --memory=512Mi \
@@ -104,7 +104,8 @@ gcloud run jobs create fec-donations-collector \
     gcloud run jobs update fec-donations-collector \
         --image=gcr.io/${PROJECT_ID}/${IMAGE_NAME}:latest \
         --region=${REGION} \
-        --project=${PROJECT_ID}
+        --project=${PROJECT_ID} \
+        --set-secrets=GEMINI_API_KEY=gemini-api-key:latest,FMP_API_KEY=FMP_API_KEY:latest,POLYGON_API_KEY=polygon-api-key:latest,SENDGRID_API_KEY=SENDGRID_API_KEY:latest
 
 echo "✅ FEC job created/updated"
 echo ""
@@ -126,7 +127,8 @@ gcloud run jobs create esg-scores-collector \
     gcloud run jobs update esg-scores-collector \
         --image=gcr.io/${PROJECT_ID}/${IMAGE_NAME}:latest \
         --region=${REGION} \
-        --project=${PROJECT_ID}
+        --project=${PROJECT_ID} \
+        --set-secrets=FMP_API_KEY=FMP_API_KEY:latest,SENDGRID_API_KEY=SENDGRID_API_KEY:latest
 
 echo "✅ ESG job created/updated"
 echo ""
@@ -148,7 +150,8 @@ gcloud run jobs create polygon-news-collector \
     gcloud run jobs update polygon-news-collector \
         --image=gcr.io/${PROJECT_ID}/${IMAGE_NAME}:latest \
         --region=${REGION} \
-        --project=${PROJECT_ID}
+        --project=${PROJECT_ID} \
+        --set-secrets=POLYGON_API_KEY=polygon-api-key:latest,SENDGRID_API_KEY=SENDGRID_API_KEY:latest
 
 echo "✅ Polygon News job created/updated"
 echo ""
@@ -170,7 +173,8 @@ gcloud run jobs create executive-statements-analyzer \
     gcloud run jobs update executive-statements-analyzer \
         --image=gcr.io/${PROJECT_ID}/${IMAGE_NAME}:latest \
         --region=${REGION} \
-        --project=${PROJECT_ID}
+        --project=${PROJECT_ID} \
+        --set-secrets=GEMINI_API_KEY=gemini-api-key:latest,SENDGRID_API_KEY=SENDGRID_API_KEY:latest
 
 echo "✅ Executive Statements job created/updated"
 echo ""
