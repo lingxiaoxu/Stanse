@@ -156,8 +156,13 @@ export const generatePersonaDescription = async (
   const socialInterp = interpretCoordinate(coordinates.social, 'social');
   const diplomaticInterp = interpretCoordinate(coordinates.diplomatic, 'diplomatic');
 
+  // Safely access arrays with fallback to empty array
+  const questionAnswers = politicalPreferences?.questionAnswers || [];
+  const warStances = politicalPreferences?.warStances || [];
+  const conflictStances = politicalPreferences?.conflictStances || [];
+
   // Map question IDs to full text
-  const questionsText = politicalPreferences.questionAnswers.map(qa => {
+  const questionsText = questionAnswers.map(qa => {
     const q = POLITICAL_QUESTIONS.find(item => item.id === qa.questionId);
     if (!q) return null;
     const answer = qa.answer === 'A' ? q.optionA : qa.answer === 'B' ? q.optionB : 'Neutral/No opinion';
@@ -165,7 +170,7 @@ export const generatePersonaDescription = async (
   }).filter(Boolean).join('\n');
 
   // Map war stances
-  const warsText = politicalPreferences.warStances.map(ws => {
+  const warsText = warStances.map(ws => {
     const war = CURRENT_WARS.find(w => w.warId === ws.warId);
     if (!war) return null;
     const side = ws.stance === 'SIDE_A' ? ws.sideAName : ws.stance === 'SIDE_B' ? ws.sideBName : 'Neutral';
@@ -173,7 +178,7 @@ export const generatePersonaDescription = async (
   }).filter(Boolean).join('\n');
 
   // Map conflict stances
-  const conflictsText = politicalPreferences.conflictStances.map(cs => {
+  const conflictsText = conflictStances.map(cs => {
     const conflict = CURRENT_CONFLICTS.find(c => c.conflictId === cs.conflictId);
     if (!conflict) return null;
     const position = cs.stance === 'SUPPORT' ? 'Supports' : cs.stance === 'OPPOSE' ? 'Opposes' : 'Neutral on';
@@ -184,9 +189,9 @@ export const generatePersonaDescription = async (
   const prompt = `Generate a standardized 300-400 word persona description for a news reader based on their political profile.
 
 USER DATA:
-- Identity: ${nationalityPrefix}, age ${demographics.age}
-- Born in: ${demographics.birthCountry}
-- Currently living in: ${demographics.currentState}, ${demographics.currentCountry}
+- Identity: ${nationalityPrefix}, age ${demographics?.age || 'unknown'}
+- Born in: ${demographics?.birthCountry || 'unknown'}
+- Currently living in: ${demographics?.currentState || 'unknown'}, ${demographics?.currentCountry || 'unknown'}
 - Political coordinates:
   * Economic: ${coordinates.economic} (${economicInterp})
   * Social: ${coordinates.social} (${socialInterp})
@@ -265,19 +270,24 @@ const generateFallbackDescription = (
   const { demographics, politicalPreferences } = answers;
   const nationalityPrefix = coordinates.nationalityPrefix || 'American';
 
+  // Safely access arrays with fallback
+  const warStances = politicalPreferences?.warStances || [];
+
   // Simple concatenation of all data
   const parts = [
-    `This user is a ${nationalityPrefix} individual, age ${demographics.age}, born in ${demographics.birthCountry} and currently residing in ${demographics.currentState}, ${demographics.currentCountry}.`,
+    `This user is a ${nationalityPrefix} individual, age ${demographics?.age || 'unknown'}, born in ${demographics?.birthCountry || 'unknown'} and currently residing in ${demographics?.currentState || 'unknown'}, ${demographics?.currentCountry || 'unknown'}.`,
 
     `Politically, they are ${interpretCoordinate(coordinates.economic, 'economic')} (economic score: ${coordinates.economic}).`,
     `Socially, they are ${interpretCoordinate(coordinates.social, 'social')} (social score: ${coordinates.social}).`,
     `Diplomatically, they are ${interpretCoordinate(coordinates.diplomatic, 'diplomatic')} (diplomatic score: ${coordinates.diplomatic}).`,
 
-    `This user most supports "${politicalPreferences.mostSupportedInitiative}" and most opposes "${politicalPreferences.mostHatedInitiative}".`,
+    `This user most supports "${politicalPreferences?.mostSupportedInitiative || 'not specified'}" and most opposes "${politicalPreferences?.mostHatedInitiative || 'not specified'}".`,
 
-    `Their stance on current conflicts: ${politicalPreferences.warStances.map(ws =>
-      `${ws.warName} (${ws.stance === 'SIDE_A' ? ws.sideAName : ws.stance === 'SIDE_B' ? ws.sideBName : 'neutral'})`
-    ).join(', ')}.`,
+    warStances.length > 0
+      ? `Their stance on current conflicts: ${warStances.map(ws =>
+          `${ws.warName} (${ws.stance === 'SIDE_A' ? ws.sideAName : ws.stance === 'SIDE_B' ? ws.sideBName : 'neutral'})`
+        ).join(', ')}.`
+      : 'No specific stance on current conflicts recorded.',
 
     `Overall, their worldview aligns with the "${coordinates.coreStanceType || 'centrist'}" stance type.`
   ];
