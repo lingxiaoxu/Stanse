@@ -76,6 +76,9 @@ export const AgentModeChat: React.FC<Props> = ({
   // Store last request for retry functionality
   const [lastRequest, setLastRequest] = useState<{ input: string; files: File[] } | null>(null);
 
+  // Ref to track current input for onFinish callback (avoids stale closure)
+  const currentInputRef = React.useRef<string>('');
+
   // Ref for auto-scroll (matching chat.tsx)
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
@@ -250,6 +253,16 @@ export const AgentModeChat: React.FC<Props> = ({
     return BASE_APP_KEYWORDS.some(keyword => text.toLowerCase().includes(keyword.toLowerCase()));
   }
 
+  // VAI (Value Aligned Investing) app keywords detection
+  const VAI_APP_KEYWORDS = [
+    'vai app', 'vai investing', 'value aligned investing', 'value aligned investing app',
+    '价值观投资的app', '价值观投资模版', '价值观投资', 'vai模版', 'vai template'
+  ];
+
+  function isVAIAppRequest(text: string): boolean {
+    return VAI_APP_KEYWORDS.some(keyword => text.toLowerCase().includes(keyword.toLowerCase()));
+  }
+
   // Analytics placeholder (posthog equivalent)
   const trackEvent = (eventName: string, properties?: any) => {
     console.log(`[Analytics] ${eventName}`, properties);
@@ -375,13 +388,15 @@ export const AgentModeChat: React.FC<Props> = ({
         setCodeTab('preview');
 
         // Save to Firebase chat history with agent metadata
-        if (user && lastRequest) {
+        // Use currentInputRef.current instead of lastRequest.input to avoid stale closure
+        const savedInput = currentInputRef.current;
+        if (user && savedInput) {
           try {
             const title = (generatedAgent as any)?.title || 'Code Generated';
             const commentary = (generatedAgent as any)?.commentary || 'Code has been generated successfully';
             const historyCount = await saveChatMessage(
               user.uid,
-              lastRequest.input,
+              savedInput, // Use ref value (always current) instead of stale state
               `**${title}**\n\n${commentary}`,
               LLMProvider.EMBER,
               generatedAgent, // Save agent code object
@@ -392,6 +407,7 @@ export const AgentModeChat: React.FC<Props> = ({
             if (historyCount > 5) {
               await clearOldestMessage(user.uid);
             }
+            console.log('[Agent Mode] Chat history saved successfully');
           } catch (saveError) {
             console.error('[Agent Mode] Failed to save chat history:', saveError);
           }
@@ -478,6 +494,8 @@ export const AgentModeChat: React.FC<Props> = ({
 
     // Save request for retry
     setLastRequest({ input, files: agentFiles });
+    // Also save to ref for onFinish callback (avoids stale closure issue)
+    currentInputRef.current = input;
 
     // Check for base app request (lines 199-252)
     if (isBaseAppRequest(input)) {
@@ -538,11 +556,12 @@ export const AgentModeChat: React.FC<Props> = ({
         });
 
         // Save to Firebase chat history (matching normal flow)
-        if (user && lastRequest) {
+        // Note: Use `input` directly instead of `lastRequest.input` because setLastRequest is async
+        if (user) {
           try {
             const historyCount = await saveChatMessage(
               user.uid,
-              lastRequest.input,
+              input, // Use input directly (available in closure) instead of lastRequest
               `**${baseApp.title}**\n\n${baseApp.commentary}`,
               LLMProvider.EMBER,
               baseApp, // Save base app code object
@@ -553,6 +572,7 @@ export const AgentModeChat: React.FC<Props> = ({
             if (historyCount > 5) {
               await clearOldestMessage(user.uid);
             }
+            console.log('[Agent Mode] Base app saved to chat history');
           } catch (saveError) {
             console.error('[Agent Mode] Failed to save base app to chat history:', saveError);
           }
@@ -567,6 +587,99 @@ export const AgentModeChat: React.FC<Props> = ({
                        language === 'FR' ? 'Échec du chargement de base app' :
                        language === 'ES' ? 'Error al cargar base app' :
                        'Failed to load base app');
+      }
+    }
+
+    // Check for VAI (Value Aligned Investing) app request - parallel to base app
+    if (isVAIAppRequest(input)) {
+      try {
+        // Add user message with proper structure
+        const userMessage: ChatMessage = {
+          id: `${Date.now()}-user`,
+          role: 'user',
+          content: input,
+          timestamp: new Date().toISOString(),
+          provider: LLMProvider.EMBER
+        };
+        setMessages(prev => [...prev, userMessage]);
+
+        const response = await fetch(`${STANSEAGENT_API_URL}/api/vai-app`);
+        const vaiApp = await response.json();
+        setGeneratedCode(vaiApp);
+
+        // Add assistant message with proper structure (matching normal flow)
+        const assistantMessage: ChatMessage = {
+          id: `${Date.now()}-assistant`,
+          role: 'assistant',
+          content: `**${vaiApp.title}**\n\n${vaiApp.commentary}`,
+          timestamp: new Date().toISOString(),
+          provider: LLMProvider.EMBER,
+          object: vaiApp, // Add object for preview card
+          result: null // Will be updated after deployment
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+
+        // Track VAI app generation
+        trackEvent('stanseAgent_generated', { template: vaiApp.template });
+
+        // Deploy VAI app to E2B sandbox (same as base app)
+        const sandboxResponse = await fetch(`${STANSEAGENT_API_URL}/api/sandbox`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stanseAgent: vaiApp, userID: user.uid })
+        });
+        const result = await sandboxResponse.json();
+
+        // Track sandbox creation
+        trackEvent('sandbox_created', { url: result.url });
+
+        setSandboxResult(result);
+        setCodeTab('preview');
+
+        // Update assistant message with result
+        setMessages(prev => {
+          const updated = [...prev];
+          if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
+            updated[updated.length - 1] = {
+              ...updated[updated.length - 1],
+              result: result
+            };
+          }
+          return updated;
+        });
+
+        // Save to Firebase chat history (matching normal flow)
+        // Note: Use `input` directly instead of `lastRequest.input` because setLastRequest is async
+        if (user) {
+          try {
+            const historyCount = await saveChatMessage(
+              user.uid,
+              input, // Use input directly (available in closure) instead of lastRequest
+              `**${vaiApp.title}**\n\n${vaiApp.commentary}`,
+              LLMProvider.EMBER,
+              vaiApp, // Save VAI app code object
+              result // Save sandbox execution result
+            );
+
+            // Clear oldest if exceeds limit
+            if (historyCount > 5) {
+              await clearOldestMessage(user.uid);
+            }
+            console.log('[Agent Mode] VAI app saved to chat history');
+          } catch (saveError) {
+            console.error('[Agent Mode] Failed to save VAI app to chat history:', saveError);
+          }
+        }
+
+        setInput('');
+        return;
+      } catch (err) {
+        console.error('[Agent Mode] VAI app failed:', err);
+        setErrorMessage(language === 'ZH' ? 'VAI app 加载失败' :
+                       language === 'JA' ? 'VAI appの読み込みに失敗しました' :
+                       language === 'FR' ? 'Échec du chargement de VAI app' :
+                       language === 'ES' ? 'Error al cargar VAI app' :
+                       'Failed to load VAI app');
       }
     }
 
