@@ -478,6 +478,14 @@ export const AgentModeChat: React.FC<Props> = ({
     }
   }, [messages, isLoading, error, errorMessage]);
 
+  // Stop handler - wraps SDK stop() and cleans up the queue
+  const handleStop = () => {
+    // Clear pending request from queue since we're cancelling
+    const cancelledRequest = pendingRequestsRef.current.shift();
+    console.log('[Agent Mode] User stopped - dequeued request:', cancelledRequest, 'Remaining queue:', pendingRequestsRef.current.length);
+    stop();
+  };
+
   // Retry handler
   const handleRetry = () => {
     if (!lastRequest) return;
@@ -499,6 +507,13 @@ export const AgentModeChat: React.FC<Props> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !user) return;
+
+    // CRITICAL: Prevent concurrent requests - only one request at a time
+    // This ensures each request's onFinish is called before the next request starts
+    if (isLoading) {
+      console.log('[Agent Mode] Request blocked - already loading');
+      return;
+    }
 
     // Save request for retry
     setLastRequest({ input, files: agentFiles });
@@ -1021,7 +1036,7 @@ export const AgentModeChat: React.FC<Props> = ({
                     {isLoading ? (
                       <button
                         type="button"
-                        onClick={stop}
+                        onClick={handleStop}
                         className="bg-red-600 text-white p-3 hover:bg-red-700 border-2 border-black transition-colors flex-shrink-0"
                         title={language === 'ZH' ? '停止生成' :
                                language === 'JA' ? '生成を停止' :
@@ -1180,7 +1195,7 @@ export const AgentModeChat: React.FC<Props> = ({
                 {isLoading ? (
                   <button
                     type="button"
-                    onClick={stop}
+                    onClick={handleStop}
                     className="bg-red-600 text-white p-3 hover:bg-red-700 border-2 border-black transition-colors flex-shrink-0"
                     title={language === 'ZH' ? '停止生成' :
                            language === 'JA' ? '生成を停止' :
