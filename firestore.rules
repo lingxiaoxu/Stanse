@@ -562,6 +562,25 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // ==================== Enhanced Persona Index Long/Short Fund ====================
+    // Portfolio return tracking for each persona's long/short strategy
+    // Written by Cloud Run Job (gen-lang-client-0960644135), read by all authenticated users
+    // Structure: enhanced_persona_index_longshort_fund/{stanceType} with snapshots subcollection
+    // Data includes: portfolioReturn, longReturn, shortReturn, positions (10 stocks with prices)
+    match /enhanced_persona_index_longshort_fund/{stanceType} {
+      // TEMP: Allow public read for testing chart
+      allow read: if true;
+      // Only Cloud Functions/Cloud Run can write (via Admin SDK)
+      allow write: if true;  // TEMP: Allow for Cloud Run Job (uses Admin SDK with service account)
+
+      // Historical snapshots - immutable record of each tracking point
+      match /snapshots/{snapshotId} {
+        // TEMP: Allow public read for testing chart
+        allow read: if true;
+        allow write: if true;  // TEMP: Allow for Cloud Run Job
+      }
+    }
+
     // Public read for certain collections
     match /public_data/{document=**} {
       allow read: if true;

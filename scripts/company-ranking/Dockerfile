@@ -33,6 +33,8 @@ COPY scripts/company-ranking/04-analyze-executive-statements.py ./
 COPY scripts/company-ranking/05-generate-enhanced-rankings.py ./
 COPY scripts/company-ranking/email_notifier.py ./
 COPY scripts/company-ranking/check-firebase-schema.py ./
+COPY scripts/company-ranking/06-track-portfolio-returns.py ./
+COPY scripts/company-ranking/07-backfill-portfolio-returns.py ./
 COPY scripts/company-ranking/verification/ ./verification/
 COPY scripts/company-ranking/maintenance/ ./maintenance/
 

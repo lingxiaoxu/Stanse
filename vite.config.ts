@@ -28,7 +28,8 @@ export default defineConfig(({ mode }) => {
           input: {
             main: path.resolve(__dirname, 'index.html'),
             test: path.resolve(__dirname, 'tests/test-typescript-rankings.html'),
-            'test-enhanced': path.resolve(__dirname, 'tests/test-enhanced-rankings.html')
+            'test-enhanced': path.resolve(__dirname, 'tests/test-enhanced-rankings.html'),
+            'portfolio-chart': path.resolve(__dirname, 'tests/portfolio-chart.html')
           }
         }
       }
