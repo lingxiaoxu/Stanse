@@ -76,8 +76,9 @@ export const AgentModeChat: React.FC<Props> = ({
   // Store last request for retry functionality
   const [lastRequest, setLastRequest] = useState<{ input: string; files: File[] } | null>(null);
 
-  // Ref to track current input for onFinish callback (avoids stale closure)
-  const currentInputRef = React.useRef<string>('');
+  // Queue to track pending requests with their inputs (FIFO order)
+  // Each request is identified by timestamp and input value
+  const pendingRequestsRef = React.useRef<Array<{ id: number; input: string }>>([]);
 
   // Ref for auto-scroll (matching chat.tsx)
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
@@ -285,6 +286,10 @@ export const AgentModeChat: React.FC<Props> = ({
     onError: (error) => {
       console.error('[Agent Mode] Error:', error);
 
+      // Dequeue the failed request to keep queue in sync
+      const failedRequest = pendingRequestsRef.current.shift();
+      console.log('[Agent Mode] Error - dequeued failed request:', failedRequest, 'Remaining queue:', pendingRequestsRef.current.length);
+
       // Use api-errors.ts logic for better error categorization
       if (isRateLimitError(error)) {
         setErrorMessage(language === 'ZH' ? '已达到请求限制。请稍后再试或使用您自己的 API 密钥。' :
@@ -388,15 +393,18 @@ export const AgentModeChat: React.FC<Props> = ({
         setCodeTab('preview');
 
         // Save to Firebase chat history with agent metadata
-        // Use currentInputRef.current instead of lastRequest.input to avoid stale closure
-        const savedInput = currentInputRef.current;
+        // Dequeue the oldest pending request (FIFO) to get the correct input for this response
+        const pendingRequest = pendingRequestsRef.current.shift();
+        const savedInput = pendingRequest?.input;
+        console.log('[Agent Mode] Dequeued request:', pendingRequest, 'Remaining queue:', pendingRequestsRef.current.length);
+
         if (user && savedInput) {
           try {
             const title = (generatedAgent as any)?.title || 'Code Generated';
             const commentary = (generatedAgent as any)?.commentary || 'Code has been generated successfully';
             const historyCount = await saveChatMessage(
               user.uid,
-              savedInput, // Use ref value (always current) instead of stale state
+              savedInput, // Use dequeued input (correct for this response)
               `**${title}**\n\n${commentary}`,
               LLMProvider.EMBER,
               generatedAgent, // Save agent code object
@@ -407,7 +415,7 @@ export const AgentModeChat: React.FC<Props> = ({
             if (historyCount > 5) {
               await clearOldestMessage(user.uid);
             }
-            console.log('[Agent Mode] Chat history saved successfully');
+            console.log('[Agent Mode] Chat history saved successfully for input:', savedInput);
           } catch (saveError) {
             console.error('[Agent Mode] Failed to save chat history:', saveError);
           }
@@ -494,8 +502,10 @@ export const AgentModeChat: React.FC<Props> = ({
 
     // Save request for retry
     setLastRequest({ input, files: agentFiles });
-    // Also save to ref for onFinish callback (avoids stale closure issue)
-    currentInputRef.current = input;
+    // Add to pending requests queue for onFinish callback to dequeue (FIFO)
+    const requestId = Date.now();
+    pendingRequestsRef.current.push({ id: requestId, input });
+    console.log('[Agent Mode] Enqueued request:', requestId, input, 'Queue size:', pendingRequestsRef.current.length);
 
     // Check for base app request (lines 199-252)
     if (isBaseAppRequest(input)) {
@@ -577,6 +587,10 @@ export const AgentModeChat: React.FC<Props> = ({
             console.error('[Agent Mode] Failed to save base app to chat history:', saveError);
           }
         }
+
+        // Remove this request from the queue since we handled it directly (not via onFinish)
+        pendingRequestsRef.current = pendingRequestsRef.current.filter(r => r.id !== requestId);
+        console.log('[Agent Mode] Base app: removed request from queue, remaining:', pendingRequestsRef.current.length);
 
         setInput('');
         return;
@@ -670,6 +684,10 @@ export const AgentModeChat: React.FC<Props> = ({
             console.error('[Agent Mode] Failed to save VAI app to chat history:', saveError);
           }
         }
+
+        // Remove this request from the queue since we handled it directly (not via onFinish)
+        pendingRequestsRef.current = pendingRequestsRef.current.filter(r => r.id !== requestId);
+        console.log('[Agent Mode] VAI app: removed request from queue, remaining:', pendingRequestsRef.current.length);
 
         setInput('');
         return;
