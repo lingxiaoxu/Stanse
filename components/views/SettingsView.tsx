@@ -43,7 +43,12 @@ export const SettingsView: React.FC = () => {
   const [isRequestingCamera, setIsRequestingCamera] = useState(false);
   const hasRequestedCamera = useRef(false);
   const { t, language, setLanguage } = useLanguage();
-  const { resetOnboarding, hasCompletedOnboarding, demoMode, setDemoMode, user } = useAuth();
+  const { resetOnboarding, hasCompletedOnboarding, demoMode, setDemoMode, user, deleteAccount } = useAuth();
+
+  // Delete account state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Load saved location and notification status on mount
   // IMPORTANT: Always check BROWSER's actual permission state first, as it's the source of truth
@@ -397,6 +402,23 @@ export const SettingsView: React.FC = () => {
     return t('settings', 'sub_camera');
   };
 
+  // Handle delete account
+  const handleDeleteAccount = async () => {
+    if (!user?.uid) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteAccount();
+      // User will be automatically signed out and redirected to login
+    } catch (error: any) {
+      console.error('Delete account error:', error);
+      setDeleteError(error.message || 'Failed to delete account');
+      setIsDeleting(false);
+    }
+  };
+
   // Track if any settings have been modified from defaults
   useEffect(() => {
     const isModified =
@@ -625,10 +647,53 @@ export const SettingsView: React.FC = () => {
       </PixelCard>
 
       <div className="text-center pt-8">
-        <button className="font-mono text-xs text-red-500 hover:underline uppercase tracking-widest">
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="font-mono text-xs text-red-500 hover:underline uppercase tracking-widest"
+        >
             {t('settings', 'delete')}
         </button>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white border-4 border-black p-6 max-w-md w-full">
+            <h3 className="font-pixel text-xl mb-4 text-center text-red-600">
+              {t('settings', 'delete_confirm_title')}
+            </h3>
+            <p className="font-mono text-sm mb-6 text-center text-gray-700">
+              {t('settings', 'delete_confirm_message')}
+            </p>
+
+            {deleteError && (
+              <div className="mb-4 p-3 border-2 border-red-500 bg-red-50 text-red-600 font-mono text-xs">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteError(null);
+                }}
+                disabled={isDeleting}
+                className="px-6 py-2 font-mono text-sm border-2 border-black bg-white hover:bg-gray-100 disabled:opacity-50"
+              >
+                {t('settings', 'delete_cancel')}
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                className="px-6 py-2 font-mono text-sm border-2 border-red-600 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {isDeleting ? t('settings', 'delete_deleting') : t('settings', 'delete_confirm_btn')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

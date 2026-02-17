@@ -8,7 +8,8 @@ import {
   signInWithTwitter,
   signInWithApple,
   logOut,
-  resetPassword
+  resetPassword,
+  deleteAccount as deleteAccountService
 } from '../services/authService';
 import { getUserProfile, updateUserCoordinates, saveOnboardingAnswers, resetUserOnboarding, UserProfile } from '../services/userService';
 import { PoliticalCoordinates, OnboardingAnswers } from '../types';
@@ -39,6 +40,7 @@ interface AuthContextType {
   updateCoordinates: (coords: PoliticalCoordinates) => Promise<void>;
   completeOnboarding: (answers: OnboardingAnswers, language?: string) => Promise<PoliticalCoordinates>;
   resetOnboarding: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   clearError: () => void;
   refreshProfile: () => Promise<void>;
 }
@@ -555,6 +557,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const clearError = () => setError(null);
 
+  const deleteAccount = async () => {
+    setError(null);
+    try {
+      // Stop heartbeat before deletion
+      if (user?.uid && heartbeatIntervalRef.current) {
+        await stopHeartbeat(user.uid, heartbeatIntervalRef.current);
+      }
+
+      // Clear presence from RTDB
+      if (user?.uid) {
+        const { rtdb } = await import('../services/firebase');
+        const { ref, remove } = await import('firebase/database');
+        const presenceRef = ref(rtdb, `presence/${user.uid}`);
+        await remove(presenceRef).catch(err => {
+          console.warn('[DeleteAccount] Failed to clear presence:', err);
+        });
+      }
+
+      // Delete account (transfers data to users_deleted, then deletes from Auth)
+      await deleteAccountService();
+
+      // Clear local state
+      setUserProfile(null);
+      setUser(null);
+    } catch (err: any) {
+      if (err.message === 'REQUIRES_RECENT_LOGIN') {
+        setError('For security reasons, please log out and log back in before deleting your account.');
+      } else {
+        setError(err.message?.replace(/^Firebase:\s*/i, '') || 'Failed to delete account');
+      }
+      throw err;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     userProfile,
@@ -573,6 +609,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateCoordinates,
     completeOnboarding,
     resetOnboarding,
+    deleteAccount,
     clearError,
     refreshProfile
   };

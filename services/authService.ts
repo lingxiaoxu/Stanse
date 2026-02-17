@@ -10,9 +10,10 @@ import {
   sendPasswordResetEmail,
   updateProfile,
   getAdditionalUserInfo,
+  deleteUser,
   User
 } from 'firebase/auth';
-import { collection, getCountFromServer } from 'firebase/firestore';
+import { collection, getCountFromServer, doc, getDoc, setDoc, deleteDoc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { createUserProfile, getUserProfile } from './userService';
 import { PoliticalCoordinates, SocialPlatform } from '../types';
@@ -226,4 +227,100 @@ export const subscribeToAuthState = (
 // Get Current User
 export const getCurrentUser = (): User | null => {
   return auth.currentUser;
+};
+
+// Subcollections to transfer when deleting account
+const USER_SUBCOLLECTIONS = [
+  'chatHistory',
+  'ember_cost_sessions',
+  'market_analysis_cache',
+  'users_countries_locations'
+];
+
+// Delete Account - Transfer data to users_deleted and remove from Authentication
+export const deleteAccount = async (): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('No authenticated user found');
+  }
+
+  const userId = user.uid;
+  console.log(`[authService] Starting account deletion for user ${userId}`);
+
+  try {
+    // Step 1: Get the user's main document
+    const userDocRef = doc(db, 'users', userId);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (!userDocSnap.exists()) {
+      console.warn(`[authService] User document not found for ${userId}, proceeding with auth deletion`);
+    }
+
+    // Step 2: Prepare the deleted user document
+    const deletedUserDocRef = doc(db, 'users_deleted', userId);
+    const deletionTimestamp = new Date().toISOString();
+
+    // Copy main user document to users_deleted
+    if (userDocSnap.exists()) {
+      const userData = userDocSnap.data();
+      await setDoc(deletedUserDocRef, {
+        ...userData,
+        deletedAt: deletionTimestamp,
+        deletedAtServer: serverTimestamp(),
+        originalUserId: userId
+      });
+      console.log(`[authService] Transferred main user document to users_deleted`);
+    }
+
+    // Step 3: Transfer all subcollections
+    for (const subcollectionName of USER_SUBCOLLECTIONS) {
+      try {
+        const subcollectionRef = collection(db, 'users', userId, subcollectionName);
+        const subcollectionSnap = await getDocs(subcollectionRef);
+
+        if (!subcollectionSnap.empty) {
+          console.log(`[authService] Transferring ${subcollectionSnap.size} docs from ${subcollectionName}`);
+
+          // Copy each document to users_deleted subcollection
+          for (const docSnap of subcollectionSnap.docs) {
+            const targetDocRef = doc(db, 'users_deleted', userId, subcollectionName, docSnap.id);
+            await setDoc(targetDocRef, {
+              ...docSnap.data(),
+              _transferredAt: deletionTimestamp
+            });
+          }
+
+          // Delete original documents from subcollection
+          for (const docSnap of subcollectionSnap.docs) {
+            await deleteDoc(doc(db, 'users', userId, subcollectionName, docSnap.id));
+          }
+          console.log(`[authService] Deleted ${subcollectionSnap.size} docs from ${subcollectionName}`);
+        }
+      } catch (subcollectionError) {
+        console.error(`[authService] Error processing subcollection ${subcollectionName}:`, subcollectionError);
+        // Continue with other subcollections
+      }
+    }
+
+    // Step 4: Delete the main user document from users collection
+    if (userDocSnap.exists()) {
+      await deleteDoc(userDocRef);
+      console.log(`[authService] Deleted main user document from users collection`);
+    }
+
+    // Step 5: Delete the user from Firebase Authentication
+    await deleteUser(user);
+    console.log(`[authService] Deleted user from Firebase Authentication`);
+
+    console.log(`[authService] Account deletion completed for user ${userId}`);
+  } catch (error: any) {
+    console.error('[authService] Error deleting account:', error);
+
+    // Check if it's a re-authentication required error
+    if (error.code === 'auth/requires-recent-login') {
+      throw new Error('REQUIRES_RECENT_LOGIN');
+    }
+
+    throw error;
+  }
 };
