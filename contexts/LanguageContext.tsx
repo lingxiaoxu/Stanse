@@ -25,6 +25,7 @@ const TRANSLATIONS = {
         btn: "ESTABLISH LINK",
         google: "CONTINUE WITH GOOGLE",
         twitter: "CONTINUE WITH X",
+        apple: "CONTINUE WITH APPLE",
         protocol: "Zero-Knowledge Protocol",
         sign_up_prompt: "Don't have an account? Sign Up",
         sign_in_prompt: "Already have an account? Sign In",
@@ -398,6 +399,11 @@ const TRANSLATIONS = {
         reset_all_desc: "Reset everything and retake questionnaire",
         demo: "DEMO MODE",
         delete: "Delete Account & Wipe Local Data",
+        delete_confirm_title: "Delete Your Account?",
+        delete_confirm_message: "This action cannot be undone. All your data will be permanently deleted from Stanse. Your account information cannot be restored after deletion.",
+        delete_cancel: "CANCEL",
+        delete_confirm_btn: "DELETE ACCOUNT",
+        delete_deleting: "DELETING...",
         sub_notif: "Alerts for campaign updates",
         sub_loc: "For local store scanning only",
         sub_strict: "Warn on 'Neutral' alignment",
@@ -474,6 +480,7 @@ const TRANSLATIONS = {
         btn: "建立连接",
         google: "通过 GOOGLE 继续",
         twitter: "通过 X 继续",
+        apple: "通过 APPLE 继续",
         protocol: "零知识证明协议",
         sign_up_prompt: "还没有账户？注册",
         sign_in_prompt: "已有账户？登录",
@@ -847,6 +854,11 @@ const TRANSLATIONS = {
         reset_all_desc: "重置一切并重新问卷",
         demo: "演示模式",
         delete: "删除账户并清除本地数据",
+        delete_confirm_title: "确定删除账户？",
+        delete_confirm_message: "此操作无法撤销。您的所有数据将从Stanse永久删除。删除后您的账户信息将无法恢复。",
+        delete_cancel: "取消",
+        delete_confirm_btn: "删除账户",
+        delete_deleting: "删除中...",
         sub_notif: "战役更新提醒",
         sub_loc: "仅用于本地商店扫描",
         sub_strict: "对'中立'对齐发出警告",
@@ -923,6 +935,7 @@ const TRANSLATIONS = {
         btn: "リンク確立",
         google: "GOOGLEで続行",
         twitter: "Xで続行",
+        apple: "APPLEで続行",
         protocol: "ゼロ知識証明プロトコル",
         sign_up_prompt: "アカウントをお持ちでない方は？登録",
         sign_in_prompt: "既にアカウントをお持ちですか？サインイン",
@@ -1296,6 +1309,11 @@ const TRANSLATIONS = {
         reset_all_desc: "すべてリセットして再受験",
         demo: "デモモード",
         delete: "アカウント削除とデータ消去",
+        delete_confirm_title: "アカウントを削除しますか？",
+        delete_confirm_message: "この操作は取り消せません。すべてのデータがStanseから完全に削除されます。削除後、アカウント情報は復元できません。",
+        delete_cancel: "キャンセル",
+        delete_confirm_btn: "アカウント削除",
+        delete_deleting: "削除中...",
         sub_notif: "キャンペーン更新のアラート",
         sub_loc: "ローカル店舗スキャン用",
         sub_strict: "「中立」アライメントに警告",
@@ -1372,6 +1390,7 @@ const TRANSLATIONS = {
         btn: "ÉTABLIR LIEN",
         google: "CONTINUER AVEC GOOGLE",
         twitter: "CONTINUER AVEC X",
+        apple: "CONTINUER AVEC APPLE",
         protocol: "Protocole à Divulgation Nulle",
         sign_up_prompt: "Pas de compte ? S'inscrire",
         sign_in_prompt: "Déjà un compte ? Se connecter",
@@ -1737,6 +1756,11 @@ const TRANSLATIONS = {
         reset_all_desc: "Tout réinitialiser et refaire le questionnaire",
         demo: "MODE DÉMO",
         delete: "Supprimer Compte & Données",
+        delete_confirm_title: "Supprimer votre compte ?",
+        delete_confirm_message: "Cette action est irréversible. Toutes vos données seront définitivement supprimées de Stanse. Vos informations ne pourront pas être restaurées après la suppression.",
+        delete_cancel: "ANNULER",
+        delete_confirm_btn: "SUPPRIMER LE COMPTE",
+        delete_deleting: "SUPPRESSION...",
         sub_notif: "Alertes mises à jour campagnes",
         sub_loc: "Pour scan magasins locaux",
         sub_strict: "Avertir sur alignement 'Neutre'",
@@ -1813,6 +1837,7 @@ const TRANSLATIONS = {
         btn: "ESTABLECER ENLACE",
         google: "CONTINUAR CON GOOGLE",
         twitter: "CONTINUAR CON X",
+        apple: "CONTINUAR CON APPLE",
         protocol: "Protocolo de Conocimiento Cero",
         sign_up_prompt: "¿No tienes cuenta? Regístrate",
         sign_in_prompt: "¿Ya tienes cuenta? Iniciar sesión",
@@ -2181,6 +2206,11 @@ const TRANSLATIONS = {
         reset_all_desc: "Restablecer y repetir cuestionario",
         demo: "MODO DEMO",
         delete: "Borrar Cuenta y Datos",
+        delete_confirm_title: "¿Eliminar tu cuenta?",
+        delete_confirm_message: "Esta acción no se puede deshacer. Todos tus datos serán eliminados permanentemente de Stanse. Tu información no podrá ser restaurada después de la eliminación.",
+        delete_cancel: "CANCELAR",
+        delete_confirm_btn: "ELIMINAR CUENTA",
+        delete_deleting: "ELIMINANDO...",
         sub_notif: "Alertas actualizaciones campañas",
         sub_loc: "Para escaneo tiendas locales",
         sub_strict: "Advertir en alineación 'Neutra'",
@@ -2249,8 +2279,28 @@ export const LanguageContext = createContext<LanguageContextType>({
   t: () => ""
 });
 
+// Detect browser language and map to supported Language enum
+const detectBrowserLanguage = (): Language => {
+  const browserLang = navigator.language || (navigator as any).userLanguage || 'en';
+  const langCode = browserLang.toLowerCase().split('-')[0]; // 'zh-CN' -> 'zh', 'en-US' -> 'en'
+
+  switch (langCode) {
+    case 'zh':
+      return Language.ZH;
+    case 'ja':
+      return Language.JA;
+    case 'fr':
+      return Language.FR;
+    case 'es':
+      return Language.ES;
+    case 'en':
+    default:
+      return Language.EN;
+  }
+};
+
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>(Language.EN);
+  const [language, setLanguage] = useState<Language>(() => detectBrowserLanguage());
 
   const t = (section: string, key?: string): any => {
     const translations = TRANSLATIONS[language] as any;

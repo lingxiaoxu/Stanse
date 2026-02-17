@@ -10,6 +10,20 @@ service cloud.firestore {
       allow list: if request.auth != null && request.query.limit == null;
     }
 
+    // 已删除用户数据 - 用户删除账户时转移数据到此集合
+    // Users can only write to their own userId document (for account deletion)
+    // No read access - data is archived for backup purposes only
+    match /users_deleted/{userId} {
+      allow read: if false; // Archived data - no read access
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // Subcollections (chatHistory, ember_cost_sessions, etc.)
+      match /{subcollection}/{docId} {
+        allow read: if false;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
     // Polis Protocol user data
     match /polis_users/{userId} {
       allow read: if request.auth != null;
@@ -393,7 +407,9 @@ service cloud.firestore {
       // User countries locations subcollection
       match /users_countries_locations/{locationId} {
         allow read: if request.auth != null && request.auth.uid == userId;
-        allow write: if false; // Only Cloud Functions can write
+        // Cloud Functions can write, users can delete their own data (for account deletion)
+        allow create, update: if false; // Only Cloud Functions can create/update
+        allow delete: if request.auth != null && request.auth.uid == userId;
       }
     }
 
