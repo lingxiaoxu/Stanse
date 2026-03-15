@@ -1,18 +1,19 @@
 # Stanse Documentation Index
 
-**Last Updated:** 2026-01-22
+**Last Updated:** 2026-03-16
 
 ## Documentation Structure
 
 All documentation files are numbered sequentially within their respective folders to maintain order and avoid conflicts.
 
 ### Numbering Convention
-- Backend: `01` to `56` (continuous)
-- Frontend: `00` to `20` (continuous)
+- Backend: `01` to `77` (continuous)
+- Frontend: `00` to `27` (continuous)
+- ML: `01` to `02` (continuous)
 
 ---
 
-## 🔧 Backend Documentation (56 files)
+## 🔧 Backend Documentation (77 files)
 
 **Location**: [documentation/backend/](backend/)
 
@@ -71,7 +72,7 @@ All documentation files are numbered sequentially within their respective folder
 44. [44_duel_arena_backend_integration.md](backend/44_duel_arena_backend_integration.md) - Duel backend
 45. [45_duel_image_generation_with_backup_keys.md](backend/45_duel_image_generation_with_backup_keys.md) - Image generation
 46. [46_adc_token_refresh_for_duel_scripts.md](backend/46_adc_token_refresh_for_duel_scripts.md) - ADC token refresh
-47. [47_realtime_database_structure.md](backend/47_realtime_database_structure.md) - Realtime DB
+47. [47_realtime_database_structure.md](backend/47_realtime_database_structure.md) - Realtime DB structure
 48. [48_duel_pvp_critical_issues.md](backend/48_duel_pvp_critical_issues.md) - Critical issues
 
 ### News & Content Systems (49-56)
@@ -84,9 +85,36 @@ All documentation files are numbered sequentially within their respective folder
 55. [55_china_news_data_structure_visual.md](backend/55_china_news_data_structure_visual.md) - China news visual
 56. [56_gemini_api_key_security_audit_2026_01_22.md](backend/56_gemini_api_key_security_audit_2026_01_22.md) - ⭐ Gemini security audit
 
+### Ember AI Framework (57-64)
+57. [57_ember_secret_manager_integration_2026_01_24.md](backend/57_ember_secret_manager_integration_2026_01_24.md) - Ember Secret Manager integration
+58. [58_ai_chat_ember_integration_architecture_design_2026_01_24.md](backend/58_ai_chat_ember_integration_architecture_design_2026_01_24.md) - Ember AI chat architecture
+59. [59_ember_ai_chat_implementation_complete_2026_01_24.md](backend/59_ember_ai_chat_implementation_complete_2026_01_24.md) - Ember AI chat implementation
+60. [60_ember_implementation_checklist_2026_01_24.md](backend/60_ember_implementation_checklist_2026_01_24.md) - Ember implementation checklist
+61. [61_ember_production_deployment_guide_2026_01_24.md](backend/61_ember_production_deployment_guide_2026_01_24.md) - Ember production deployment guide
+62. [62_ember_complete_deployment_guide_2026_01_24.md](backend/62_ember_complete_deployment_guide_2026_01_24.md) - Ember complete deployment guide
+63. [63_ember_deployment_lessons_learned_2026_01_25.md](backend/63_ember_deployment_lessons_learned_2026_01_25.md) - Ember deployment lessons
+64. [64_ember_firestore_data_structure_2026_01_25.md](backend/64_ember_firestore_data_structure_2026_01_25.md) - Ember Firestore data structure
+
+### StanseAgent & Intelligence Map (65-72)
+65. [65_e2b_intelligence_agent_architecture_design_2026_01_27.md](backend/65_e2b_intelligence_agent_architecture_design_2026_01_27.md) - E2B intelligence agent architecture
+66. [66_stanseagent_vs_intelligence_agent_comparison_2026_01_31.md](backend/66_stanseagent_vs_intelligence_agent_comparison_2026_01_31.md) - StanseAgent vs intelligence agent
+67. [67_stanseagent_secret_manager_migration_2026_01_29.md](backend/67_stanseagent_secret_manager_migration_2026_01_29.md) - StanseAgent Secret Manager migration
+68. [68_global_intelligence_map_technical_design_2026_01_31.md](backend/68_global_intelligence_map_technical_design_2026_01_31.md) - Global intelligence map design
+69. [69_user_location_subcollection_design_2026_01_31.md](backend/69_user_location_subcollection_design_2026_01_31.md) - User location subcollection design
+70. [70_globe_map_implementation_summary_2026_01_31.md](backend/70_globe_map_implementation_summary_2026_01_31.md) - Globe map implementation summary
+71. [71_phase1_implementation_complete_2026_01_31.md](backend/71_phase1_implementation_complete_2026_01_31.md) - Phase 1 implementation complete
+72. [72_initialization_scripts_guide_2026_01_31.md](backend/72_initialization_scripts_guide_2026_01_31.md) - Initialization scripts guide
+
+### S&P 500 Expansion & Deployment (73-77)
+73. [73_presence_polis_blockchain_analysis_2026_02_02.md](backend/73_presence_polis_blockchain_analysis_2026_02_02.md) - Presence & Polis blockchain analysis
+74. [74_sp500_expansion_phase1_125_companies_2026_02_04.md](backend/74_sp500_expansion_phase1_125_companies_2026_02_04.md) - S&P 500 expansion phase 1
+75. [75_batch1_data_collection_execution_guide_2026_02_04.md](backend/75_batch1_data_collection_execution_guide_2026_02_04.md) - Batch 1 data collection guide
+76. [76_phase1_deployment_complete_2026_02_06.md](backend/76_phase1_deployment_complete_2026_02_06.md) - Phase 1 deployment complete
+77. [77_cloud_run_traffic_routing_guide_2026_02_07.md](backend/77_cloud_run_traffic_routing_guide_2026_02_07.md) - Cloud Run traffic routing guide
+
 ---
 
-## 🎨 Frontend Documentation (20 files)
+## 🎨 Frontend Documentation (28 files)
 
 **Location**: [documentation/frontend/](frontend/)
 
@@ -117,15 +145,36 @@ All documentation files are numbered sequentially within their respective folder
 19. [19_china_news_translation_and_ui_fixes.md](frontend/19_china_news_translation_and_ui_fixes.md) - Translation fixes
 
 ### AI Chat Assistant (20)
-20. [20_ai_chat_assistant_implementation.md](frontend/20_ai_chat_assistant_implementation.md) - ⭐ **NEW** - AI Chat complete implementation
+20. [20_ai_chat_assistant_implementation.md](frontend/20_ai_chat_assistant_implementation.md) - ⭐ AI Chat complete implementation
+
+### Ember AI Chat Frontend (21-24)
+21. [21_ember_ai_chat_integration_final_summary_2026_01_24.md](frontend/21_ember_ai_chat_integration_final_summary_2026_01_24.md) - Ember AI chat integration summary
+22. [22_ember_api_quickstart_guide_2026_01_24.md](frontend/22_ember_api_quickstart_guide_2026_01_24.md) - Ember API quickstart guide
+23. [23_ember_frontend_integration_checklist_2026_01_24.md](frontend/23_ember_frontend_integration_checklist_2026_01_24.md) - Ember frontend integration checklist
+24. [24_ember_final_deployment_complete_2026_01_25.md](frontend/24_ember_final_deployment_complete_2026_01_25.md) - Ember final deployment complete
+
+### Agent Mode & Social (25-27)
+25. [25_agent_mode_integration_2026_01_29.md](frontend/25_agent_mode_integration_2026_01_29.md) - Agent mode integration
+26. [26_agent_mode_mobile_portrait_layout_improvements.md](frontend/26_agent_mode_mobile_portrait_layout_improvements.md) - Agent mode mobile layout
+27. [27_social_media_posts_2026_02_02.md](frontend/27_social_media_posts_2026_02_02.md) - Social media posts
+
+---
+
+## 🤖 ML Documentation (2 files)
+
+**Location**: [documentation/ml/](ml/)
+
+1. [01_local_model_training_plan.md](ml/01_local_model_training_plan.md) - Local model training plan
+2. [02_feature_roadmap_for_b2b_api.md](ml/02_feature_roadmap_for_b2b_api.md) - Feature roadmap for B2B API
 
 ---
 
 ## 🚀 Next Available Numbers
 
 When creating new documentation:
-- **Backend:** Use number `57` and above
-- **Frontend:** Use number `21` and above
+- **Backend:** Use number `78` and above
+- **Frontend:** Use number `28` and above
+- **ML:** Use number `03` and above
 
 ---
 
@@ -136,8 +185,8 @@ When creating new documentation:
 ```
 
 **Examples:**
-- `57_new_backend_feature.md`
-- `21_ui_component_library.md`
+- `78_new_backend_feature.md`
+- `28_ui_component_library.md`
 
 ---
 
@@ -148,97 +197,76 @@ When creating new documentation:
 3. **Update Index:** Update this file when adding new documentation
 4. **Cross-References:** Link to related documents using relative paths
 5. **Date Stamps:** Include date in content for time-sensitive documentation
-6. **Folder Organization:** Backend goes to `backend/`, Frontend to `frontend/`
+6. **Folder Organization:** Backend goes to `backend/`, Frontend to `frontend/`, ML to `ml/`
 
 ---
 
 ## 🎯 Quick Reference by Topic
 
 ### For New Developers
-**Read these first**:
 1. [Frontend README](frontend/02_project_readme.md) - Understand the project
 2. [Backend Quick Start](backend/07_quick_start_guide.md) - Set up the backend
 3. [API Audit Report](backend/10_api_audit_report.md) - Learn the API
 4. [Issues & Recommendations](backend/15_issues_and_recommendations.md) - Known issues
 
-### For API Integration
-**Essential files**:
-- [API Audit Report](backend/10_api_audit_report.md) - Complete API reference
-- [Firebase Integration](backend/14_firebase_polis_integration_complete.md) - Firebase setup
-- [Production Features](backend/18_production_mode_real_features.md) - Production capabilities
-
 ### For Security
-**Security documentation**:
 - [API Key Security Guide](backend/28_api_key_security_guide.md) - API key best practices
 - [Security Checklist](backend/40_security_checklist.md) - Security checklist
-- [Gemini Security Audit](backend/56_gemini_api_key_security_audit_2026_01_22.md) - ⭐ Latest audit (2026-01-22)
+- [Gemini Security Audit](backend/56_gemini_api_key_security_audit_2026_01_22.md) - Gemini audit
+- [StanseAgent Secret Manager Migration](backend/67_stanseagent_secret_manager_migration_2026_01_29.md) - Secret Manager
 
 ### For Deployment
-**Deployment guides**:
 - [Deployment Checklist](backend/36_deployment_checklist.md) - Deployment steps
-- [Final Deployment Ready](backend/34_final_deployment_ready.md) - Deployment readiness
-- [Company Ranking Deployment](backend/39_company_ranking_deployment.md) - Rankings deployment
+- [Cloud Run Traffic Routing](backend/77_cloud_run_traffic_routing_guide_2026_02_07.md) - ⭐ Traffic routing fix
+- [Phase 1 Deployment Complete](backend/76_phase1_deployment_complete_2026_02_06.md) - Latest deployment
 
 ### For Architecture
-**Architecture documentation**:
-- [FEC Firebase Architecture](backend/21_fec_firebase_architecture.md) - FEC architecture
-- [FEC Consolidated Architecture](backend/31_fec_consolidated_architecture.md) - Consolidated FEC
-- [Multilanguage News Architecture](backend/52_multilanguage_news_feed_architecture.md) - News architecture
+- [Multilanguage News Feed Architecture](backend/52_multilanguage_news_feed_architecture.md) - News architecture
+- [Global Intelligence Map Design](backend/68_global_intelligence_map_technical_design_2026_01_31.md) - Globe map
+- [Realtime Database Structure](backend/47_realtime_database_structure.md) - RTDB structure
 - [Dual Stance System](backend/42_dual_stance_system_and_persona_expansion.md) - Persona expansion
 
----
+### For Ember AI Framework
+- [Ember Secret Manager Integration](backend/57_ember_secret_manager_integration_2026_01_24.md) - Secret Manager
+- [Ember AI Chat Architecture](backend/58_ai_chat_ember_integration_architecture_design_2026_01_24.md) - Architecture
+- [Ember Complete Deployment Guide](backend/62_ember_complete_deployment_guide_2026_01_24.md) - Deployment
+- [Ember API Quickstart](frontend/22_ember_api_quickstart_guide_2026_01_24.md) - Frontend quickstart
 
-## 📊 Special Categories
+### For News System
+- [RSS Multilingual News System](backend/50_rss_multilingual_news_system.md) - RSS system
+- [Multilanguage News Architecture](backend/52_multilanguage_news_feed_architecture.md) - Architecture
+- [China News Structure](backend/54_china_news_collection_data_structure.md) - China news
 
-### Latest Features (2026-01-22)
-- ⭐ [AI Chat Assistant](frontend/20_ai_chat_assistant_implementation.md) - Complete multi-provider AI chat
-- ⭐ [Gemini Security Audit](backend/56_gemini_api_key_security_audit_2026_01_22.md) - API key security audit
-
-### Security Documentation
-- [API Key Security Guide](backend/28_api_key_security_guide.md)
-- [Security Checklist](backend/40_security_checklist.md)
-- [Gemini Security Audit](backend/56_gemini_api_key_security_audit_2026_01_22.md)
-
-### Deployment Documentation
-- [Final Deployment Ready](backend/34_final_deployment_ready.md)
-- [Deployment Checklist](backend/36_deployment_checklist.md)
-- [Company Ranking Deployment](backend/39_company_ranking_deployment.md)
-
-### Architecture Documentation
-- [FEC Firebase Architecture](backend/21_fec_firebase_architecture.md)
-- [FEC Consolidated Architecture](backend/31_fec_consolidated_architecture.md)
-- [Multilanguage News Feed Architecture](backend/52_multilanguage_news_feed_architecture.md)
+### For Duel Arena
+- [Duel Arena Backend](backend/44_duel_arena_backend_integration.md) - Backend integration
+- [Duel Arena PVP System](frontend/12_duel_arena_pvp_system.md) - Frontend
+- [Realtime Database Structure](backend/47_realtime_database_structure.md) - RTDB
 
 ---
 
-## 🔍 Project Status Overview
+## 📊 Project Status Overview
 
-**Last Full Test**: 2025-11-27
-**Last Updated**: 2026-01-22
+**Last Updated**: 2026-03-16
 
 ### Backend (Polis Protocol)
 - ✅ **Status**: Production Ready
 - ✅ **API Endpoints**: 14 active endpoints
 - ✅ **Blockchain**: Real blockchain implementation (verified)
-- ✅ **Tests Passed**: 23/23 comprehensive tests
 
 ### Backend (FEC Data System)
 - ✅ **Status**: Operational
-- ✅ **Collections**: 5 Firebase collections
-- ✅ **Data**: 2024 election cycle data loaded
-- ✅ **Queries**: Optimized with indexes
+- ✅ **S&P 500**: 125 companies (Phase 1 complete)
 
 ### Frontend (React + TypeScript)
 - ✅ **Status**: Production Ready
-- ✅ **Integration**: Connected to backend
-- ✅ **Features**: Feed, Sense, Stance, Union tabs
-- ✅ **AI Chat**: Multi-provider chat assistant
 - ✅ **Languages**: 5 languages (EN, ZH, JA, FR, ES)
+- ✅ **AI Chat**: Ember framework integrated
+- ✅ **Agent Mode**: Intelligence agent active
 
-### Integration
-- ✅ **Firebase ↔ Polis**: Fully integrated
-- ✅ **Frontend ↔ Backend**: All API endpoints connected
-- ✅ **Real-time Updates**: Live data synchronization
+### Cloud Infrastructure
+- ✅ **Cloud Run**: stanse, polis-protocol, stanseagent, ember-api
+- ✅ **Firebase Functions**: 31 functions deployed (stanseproject)
+- ✅ **Cloud Scheduler**: 7 scheduled jobs (gen-lang-client-0960644135)
 
 ---
 
@@ -246,32 +274,15 @@ When creating new documentation:
 
 ### Review Schedule
 - **Quarterly reviews**
-- **Last Review:** 2026-01-22
-- **Next Review:** 2026-04-22
-
-### When to Update This Index
-- After major feature additions
-- After API changes
-- After resolving critical issues
-- After production deployment
-- When adding new documentation files
+- **Last Review:** 2026-03-16
+- **Next Review:** 2026-06-16
 
 ### How to Add New Documentation
-1. Place in appropriate folder (`backend/` or `frontend/`)
+1. Place in appropriate folder (`backend/`, `frontend/`, or `ml/`)
 2. Follow naming convention: `{number}_{descriptive_name}.md`
 3. Use next available number for the folder
 4. Update this index file with the new entry
 5. Update "Last Updated" date at the top
-6. Add to relevant category sections
-
----
-
-## 📧 Contact & Support
-
-For questions about documentation:
-- Check [Issues & Recommendations](backend/15_issues_and_recommendations.md) first
-- Review [Quick Start Guide](backend/07_quick_start_guide.md) for setup
-- Consult [API Audit Report](backend/10_api_audit_report.md) for API questions
 
 ---
 
