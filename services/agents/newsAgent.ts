@@ -522,6 +522,109 @@ export const fetch6ParkNews = async (): Promise<AgentResponse<RawNewsItem[]>> =>
 };
 
 /**
+ * Fetch news from Yahoo Japan News (news.yahoo.co.jp)
+ * Uses Gemini Search Grounding to get latest Japanese news
+ * Fallback for when Google News RSS is blocked
+ */
+export const fetchYahooJapanNews = async (): Promise<AgentResponse<RawNewsItem[]>> => {
+  const opId = newsLogger.operationStart('fetchYahooJapan', { source: 'news.yahoo.co.jp' });
+  const startTime = Date.now();
+
+  try {
+    newsLogger.debug('fetchYahooJapan', 'Fetching Japanese news via Google Search grounding');
+
+    const prompt = `
+      Search for the latest Japanese news headlines from news.yahoo.co.jp (Yahoo!ニュース), NHK, Asahi Shimbun, or similar Japanese news sources.
+
+      Find 5-8 important news stories about:
+      - Japanese politics and government (政治)
+      - International news (国際)
+      - Economy and business (経済・ビジネス)
+      - Technology (テクノロジー)
+      - Military and defense (防衛)
+
+      Format your response EXACTLY like this (use this exact format):
+
+      ---NEWS_ITEM---
+      TITLE: [Original Japanese title - keep in Japanese]
+      SUMMARY: [Brief summary in Japanese, max 200 characters - keep in Japanese]
+      CATEGORY: [one of: POLITICS, WORLD, BUSINESS, TECH, MILITARY]
+      ---END_ITEM---
+
+      IMPORTANT: Keep ALL content in original Japanese (日本語). Do NOT translate to English.
+      Repeat this format for each news item. Focus on factual news from major Japanese news sources.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+      }
+    });
+
+    const rawText = response.text || '';
+    newsLogger.debug('fetchYahooJapan', 'Raw response length: ' + rawText.length);
+
+    const newsItems: RawNewsItem[] = [];
+    const itemBlocks = rawText.split('---NEWS_ITEM---').filter(block => block.includes('---END_ITEM---'));
+
+    for (const block of itemBlocks) {
+      const titleMatch = block.match(/TITLE:\s*(.+?)(?=\n|SUMMARY:)/s);
+      const summaryMatch = block.match(/SUMMARY:\s*(.+?)(?=\n|CATEGORY:)/s);
+      const categoryMatch = block.match(/CATEGORY:\s*(.+?)(?=\n|---END_ITEM---)/s);
+
+      if (titleMatch && summaryMatch && categoryMatch) {
+        const category = categoryMatch[1].trim().toUpperCase();
+        const validCategories = ['POLITICS', 'WORLD', 'BUSINESS', 'TECH', 'MILITARY'];
+
+        newsItems.push({
+          title: titleMatch[1].trim(),
+          summary: summaryMatch[1].trim(),
+          url: '',
+          source: 'Yahoo Japan/Japanese Media',
+          publishedAt: new Date(),
+          language: 'ja' as const,
+          category: validCategories.includes(category) ? category : 'WORLD',
+          sourceType: 'yahoo-japan' as const
+        });
+      }
+    }
+
+    newsLogger.operationSuccess(opId, 'fetchYahooJapan', {
+      newsCount: newsItems.length,
+      categories: [...new Set(newsItems.map(n => n.category))]
+    });
+
+    newsLogger.summary('fetchYahooJapan', {
+      totalNews: newsItems.length,
+      processingTimeMs: Date.now() - startTime
+    });
+
+    return {
+      success: true,
+      data: newsItems,
+      metadata: {
+        source: 'yahoo-japan-news',
+        timestamp: new Date(),
+        processingTime: Date.now() - startTime
+      }
+    };
+  } catch (error: any) {
+    newsLogger.operationFailed(opId, 'fetchYahooJapan', error);
+    return {
+      success: false,
+      error: error.message,
+      metadata: {
+        source: 'yahoo-japan-news',
+        timestamp: new Date(),
+        processingTime: Date.now() - startTime
+      }
+    };
+  }
+};
+
+/**
  * Process raw news items into standardized format
  * Translates non-English content and generates images
  */
@@ -827,12 +930,15 @@ export const fetchAllNews = async (
   // Fetch from Google News RSS (primary source for multi-language)
   newsLogger.info('fetchAllNews', `Fetching from Google News RSS (${language})...`);
   const rssResult = await fetchGoogleNewsRSS(rssCategories, language);
-  if (rssResult.success && rssResult.data) {
+  if (rssResult.success && rssResult.data && rssResult.data.length > 0) {
     newsLogger.info('fetchAllNews', `RSS returned ${rssResult.data.length} items`);
     allRawNews.push(...rssResult.data);
-  } else if (rssResult.error) {
-    newsLogger.warn('fetchAllNews', `RSS failed: ${rssResult.error}`);
-    errors.push(`RSS: ${rssResult.error}`);
+  } else {
+    const reason = rssResult.error || `RSS returned 0 items for language: ${language}`;
+    console.warn(`⚠️ [RSS ALERT] Google News RSS failed for language "${language}": ${reason}`);
+    console.warn(`⚠️ [RSS ALERT] This may be caused by Google rate-limiting the Cloud Function IP. Check Cloud Function logs for HTTP 503 errors.`);
+    newsLogger.warn('fetchAllNews', `RSS failed: ${reason}`);
+    errors.push(`RSS: ${reason}`);
   }
 
   // Fetch from Google Search Grounding (fallback for English)
@@ -858,6 +964,19 @@ export const fetchAllNews = async (
     } else if (sixParkResult.error) {
       newsLogger.warn('fetchAllNews', `6park failed: ${sixParkResult.error}`);
       errors.push(`6park: ${sixParkResult.error}`);
+    }
+  }
+
+  // Fetch Japanese news from Yahoo Japan (for Japanese language)
+  if (language === 'ja') {
+    newsLogger.info('fetchAllNews', 'Fetching from Yahoo Japan news...');
+    const yahooJapanResult = await fetchYahooJapanNews();
+    if (yahooJapanResult.success && yahooJapanResult.data) {
+      newsLogger.info('fetchAllNews', `Yahoo Japan returned ${yahooJapanResult.data.length} items`);
+      allRawNews.push(...yahooJapanResult.data);
+    } else if (yahooJapanResult.error) {
+      newsLogger.warn('fetchAllNews', `Yahoo Japan failed: ${yahooJapanResult.error}`);
+      errors.push(`Yahoo Japan: ${yahooJapanResult.error}`);
     }
   }
 

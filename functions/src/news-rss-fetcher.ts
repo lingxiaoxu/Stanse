@@ -139,12 +139,28 @@ function parseRSSFeed(xmlText: string): RSSItem[] {
 /**
  * Fetch and parse RSS feed from URL with retry logic
  */
-async function fetchRSSFeed(url: string, retries: number = 0): Promise<RSSItem[]> {
+const ACCEPT_LANGUAGE_MAP: Record<string, string> = {
+  'en': 'en-US,en;q=0.9',
+  'zh': 'zh-CN,zh;q=0.9,en;q=0.5',
+  'ja': 'ja-JP,ja;q=0.9,en;q=0.5',
+  'fr': 'fr-FR,fr;q=0.9,en;q=0.5',
+  'es': 'es-ES,es;q=0.9,en;q=0.5',
+};
+
+async function fetchRSSFeed(url: string, retries: number = 2, language: string = 'en'): Promise<RSSItem[]> {
+  const userAgents = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+  ];
+
+  const acceptLanguage = ACCEPT_LANGUAGE_MAP[language] || 'en-US,en;q=0.9';
+
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       if (attempt > 0) {
-        // Wait before retry (5s gentle retry)
-        const delay = 5000;
+        // Exponential backoff: 3s, 6s
+        const delay = 3000 * Math.pow(2, attempt - 1);
         console.log(`Retry attempt ${attempt} after ${delay}ms delay...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -155,12 +171,12 @@ async function fetchRSSFeed(url: string, retries: number = 0): Promise<RSSItem[]
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
+      const ua = userAgents[attempt % userAgents.length];
       const response = await fetch(url, {
         headers: {
-          // Mimic legitimate RSS reader
-          'User-Agent': 'Stanse/2.0 RSS Reader (+https://stanse.ai)',
-          'Accept': 'application/rss+xml, application/xml, text/xml, */*',
-          'Accept-Language': 'en-US,en;q=0.9'
+          'User-Agent': ua,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': acceptLanguage,
         },
         signal: controller.signal
       });
@@ -248,7 +264,7 @@ export const fetchGoogleNewsRSS = functions.https.onCall(
         }
 
         try {
-          const rssItems = await fetchRSSFeed(rssUrl);
+          const rssItems = await fetchRSSFeed(rssUrl, 2, language);
 
           // Convert RSS items to our format
           const parsedItems = rssItems.slice(0, maxPerCategory).map(item => {

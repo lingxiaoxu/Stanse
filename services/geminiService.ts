@@ -1073,12 +1073,12 @@ export const fetchPersonalizedNews = async (
         console.log(`Agent returned ${result.data.length} news items`);
         return result.data;
       } else {
-        console.warn('Agent returned no data:', result.error);
+        console.error(`🚨 [NEWS FEED FAILURE] Language: ${language} — 0 news items returned. RSS Cloud Function may be blocked by Google (HTTP 503). Error: ${result.error || 'no data'}`);
         // Don't generate fake news - return empty array
         return [];
       }
     } catch (agentError) {
-      console.error('Agent architecture failed:', agentError);
+      console.error(`🚨 [NEWS FEED FAILURE] Language: ${language} — Agent architecture threw an error:`, agentError);
       // Don't generate fake news - return empty array
       return [];
     }
