@@ -95,8 +95,12 @@ npm run build        # 生产构建
 ```
 
 ### 部署主前端（Cloud Run）
+
+> 部署使用项目根目录的 `cloudbuild.yaml`，流程：拉取 Secret Manager 里的 API keys → Docker build → push → Cloud Run deploy
+
 ```bash
-# 部署主前端 + 后端到 Cloud Run
+# 在项目根目录执行（必须有 cloudbuild.yaml）
+cd /Users/xuling/code/Stanse
 gcloud builds submit --config=cloudbuild.yaml --project=gen-lang-client-0960644135
 
 # 如果新 revision 流量未自动切换，手动更新：
@@ -108,6 +112,12 @@ gcloud run services describe stanse \
   --region=us-central1 --format="value(status.traffic)" \
   --project=gen-lang-client-0960644135
 ```
+
+**cloudbuild.yaml 做了什么：**
+1. 从 Secret Manager 拉取 `gemini-api-key` 和 `polygon-api-key`
+2. `docker build` 将 key 作为 build-arg 注入（不会 hardcode 进代码）
+3. Push image 到 `gcr.io/gen-lang-client-0960644135/stanse:latest`
+4. `gcloud run deploy stanse` 部署到 us-central1
 
 ### Firebase Functions
 ```bash
