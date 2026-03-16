@@ -536,14 +536,17 @@ export const fetchBBCChineseNews = async (): Promise<AgentResponse<RawNewsItem[]
     newsLogger.debug('fetchBBCChinese', 'Fetching BBC Chinese news via Google Search grounding');
 
     const prompt = `
-      Search for the latest Chinese news headlines from bbc.com/zhongwen (BBC 中文), or similar international Chinese-language news sources.
+      Search for the latest news from bbc.com/zhongwen (BBC 中文) or similar international Chinese-language sources, focusing specifically on news relevant to overseas Chinese communities (海外华人).
 
-      Find 5-8 important news stories about:
-      - International politics and diplomacy (国际政治与外交)
-      - Economy and business (经济与商业)
-      - Technology (科技)
-      - Military and security (军事与安全)
-      - World affairs (国际事务)
+      Find 5-8 news stories about overseas Chinese communities and issues that affect them, prioritizing:
+      - Chinese communities in the US (美国华人) — immigration policy, discrimination, community events
+      - Chinese communities in Europe: UK, France, Germany (英国、法国、德国华人)
+      - Chinese communities in Singapore (新加坡华人) — politics, economy, society
+      - Chinese communities in the Middle East (中东华人)
+      - Chinese communities in Southeast Asia: Malaysia, Thailand (东南亚华人，马来西亚、泰国)
+      - Chinese communities in Japan and South Korea (日韩华人)
+      - Policies, laws, or events in host countries that directly affect overseas Chinese
+      - Cultural identity, education, rights of overseas Chinese diaspora
 
       Format your response EXACTLY like this (use this exact format):
 
@@ -554,7 +557,7 @@ export const fetchBBCChineseNews = async (): Promise<AgentResponse<RawNewsItem[]
       ---END_ITEM---
 
       IMPORTANT: Keep ALL content in original Chinese (中文). Do NOT translate to English.
-      Repeat this format for each news item. Focus on factual news from BBC Chinese and major international Chinese-language sources.
+      Focus on news that overseas Chinese people living abroad would find directly relevant to their daily lives and communities.
     `;
 
     const response = await ai.models.generateContent({
@@ -1285,8 +1288,10 @@ export const fetchAllNews = async (
     newsLogger.info('fetchAllNews', 'Fetching from BBC Chinese news...');
     const bbcChineseResult = await fetchBBCChineseNews();
     if (bbcChineseResult.success && bbcChineseResult.data) {
-      newsLogger.info('fetchAllNews', `BBC Chinese returned ${bbcChineseResult.data.length} items`);
-      allRawNews.push(...bbcChineseResult.data);
+      // Limit BBC Chinese to 3 items max — 6park is the primary ZH source
+      const bbcItems = bbcChineseResult.data.slice(0, 3);
+      newsLogger.info('fetchAllNews', `BBC Chinese returned ${bbcChineseResult.data.length} items, using ${bbcItems.length}`);
+      allRawNews.push(...bbcItems);
     } else if (bbcChineseResult.error) {
       newsLogger.warn('fetchAllNews', `BBC Chinese failed: ${bbcChineseResult.error}`);
       errors.push(`BBC Chinese: ${bbcChineseResult.error}`);
