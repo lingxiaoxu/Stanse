@@ -625,6 +625,217 @@ export const fetchYahooJapanNews = async (): Promise<AgentResponse<RawNewsItem[]
 };
 
 /**
+ * Fetch news from Le Monde and RFI (French news)
+ * Le Monde: premier French daily newspaper (France)
+ * RFI: Radio France Internationale (global French-speaking audience)
+ * Uses Gemini Search Grounding to get latest French news
+ * Fallback for when Google News RSS is blocked
+ */
+export const fetchFrenchNews = async (): Promise<AgentResponse<RawNewsItem[]>> => {
+  const opId = newsLogger.operationStart('fetchFrenchNews', { source: 'lemonde.fr, rfi.fr' });
+  const startTime = Date.now();
+
+  try {
+    newsLogger.debug('fetchFrenchNews', 'Fetching French news via Google Search grounding');
+
+    const prompt = `
+      Search for the latest French news headlines from lemonde.fr (Le Monde), rfi.fr (RFI - Radio France Internationale), or similar French news sources.
+
+      Find 5-8 important news stories about:
+      - French politics and government (politique)
+      - International news (international)
+      - Economy and business (économie)
+      - Technology (technologie)
+      - Military and defense (défense)
+
+      Format your response EXACTLY like this (use this exact format):
+
+      ---NEWS_ITEM---
+      TITLE: [Original French title - keep in French]
+      SUMMARY: [Brief summary in French, max 200 characters - keep in French]
+      CATEGORY: [one of: POLITICS, WORLD, BUSINESS, TECH, MILITARY]
+      ---END_ITEM---
+
+      IMPORTANT: Keep ALL content in original French (Français). Do NOT translate to English.
+      Repeat this format for each news item. Focus on factual news from major French news sources.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+      }
+    });
+
+    const rawText = response.text || '';
+    newsLogger.debug('fetchFrenchNews', 'Raw response length: ' + rawText.length);
+
+    const newsItems: RawNewsItem[] = [];
+    const itemBlocks = rawText.split('---NEWS_ITEM---').filter(block => block.includes('---END_ITEM---'));
+
+    for (const block of itemBlocks) {
+      const titleMatch = block.match(/TITLE:\s*(.+?)(?=\n|SUMMARY:)/s);
+      const summaryMatch = block.match(/SUMMARY:\s*(.+?)(?=\n|CATEGORY:)/s);
+      const categoryMatch = block.match(/CATEGORY:\s*(.+?)(?=\n|---END_ITEM---)/s);
+
+      if (titleMatch && summaryMatch && categoryMatch) {
+        const category = categoryMatch[1].trim().toUpperCase();
+        const validCategories = ['POLITICS', 'WORLD', 'BUSINESS', 'TECH', 'MILITARY'];
+
+        newsItems.push({
+          title: titleMatch[1].trim(),
+          summary: summaryMatch[1].trim(),
+          url: '',
+          source: 'Le Monde/RFI',
+          publishedAt: new Date(),
+          language: 'fr' as const,
+          category: validCategories.includes(category) ? category : 'WORLD',
+          sourceType: 'le-monde-rfi' as const
+        });
+      }
+    }
+
+    newsLogger.operationSuccess(opId, 'fetchFrenchNews', {
+      newsCount: newsItems.length,
+      categories: [...new Set(newsItems.map(n => n.category))]
+    });
+
+    newsLogger.summary('fetchFrenchNews', {
+      totalNews: newsItems.length,
+      processingTimeMs: Date.now() - startTime
+    });
+
+    return {
+      success: true,
+      data: newsItems,
+      metadata: {
+        source: 'le-monde-rfi-news',
+        timestamp: new Date(),
+        processingTime: Date.now() - startTime
+      }
+    };
+  } catch (error: any) {
+    newsLogger.operationFailed(opId, 'fetchFrenchNews', error);
+    return {
+      success: false,
+      error: error.message,
+      metadata: {
+        source: 'le-monde-rfi-news',
+        timestamp: new Date(),
+        processingTime: Date.now() - startTime
+      }
+    };
+  }
+};
+
+/**
+ * Fetch news from El País, La Nación and BBC Mundo (Spanish news)
+ * El País: leading Spanish daily newspaper (Spain/Europe)
+ * La Nación: major Argentine newspaper (South America)
+ * BBC Mundo: BBC's Spanish-language service (US/Americas audience)
+ * Uses Gemini Search Grounding to get latest Spanish news
+ * Fallback for when Google News RSS is blocked
+ */
+export const fetchSpanishNews = async (): Promise<AgentResponse<RawNewsItem[]>> => {
+  const opId = newsLogger.operationStart('fetchSpanishNews', { source: 'elpais.com, lanacion.com.ar, bbc.com/mundo' });
+  const startTime = Date.now();
+
+  try {
+    newsLogger.debug('fetchSpanishNews', 'Fetching Spanish news via Google Search grounding');
+
+    const prompt = `
+      Search for the latest Spanish news headlines from elpais.com (El País), lanacion.com.ar (La Nación), bbc.com/mundo (BBC Mundo), or similar Spanish-language news sources.
+
+      Find 5-8 important news stories about:
+      - Politics and government (política)
+      - International news (internacional)
+      - Economy and business (economía)
+      - Technology (tecnología)
+      - Military and defense (defensa)
+
+      Format your response EXACTLY like this (use this exact format):
+
+      ---NEWS_ITEM---
+      TITLE: [Original Spanish title - keep in Spanish]
+      SUMMARY: [Brief summary in Spanish, max 200 characters - keep in Spanish]
+      CATEGORY: [one of: POLITICS, WORLD, BUSINESS, TECH, MILITARY]
+      ---END_ITEM---
+
+      IMPORTANT: Keep ALL content in original Spanish (Español). Do NOT translate to English.
+      Repeat this format for each news item. Focus on factual news from major Spanish-language news sources.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+      }
+    });
+
+    const rawText = response.text || '';
+    newsLogger.debug('fetchSpanishNews', 'Raw response length: ' + rawText.length);
+
+    const newsItems: RawNewsItem[] = [];
+    const itemBlocks = rawText.split('---NEWS_ITEM---').filter(block => block.includes('---END_ITEM---'));
+
+    for (const block of itemBlocks) {
+      const titleMatch = block.match(/TITLE:\s*(.+?)(?=\n|SUMMARY:)/s);
+      const summaryMatch = block.match(/SUMMARY:\s*(.+?)(?=\n|CATEGORY:)/s);
+      const categoryMatch = block.match(/CATEGORY:\s*(.+?)(?=\n|---END_ITEM---)/s);
+
+      if (titleMatch && summaryMatch && categoryMatch) {
+        const category = categoryMatch[1].trim().toUpperCase();
+        const validCategories = ['POLITICS', 'WORLD', 'BUSINESS', 'TECH', 'MILITARY'];
+
+        newsItems.push({
+          title: titleMatch[1].trim(),
+          summary: summaryMatch[1].trim(),
+          url: '',
+          source: 'El País/La Nación/BBC Mundo',
+          publishedAt: new Date(),
+          language: 'es' as const,
+          category: validCategories.includes(category) ? category : 'WORLD',
+          sourceType: 'elpais-bbc-mundo' as const
+        });
+      }
+    }
+
+    newsLogger.operationSuccess(opId, 'fetchSpanishNews', {
+      newsCount: newsItems.length,
+      categories: [...new Set(newsItems.map(n => n.category))]
+    });
+
+    newsLogger.summary('fetchSpanishNews', {
+      totalNews: newsItems.length,
+      processingTimeMs: Date.now() - startTime
+    });
+
+    return {
+      success: true,
+      data: newsItems,
+      metadata: {
+        source: 'elpais-bbc-mundo-news',
+        timestamp: new Date(),
+        processingTime: Date.now() - startTime
+      }
+    };
+  } catch (error: any) {
+    newsLogger.operationFailed(opId, 'fetchSpanishNews', error);
+    return {
+      success: false,
+      error: error.message,
+      metadata: {
+        source: 'elpais-bbc-mundo-news',
+        timestamp: new Date(),
+        processingTime: Date.now() - startTime
+      }
+    };
+  }
+};
+
+/**
  * Process raw news items into standardized format
  * Translates non-English content and generates images
  */
@@ -977,6 +1188,32 @@ export const fetchAllNews = async (
     } else if (yahooJapanResult.error) {
       newsLogger.warn('fetchAllNews', `Yahoo Japan failed: ${yahooJapanResult.error}`);
       errors.push(`Yahoo Japan: ${yahooJapanResult.error}`);
+    }
+  }
+
+  // Fetch French news from Le Monde and RFI (for French language)
+  if (language === 'fr') {
+    newsLogger.info('fetchAllNews', 'Fetching from Le Monde/RFI French news...');
+    const frenchNewsResult = await fetchFrenchNews();
+    if (frenchNewsResult.success && frenchNewsResult.data) {
+      newsLogger.info('fetchAllNews', `Le Monde/RFI returned ${frenchNewsResult.data.length} items`);
+      allRawNews.push(...frenchNewsResult.data);
+    } else if (frenchNewsResult.error) {
+      newsLogger.warn('fetchAllNews', `Le Monde/RFI failed: ${frenchNewsResult.error}`);
+      errors.push(`Le Monde/RFI: ${frenchNewsResult.error}`);
+    }
+  }
+
+  // Fetch Spanish news from El País, La Nación and BBC Mundo (for Spanish language)
+  if (language === 'es') {
+    newsLogger.info('fetchAllNews', 'Fetching from El País/La Nación/BBC Mundo Spanish news...');
+    const spanishNewsResult = await fetchSpanishNews();
+    if (spanishNewsResult.success && spanishNewsResult.data) {
+      newsLogger.info('fetchAllNews', `El País/La Nación/BBC Mundo returned ${spanishNewsResult.data.length} items`);
+      allRawNews.push(...spanishNewsResult.data);
+    } else if (spanishNewsResult.error) {
+      newsLogger.warn('fetchAllNews', `El País/La Nación/BBC Mundo failed: ${spanishNewsResult.error}`);
+      errors.push(`El País/La Nación/BBC Mundo: ${spanishNewsResult.error}`);
     }
   }
 
