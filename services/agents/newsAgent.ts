@@ -522,6 +522,111 @@ export const fetch6ParkNews = async (): Promise<AgentResponse<RawNewsItem[]>> =>
 };
 
 /**
+ * Fetch news from BBC Chinese (bbc.com/zhongwen)
+ * BBC 中文: international news from BBC's Chinese-language service
+ * Provides authoritative overseas perspective for Chinese-language readers
+ * Uses Gemini Search Grounding to get latest Chinese news
+ * Second source alongside 6park for Chinese language
+ */
+export const fetchBBCChineseNews = async (): Promise<AgentResponse<RawNewsItem[]>> => {
+  const opId = newsLogger.operationStart('fetchBBCChinese', { source: 'bbc.com/zhongwen' });
+  const startTime = Date.now();
+
+  try {
+    newsLogger.debug('fetchBBCChinese', 'Fetching BBC Chinese news via Google Search grounding');
+
+    const prompt = `
+      Search for the latest Chinese news headlines from bbc.com/zhongwen (BBC 中文), or similar international Chinese-language news sources.
+
+      Find 5-8 important news stories about:
+      - International politics and diplomacy (国际政治与外交)
+      - Economy and business (经济与商业)
+      - Technology (科技)
+      - Military and security (军事与安全)
+      - World affairs (国际事务)
+
+      Format your response EXACTLY like this (use this exact format):
+
+      ---NEWS_ITEM---
+      TITLE: [Original Chinese title - keep in Chinese]
+      SUMMARY: [Brief summary in Chinese, max 200 characters - keep in Chinese]
+      CATEGORY: [one of: POLITICS, WORLD, BUSINESS, TECH, MILITARY]
+      ---END_ITEM---
+
+      IMPORTANT: Keep ALL content in original Chinese (中文). Do NOT translate to English.
+      Repeat this format for each news item. Focus on factual news from BBC Chinese and major international Chinese-language sources.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+      }
+    });
+
+    const rawText = response.text || '';
+    newsLogger.debug('fetchBBCChinese', 'Raw response length: ' + rawText.length);
+
+    const newsItems: RawNewsItem[] = [];
+    const itemBlocks = rawText.split('---NEWS_ITEM---').filter(block => block.includes('---END_ITEM---'));
+
+    for (const block of itemBlocks) {
+      const titleMatch = block.match(/TITLE:\s*(.+?)(?=\n|SUMMARY:)/s);
+      const summaryMatch = block.match(/SUMMARY:\s*(.+?)(?=\n|CATEGORY:)/s);
+      const categoryMatch = block.match(/CATEGORY:\s*(.+?)(?=\n|---END_ITEM---)/s);
+
+      if (titleMatch && summaryMatch && categoryMatch) {
+        const category = categoryMatch[1].trim().toUpperCase();
+        const validCategories = ['POLITICS', 'WORLD', 'BUSINESS', 'TECH', 'MILITARY'];
+
+        newsItems.push({
+          title: titleMatch[1].trim(),
+          summary: summaryMatch[1].trim(),
+          url: '',
+          source: 'BBC 中文',
+          publishedAt: new Date(),
+          language: 'zh' as const,
+          category: validCategories.includes(category) ? category : 'WORLD',
+          sourceType: 'bbc-chinese' as const
+        });
+      }
+    }
+
+    newsLogger.operationSuccess(opId, 'fetchBBCChinese', {
+      newsCount: newsItems.length,
+      categories: [...new Set(newsItems.map(n => n.category))]
+    });
+
+    newsLogger.summary('fetchBBCChinese', {
+      totalNews: newsItems.length,
+      processingTimeMs: Date.now() - startTime
+    });
+
+    return {
+      success: true,
+      data: newsItems,
+      metadata: {
+        source: 'bbc-chinese-news',
+        timestamp: new Date(),
+        processingTime: Date.now() - startTime
+      }
+    };
+  } catch (error: any) {
+    newsLogger.operationFailed(opId, 'fetchBBCChinese', error);
+    return {
+      success: false,
+      error: error.message,
+      metadata: {
+        source: 'bbc-chinese-news',
+        timestamp: new Date(),
+        processingTime: Date.now() - startTime
+      }
+    };
+  }
+};
+
+/**
  * Fetch news from Yahoo Japan News (news.yahoo.co.jp)
  * Uses Gemini Search Grounding to get latest Japanese news
  * Fallback for when Google News RSS is blocked
@@ -1165,7 +1270,7 @@ export const fetchAllNews = async (
     }
   }
 
-  // Fetch Chinese news from 6park (for Chinese language)
+  // Fetch Chinese news from 6park and BBC Chinese (for Chinese language)
   if (language === 'zh') {
     newsLogger.info('fetchAllNews', 'Fetching from 6park Chinese news...');
     const sixParkResult = await fetch6ParkNews();
@@ -1175,6 +1280,16 @@ export const fetchAllNews = async (
     } else if (sixParkResult.error) {
       newsLogger.warn('fetchAllNews', `6park failed: ${sixParkResult.error}`);
       errors.push(`6park: ${sixParkResult.error}`);
+    }
+
+    newsLogger.info('fetchAllNews', 'Fetching from BBC Chinese news...');
+    const bbcChineseResult = await fetchBBCChineseNews();
+    if (bbcChineseResult.success && bbcChineseResult.data) {
+      newsLogger.info('fetchAllNews', `BBC Chinese returned ${bbcChineseResult.data.length} items`);
+      allRawNews.push(...bbcChineseResult.data);
+    } else if (bbcChineseResult.error) {
+      newsLogger.warn('fetchAllNews', `BBC Chinese failed: ${bbcChineseResult.error}`);
+      errors.push(`BBC Chinese: ${bbcChineseResult.error}`);
     }
   }
 
