@@ -1090,3 +1090,16 @@ export { analyzeEntityLocation } from './api/entity-location-analyzer';
 // OpenClaw Skill API Key Manager
 // ========================================
 export { generateApiKey } from './api-key-manager';
+
+// ========================================
+// OpenClaw Skill HTTP API Endpoints
+// ========================================
+export {
+  skillPing,
+  skillGetNews,
+  skillGetBreakingNews,
+  skillGetChinaRadar,
+  skillGetMyPersona,
+  skillGetDuelCredits,
+  skillGetCompanyRankings,
+} from './skill-api';

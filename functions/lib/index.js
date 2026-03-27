@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateApiKey = exports.analyzeEntityLocation = exports.getGlobeMarkers = exports.onUserLocationUpdated = exports.onBreakingNewsCreated = exports.onNewsCreated = exports.onChinaNewsCreate = exports.cleanupStalePresence = exports.scheduledNewsFetch = exports.fetchGoogleNewsRSS = exports.checkBreakingNews = exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
+exports.skillGetCompanyRankings = exports.skillGetDuelCredits = exports.skillGetMyPersona = exports.skillGetChinaRadar = exports.skillGetBreakingNews = exports.skillGetNews = exports.skillPing = exports.generateApiKey = exports.analyzeEntityLocation = exports.getGlobeMarkers = exports.onUserLocationUpdated = exports.onBreakingNewsCreated = exports.onNewsCreated = exports.onChinaNewsCreate = exports.cleanupStalePresence = exports.scheduledNewsFetch = exports.fetchGoogleNewsRSS = exports.checkBreakingNews = exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -947,4 +947,15 @@ Object.defineProperty(exports, "analyzeEntityLocation", { enumerable: true, get:
 // ========================================
 var api_key_manager_1 = require("./api-key-manager");
 Object.defineProperty(exports, "generateApiKey", { enumerable: true, get: function () { return api_key_manager_1.generateApiKey; } });
+// ========================================
+// OpenClaw Skill HTTP API Endpoints
+// ========================================
+var skill_api_1 = require("./skill-api");
+Object.defineProperty(exports, "skillPing", { enumerable: true, get: function () { return skill_api_1.skillPing; } });
+Object.defineProperty(exports, "skillGetNews", { enumerable: true, get: function () { return skill_api_1.skillGetNews; } });
+Object.defineProperty(exports, "skillGetBreakingNews", { enumerable: true, get: function () { return skill_api_1.skillGetBreakingNews; } });
+Object.defineProperty(exports, "skillGetChinaRadar", { enumerable: true, get: function () { return skill_api_1.skillGetChinaRadar; } });
+Object.defineProperty(exports, "skillGetMyPersona", { enumerable: true, get: function () { return skill_api_1.skillGetMyPersona; } });
+Object.defineProperty(exports, "skillGetDuelCredits", { enumerable: true, get: function () { return skill_api_1.skillGetDuelCredits; } });
+Object.defineProperty(exports, "skillGetCompanyRankings", { enumerable: true, get: function () { return skill_api_1.skillGetCompanyRankings; } });
 //# sourceMappingURL=index.js.map
