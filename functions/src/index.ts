@@ -1085,3 +1085,8 @@ export { onUserLocationUpdated } from './user-location-analyzer';
 // ========================================
 export { getGlobeMarkers } from './api/globe-markers';
 export { analyzeEntityLocation } from './api/entity-location-analyzer';
+
+// ========================================
+// OpenClaw Skill API Key Manager
+// ========================================
+export { generateApiKey } from './api-key-manager';

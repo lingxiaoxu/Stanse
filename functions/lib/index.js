@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.analyzeEntityLocation = exports.getGlobeMarkers = exports.onUserLocationUpdated = exports.onBreakingNewsCreated = exports.onNewsCreated = exports.onChinaNewsCreate = exports.cleanupStalePresence = exports.scheduledNewsFetch = exports.fetchGoogleNewsRSS = exports.checkBreakingNews = exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
+exports.generateApiKey = exports.analyzeEntityLocation = exports.getGlobeMarkers = exports.onUserLocationUpdated = exports.onBreakingNewsCreated = exports.onNewsCreated = exports.onChinaNewsCreate = exports.cleanupStalePresence = exports.scheduledNewsFetch = exports.fetchGoogleNewsRSS = exports.checkBreakingNews = exports.validateDuelQuestions = exports.generateDuelSequences = exports.getDuelMatchSequence = exports.getDuelSequenceStats = exports.getDuelQuestionStats = exports.populateDuelQuestions = exports.finalizeDuelMatch = exports.submitDuelAnswer = exports.withdrawDuelCredits = exports.refundDuelCredits = exports.addDuelCredits = exports.getDuelCreditHistory = exports.getDuelCredits = exports.leaveDuelQueue = exports.joinDuelQueue = exports.checkDuelMatchmaking = exports.runDuelMatchmaking = exports.processMonthlyRenewals = exports.processTrialEndCharges = void 0;
 const functions = __importStar(require("firebase-functions/v2"));
 const admin = __importStar(require("firebase-admin"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
@@ -942,4 +942,9 @@ var globe_markers_1 = require("./api/globe-markers");
 Object.defineProperty(exports, "getGlobeMarkers", { enumerable: true, get: function () { return globe_markers_1.getGlobeMarkers; } });
 var entity_location_analyzer_1 = require("./api/entity-location-analyzer");
 Object.defineProperty(exports, "analyzeEntityLocation", { enumerable: true, get: function () { return entity_location_analyzer_1.analyzeEntityLocation; } });
+// ========================================
+// OpenClaw Skill API Key Manager
+// ========================================
+var api_key_manager_1 = require("./api-key-manager");
+Object.defineProperty(exports, "generateApiKey", { enumerable: true, get: function () { return api_key_manager_1.generateApiKey; } });
 //# sourceMappingURL=index.js.map

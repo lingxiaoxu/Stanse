@@ -303,6 +303,20 @@ service cloud.firestore {
       }
     }
 
+    // ==================== OpenClaw Skill API Key Authentication ====================
+    // API Key 存储（hash 只读，明文永不存储）
+    // 用户只能读取自己的 key 信息，写入仅由 Cloud Function（Admin SDK）完成
+    match /authentication_api_keys/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // Only Cloud Functions via Admin SDK
+
+      // 历史记录（被撤销的旧 key）- 只读
+      match /history/{historyId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false; // Only Cloud Functions via Admin SDK
+      }
+    }
+
     // Payment Methods - users can read/write their own payment info
     match /payment_methods/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
